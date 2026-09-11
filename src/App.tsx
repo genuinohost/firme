@@ -157,8 +157,9 @@ export default function App() {
 
       {/* Aviso flotante con la frase de ánimo tras marcar un bloque. */}
       {brindis ? (
-        <div className="entrar pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-center px-4">
-          <div className="pointer-events-auto max-w-md rounded-2xl border border-acento/30 bg-superficie-alta/95 px-4 py-3 shadow-lg backdrop-blur">
+        <div className="entrar pointer-events-none fixed inset-x-0 bottom-[76px] z-30 flex justify-center px-4">
+          {/* Fondo opaco a propósito: translúcido sobre la lista no se leía. */}
+          <div className="pointer-events-auto max-w-md rounded-2xl border border-acento/40 bg-superficie-alta px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
             <Cita texto={brindis.texto} fuente={brindis.fuente} />
           </div>
         </div>
