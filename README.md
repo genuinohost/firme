@@ -54,17 +54,29 @@ primer toque arranca el timbre.
 
 ## Despliegue
 
-Hace falta HTTPS para poder instalarla en el móvil, así que en `localhost` solo se
-prueba desde el propio ordenador.
+**En producción: https://genuino-pro.web.app**
 
 ```bash
-firebase login --reauth
-firebase use --add            # elegir el proyecto y ponerle un alias
 npm run desplegar
 ```
 
-Para no mezclarla con otro sitio del mismo proyecto, conviene crear un *site* aparte
-en Firebase Hosting y añadirlo a `firebase.json` con `"site": "..."`.
+Ya está todo configurado. Hace falta HTTPS para poder instalarla en el móvil, así que
+en `localhost` solo se prueba desde el propio ordenador.
+
+### ⚠️ Por qué el despliegue va con *target*
+
+El proyecto de Firebase es **`genuino-host`**, el mismo que aloja **genuinohost.com**.
+Ese es el *site* por defecto: un `firebase deploy --only hosting` a secas **sustituiría
+la web pública por esta app**.
+
+Por eso Firme vive en un site aparte, `genuino-pro`, atado al target `firme`:
+
+- `.firebaserc` asocia el target `firme` → site `genuino-pro`
+- `firebase.json` declara `"target": "firme"` en su bloque de hosting
+- el script usa `firebase deploy --only hosting:firme`
+
+Son tres cierres para lo mismo. **No quitar ninguno**, y no desplegar nunca con
+`--only hosting` a secas desde este proyecto.
 
 ## Pendiente
 

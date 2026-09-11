@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "desplegar": "npm run build && firebase deploy --only hosting"
+    "desplegar": "npm run build && firebase deploy --only hosting:firme"
   },
   "dependencies": {
     "react": "^19.1.1",

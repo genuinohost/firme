@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "genuino-host"
+  },
+  "targets": {
+    "genuino-host": {
+      "hosting": {
+        "firme": [
+          "genuino-pro"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

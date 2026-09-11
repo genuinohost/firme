@@ -8,6 +8,76 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 11 de septiembre de 2026 — desplegada, y la bala que pasó rozando
+
+## 🟢 Firme está en producción: **https://genuino-pro.web.app**
+
+Alex renovó el login de Firebase y se desplegó. Service worker activo, HTTPS, sin
+errores de consola. **Falta que la instale en el móvil y la use.**
+
+## 🔴 El despliegue iba a tumbar genuinohost.com
+
+Ayer quedó escrito el comando `firebase deploy --only hosting`. Al comprobar el proyecto
+apareció lo que no se había verificado:
+
+```
+Site ID      │ Default URL
+genuino-host │ https://genuino-host.web.app   ← el site por DEFECTO
+```
+
+**Un solo site, y es el de la web pública.** Ese comando habría sustituido genuinohost.com
+—la web a la que apuntan el Instagram y las 10 fichas— por la app de disciplina.
+
+⚠️ **La lección: antes de desplegar en un proyecto compartido, listar los sites.** No dar
+por hecho que el site por defecto está libre.
+
+### Cómo quedó blindado
+
+Alex eligió el ID **`genuino-pro`**. Tres cierres para lo mismo:
+
+| Dónde | Qué |
+|---|---|
+| `.firebaserc` | target `firme` → site `genuino-pro` |
+| `firebase.json` | `"target": "firme"` en el bloque de hosting |
+| `package.json` | `firebase deploy --only hosting:firme` |
+
+**Verificado después del despliegue:** genuinohost.com sigue devolviendo 200 con su
+título de siempre, y genuino-pro.web.app sirve Firme.
+
+💡 **El ID del site no se cambia luego:** la app instalada y los datos guardados van
+atados al dominio. Cambiarlo obliga a reinstalar y se pierde el historial.
+
+## Arreglos de la mañana, y dos avisos que exageré
+
+**El que importaba:** la cuenta atrás decía «quedan **120:00**» en cualquier bloque de más
+de una hora — y la rutina de ejemplo tiene dos de 120 minutos y uno de 90. Ahora dice
+«quedan 1 h 54 min».
+
+**Los dos que vendí de más, y hay que decirlo:**
+
+- Anuncié que los bloques que cruzan medianoche eran un fallo serio. **No lo era:** el día
+  termina a medianoche igual. El cambio (`finDe()` recorta el fin a las 24 h) es coherencia
+  interna, no algo que se viera en pantalla.
+- Anuncié que la racha «quemaba batería» al recalcularse cada segundo. **Medido: 36 ms por
+  minuto.** Despreciable. El cambio es correcto —un historial no debe colgar de un reloj de
+  segundos— pero no era urgente.
+
+**Un caso de borde que sí era real:** un aviso previo que caería antes de medianoche (un
+bloque a las 00:05 con aviso de 10 minutos) se quedaba esperando un minuto que nunca
+llegaba. Ahora se descarta.
+
+## ⏭️ Por dónde se sigue
+
+1. **Instalarla:** abrir https://genuino-pro.web.app en el móvil → menú de Chrome →
+   *Instalar aplicación*. Dentro, Ajustes → *Activar* notificaciones.
+2. **Personalizarla:** la rutina que trae es un ejemplo. Poner la suya y, sobre todo,
+   **escribir su porqué** — sigue con el texto de relleno.
+3. **Usarla unos días y ver si la alarma falla de verdad.** Ese es el único criterio para
+   decidir si se monta el web push (ver los precios más abajo, en la entrada del día 10).
+4. Revisar las citas bíblicas (Reina-Valera 1909).
+
+---
+
 # 🧭 10 de septiembre de 2026 — el día uno: la app existe y funciona
 
 ## Qué se pidió
