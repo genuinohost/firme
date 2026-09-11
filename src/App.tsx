@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cargar, guardar } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
-import { claveFecha, sucesosDelDia } from "@/logica/dia";
+import { claveFecha, desdeClave, sucesosDelDia } from "@/logica/dia";
 import { useAlarmas, useReloj } from "@/logica/alarmas";
 import { rachaActual } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
@@ -57,12 +57,21 @@ export default function App() {
   const fechaHoy = claveFecha(ahora);
   const esHoy = fecha === fechaHoy;
 
+  /**
+   * El día de hoy como fecha estable: solo cambia al pasar de medianoche.
+   *
+   * `ahora` avanza cada segundo, y atarle la racha o el historial los rehacía
+   * sesenta veces por minuto — cientos de recorridos del calendario que en el
+   * móvil se notan en la batería.
+   */
+  const diaEstable = useMemo(() => desdeClave(fechaHoy), [fechaHoy]);
+
   const sucesos = useMemo(() => sucesosDelDia(datos, fecha), [datos, fecha]);
   const sucesosHoy = useMemo(
     () => (esHoy ? sucesos : sucesosDelDia(datos, fechaHoy)),
     [datos, fechaHoy, esHoy, sucesos],
   );
-  const racha = useMemo(() => rachaActual(datos, ahora), [datos, ahora]);
+  const racha = useMemo(() => rachaActual(datos, diaEstable), [datos, diaEstable]);
 
   const { disparo, cerrar, posponer } = useAlarmas(
     sucesosHoy,
@@ -144,7 +153,7 @@ export default function App() {
           />
         ) : null}
 
-        {pestaña === "progreso" ? <PantallaProgreso datos={datos} hoy={ahora} /> : null}
+        {pestaña === "progreso" ? <PantallaProgreso datos={datos} hoy={diaEstable} /> : null}
 
         {pestaña === "ajustes" ? (
           <PantallaAjustes

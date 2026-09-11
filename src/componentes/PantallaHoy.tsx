@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Ajustes, Motivo, Suceso } from "@/datos/tipos";
-import { estaVencido, faseDe, fechaLarga, minutoActual, sucesoEnCurso } from "@/logica/dia";
+import { estaVencido, faseDe, fechaLarga, finDe, minutoActual, sucesoEnCurso } from "@/logica/dia";
 import { elegirFrase } from "@/logica/elegirFrase";
 import { AreaTexto, Boton, Cita, Etiqueta, Punto, Tarjeta, Vacio, colorDe } from "./piezas";
 
@@ -45,9 +45,15 @@ function etiquetaRelativa(fecha: Date, ahora: Date): string {
 
 function quedanDe(suceso: Suceso, ahora: Date): string {
   if (suceso.minuto === null) return "";
-  const finSeg = (suceso.minuto + suceso.duracionMin) * 60;
+  const finSeg = finDe(suceso) * 60;
   const ahoraSeg = ahora.getHours() * 3600 + ahora.getMinutes() * 60 + ahora.getSeconds();
   const restan = Math.max(0, finSeg - ahoraSeg);
+  // Por encima de la hora se cuenta en horas y minutos: «120:00» no se lee.
+  if (restan >= 3600) {
+    const h = Math.floor(restan / 3600);
+    const m = Math.floor((restan % 3600) / 60);
+    return `${h} h ${String(m).padStart(2, "0")} min`;
+  }
   const m = Math.floor(restan / 60);
   const s = restan % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;

@@ -86,6 +86,26 @@ export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
   });
 }
 
+export const MINUTOS_DEL_DIA = 1440;
+
+/** ¿Este bloque se pasa de la medianoche? (dormir, un turno de noche…) */
+export function cruzaMedianoche(minuto: number, duracionMin: number): boolean {
+  return minuto + duracionMin > MINUTOS_DEL_DIA;
+}
+
+/**
+ * El minuto en que se da por cerrado un suceso, **recortado a medianoche**.
+ *
+ * Un bloque de dormir de 22:00 a 06:00 pertenece al día en que empieza; si se
+ * dejara su fin real (1800) nunca llegaría a «pasado» ni vencería, porque el
+ * reloj del día no pasa de 1440. Se cierra a medianoche y el día siguiente
+ * empieza limpio.
+ */
+export function finDe(suceso: Suceso): number {
+  if (suceso.minuto === null) return MINUTOS_DEL_DIA;
+  return Math.min(suceso.minuto + suceso.duracionMin, MINUTOS_DEL_DIA);
+}
+
 export type FaseSuceso = "pasado" | "ahora" | "proximo" | "futuro" | "sinHora";
 
 /** En qué punto del día está cada suceso, para saber qué destacar. */
@@ -96,7 +116,7 @@ export function faseDe(
 ): FaseSuceso {
   if (suceso.minuto === null) return "sinHora";
   if (!esHoy) return "futuro";
-  const fin = suceso.minuto + suceso.duracionMin;
+  const fin = finDe(suceso);
   if (minutoAhora >= suceso.minuto && minutoAhora < fin) return "ahora";
   if (minutoAhora >= fin) return "pasado";
   return "futuro";
@@ -108,10 +128,7 @@ export function sucesoEnCurso(
   minutoAhora: number,
 ): Suceso | null {
   const enCurso = sucesos.find(
-    (s) =>
-      s.minuto !== null &&
-      minutoAhora >= s.minuto &&
-      minutoAhora < s.minuto + s.duracionMin,
+    (s) => s.minuto !== null && minutoAhora >= s.minuto && minutoAhora < finDe(s),
   );
   if (enCurso) return enCurso;
   return sucesos.find((s) => s.minuto !== null && s.minuto > minutoAhora) ?? null;
@@ -129,5 +146,5 @@ export function estaVencido(
 ): boolean {
   if (suceso.registro || suceso.minuto === null) return false;
   if (!esHoy) return false;
-  return minutoAhora > suceso.minuto + suceso.duracionMin + graciaMin;
+  return minutoAhora > finDe(suceso) + graciaMin;
 }

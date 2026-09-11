@@ -132,8 +132,11 @@ export function useAlarmas(
       const candidatos: { tipo: TipoAviso; minutoObjetivo: number }[] = [
         { tipo: "inicio", minutoObjetivo: suceso.minuto },
       ];
-      if (suceso.avisoPrevioMin > 0) {
-        candidatos.push({ tipo: "previo", minutoObjetivo: suceso.minuto - suceso.avisoPrevioMin });
+      // Un aviso previo que caería antes de medianoche pertenece al día anterior:
+      // se descarta en vez de quedarse esperando un minuto que nunca llega.
+      const minutoPrevio = suceso.minuto - suceso.avisoPrevioMin;
+      if (suceso.avisoPrevioMin > 0 && minutoPrevio >= 0) {
+        candidatos.push({ tipo: "previo", minutoObjetivo: minutoPrevio });
       }
 
       for (const { tipo, minutoObjetivo } of candidatos) {

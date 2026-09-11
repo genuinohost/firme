@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type BloqueRutina, type Categoria, type Timbre } from "@/datos/tipos";
-import { DIAS_CORTOS, aMinutos } from "@/logica/dia";
+import { DIAS_CORTOS, aMinutos, cruzaMedianoche } from "@/logica/dia";
 import { sonar, parar } from "@/logica/sonido";
 import {
   AreaTexto, Boton, Campo, Entrada, Etiqueta, Punto, Selector, Tarjeta, Vacio, colorDe,
@@ -220,6 +220,13 @@ function EditorBloque({
                 ))}
               </div>
             </div>
+
+            {cruzaMedianoche(aMinutos(b.hora), b.duracionMin) ? (
+              <p className="rounded-xl border border-acento/30 bg-acento/[0.06] px-3 py-2.5 text-xs leading-relaxed">
+                Este bloque termina al día siguiente. Se dará por cerrado a medianoche y el
+                día nuevo empieza limpio.
+              </p>
+            ) : null}
 
             <Campo etiqueta="Por qué este bloque (sale en la alarma)">
               <AreaTexto
