@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fondo: #0b0d10;
+  --color-superficie: #14181d;
+  --color-superficie-alta: #1c222a;
+  --color-borde: #262e38;
+  --color-texto: #e9ecef;
+  --color-tenue: #8b949e;
+  --color-acento: #c9a227;
+  --color-logro: #3f9e7a;
+  --color-fallo: #b9503a;
+
+  --font-cita: Georgia, "Times New Roman", serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* El contenedor crece con el contenido; fijarle la altura lo desbordaba. */
+#raiz {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* El teclado y la barra del navegador móvil no deben tapar la interfaz. */
+.zona-segura-abajo {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.zona-segura-arriba {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* Números tabulares para relojes y contadores: no bailan al cambiar. */
+.cifras {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.cita {
+  font-family: var(--font-cita);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+@keyframes latido {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(1.03);
+  }
+}
+.latido {
+  animation: latido 1.6s ease-in-out infinite;
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.entrar {
+  animation: entrar 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .latido,
+  .entrar {
+    animation: none;
+  }
+}
+
+/* Barra de desplazamiento discreta en escritorio. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-borde);
+  border-radius: 4px;
+}
