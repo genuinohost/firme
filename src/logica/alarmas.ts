@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Ajustes, Suceso } from "@/datos/tipos";
-import { claveFecha, minutoActual } from "./dia";
+import { aHora, claveFecha, minutoActual } from "./dia";
 import { parar, sonar } from "./sonido";
 
 export type TipoAviso = "inicio" | "previo";
@@ -10,7 +10,36 @@ export type Disparo = {
   tipo: TipoAviso;
   /** Clave única del disparo, para no repetirlo. */
   clave: string;
+  /** Disparo lanzado a mano desde Ajustes: no registra nada. */
+  esPrueba?: boolean;
 };
+
+/** El siguiente aviso que va a sonar hoy, o null si ya no queda ninguno. */
+export function proximoAviso(
+  sucesos: Suceso[],
+  minutoAhora: number,
+): { suceso: Suceso; minuto: number; tipo: TipoAviso } | null {
+  let mejor: { suceso: Suceso; minuto: number; tipo: TipoAviso } | null = null;
+  for (const suceso of sucesos) {
+    if (suceso.minuto === null || suceso.registro) continue;
+    if (suceso.timbre === "ninguno" && suceso.avisoPrevioMin === 0) continue;
+
+    const momentos: { minuto: number; tipo: TipoAviso }[] = [
+      { minuto: suceso.minuto, tipo: "inicio" },
+    ];
+    const previo = suceso.minuto - suceso.avisoPrevioMin;
+    if (suceso.avisoPrevioMin > 0 && previo >= 0) {
+      momentos.push({ minuto: previo, tipo: "previo" });
+    }
+    for (const m of momentos) {
+      if (m.minuto < minutoAhora) continue;
+      if (mejor === null || m.minuto < mejor.minuto) {
+        mejor = { suceso, minuto: m.minuto, tipo: m.tipo };
+      }
+    }
+  }
+  return mejor;
+}
 
 /** Cuánto margen se da a una alarma perdida (app cerrada) para saltar al volver. */
 const MARGEN_RECUPERACION_MIN = 3;
@@ -116,7 +145,12 @@ export function useAlarmas(
   ajustes: Ajustes,
   ahora: Date,
   activas: boolean,
-): { disparo: Disparo | null; cerrar: () => void; posponer: (minutos: number) => void } {
+): {
+  disparo: Disparo | null;
+  cerrar: () => void;
+  posponer: (minutos: number) => void;
+  probar: () => void;
+} {
   const [disparo, setDisparo] = useState<Disparo | null>(null);
   const pospuestas = useRef<Map<string, number>>(new Map());
   const fecha = claveFecha(ahora);
@@ -160,6 +194,31 @@ export function useAlarmas(
     }
   }, [sucesos, fecha, minuto, activas, disparo, ajustes.volumen]);
 
+  /**
+   * Lanza la alarma a mano, tal cual sonaría de verdad. Es la forma de separar
+   * «la alarma está rota» de «la programación no llegó a dispararse» sin tener
+   * que esperar a que llegue una hora.
+   */
+  const probar = useCallback(() => {
+    const suceso: Suceso = {
+      id: "prueba",
+      origen: "rutina",
+      nombre: "Prueba de alarma",
+      minuto,
+      hora: aHora(minuto),
+      duracionMin: 1,
+      categoria: "cuerpo",
+      porque: "Si ves esta pantalla y la oyes sonar, la alarma funciona.",
+      timbre: "diana",
+      avisoPrevioMin: 0,
+      registro: null,
+    };
+    const nuevo: Disparo = { suceso, tipo: "inicio", clave: "prueba", esPrueba: true };
+    setDisparo(nuevo);
+    sonar("diana", ajustes.volumen);
+    void avisarSistema(nuevo, suceso.porque);
+  }, [minuto, ajustes.volumen]);
+
   const cerrar = useCallback(() => {
     parar();
     setDisparo(null);
@@ -176,5 +235,5 @@ export function useAlarmas(
     [disparo],
   );
 
-  return { disparo, cerrar, posponer };
+  return { disparo, cerrar, posponer, probar };
 }

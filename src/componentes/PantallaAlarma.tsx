@@ -59,7 +59,11 @@ export function PantallaAlarma({
       <div className="zona-segura-arriba zona-segura-abajo flex flex-1 flex-col justify-between gap-6 px-5 py-8">
         <div className="entrar">
           <Etiqueta>
-            {tipo === "previo" ? `faltan ${suceso.avisoPrevioMin} minutos` : "es la hora"}
+            {disparo.esPrueba
+              ? "prueba"
+              : tipo === "previo"
+                ? `faltan ${suceso.avisoPrevioMin} minutos`
+                : "es la hora"}
           </Etiqueta>
           <h1 className="latido mt-2 text-4xl leading-[1.1] font-bold">{suceso.nombre}</h1>
           <p className="cifras mt-2 text-sm text-tenue">
@@ -93,7 +97,11 @@ export function PantallaAlarma({
         </div>
 
         <div className="flex flex-col gap-2.5">
-          {tipo === "previo" ? (
+          {disparo.esPrueba ? (
+            <Boton variante="fuerte" ancho onClick={onCerrar}>
+              Funciona. Cerrar
+            </Boton>
+          ) : tipo === "previo" ? (
             <>
               <Boton variante="fuerte" ancho onClick={onCerrar}>
                 Entendido, me preparo

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cargar, guardar } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
-import { claveFecha, desdeClave, sucesosDelDia } from "@/logica/dia";
-import { useAlarmas, useReloj } from "@/logica/alarmas";
+import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
+import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { rachaActual } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
 import { elegirFrase } from "@/logica/elegirFrase";
@@ -73,12 +73,31 @@ export default function App() {
   );
   const racha = useMemo(() => rachaActual(datos, diaEstable), [datos, diaEstable]);
 
-  const { disparo, cerrar, posponer } = useAlarmas(
+  const { disparo, cerrar, posponer, probar } = useAlarmas(
     sucesosHoy,
     datos.ajustes,
     ahora,
     !nuevaTarea,
   );
+
+  // El siguiente aviso, ya redactado para la pantalla de comprobación.
+  const proximo = useMemo(() => {
+    const siguiente = proximoAviso(sucesosHoy, minutoActual(ahora));
+    if (!siguiente) return null;
+    const faltanMin = siguiente.minuto - minutoActual(ahora);
+    const h = Math.floor(faltanMin / 60);
+    const m = faltanMin % 60;
+    return {
+      nombre: siguiente.suceso.nombre,
+      hora: aHora(siguiente.minuto),
+      falta:
+        faltanMin === 0
+          ? "ahora mismo"
+          : h > 0
+            ? `dentro de ${h} h ${m} min`
+            : `dentro de ${m} min`,
+    };
+  }, [sucesosHoy, ahora]);
 
   const registrar = useCallback(
     (suceso: Suceso, estado: "cumplido" | "saltado", excusa?: string, enFecha?: string) => {
@@ -160,6 +179,8 @@ export default function App() {
             datos={datos}
             onCambiarAjustes={cambiarAjustes}
             onReemplazar={(nuevos) => setDatos(nuevos)}
+            proximo={proximo}
+            onProbar={probar}
           />
         ) : null}
       </main>

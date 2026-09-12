@@ -9,10 +9,15 @@ export function PantallaAjustes({
   datos,
   onCambiarAjustes,
   onReemplazar,
+  proximo,
+  onProbar,
 }: {
   datos: Datos;
   onCambiarAjustes: (ajustes: Ajustes) => void;
   onReemplazar: (datos: Datos) => void;
+  /** El siguiente aviso de hoy, ya redactado. Null si no queda ninguno. */
+  proximo: { nombre: string; hora: string; falta: string } | null;
+  onProbar: () => void;
 }) {
   const a = datos.ajustes;
   const cambiar = <C extends keyof Ajustes>(campo: C, valor: Ajustes[C]) =>
@@ -39,6 +44,13 @@ export function PantallaAjustes({
       <header className="pt-2">
         <h1 className="text-xl font-semibold">Ajustes</h1>
       </header>
+
+      <Comprobacion
+        permiso={permiso}
+        yaInstalada={yaInstalada}
+        proximo={proximo}
+        onProbar={onProbar}
+      />
 
       <Tarjeta>
         <Etiqueta>avisos y alarma</Etiqueta>
@@ -234,6 +246,84 @@ export function PantallaAjustes({
         </div>
       </Tarjeta>
     </div>
+  );
+}
+
+/**
+ * El panel que contesta a «¿por qué no me sonó?».
+ *
+ * Tres cosas tienen que estar bien para que suene una alarma: permiso del
+ * sistema, la app instalada, y que haya un aviso programado. Aquí se ven las
+ * tres de un vistazo, y el botón dispara la alarma de verdad para separar «no
+ * suena» de «no llegó a programarse».
+ */
+function Comprobacion({
+  permiso,
+  yaInstalada,
+  proximo,
+  onProbar,
+}: {
+  permiso: NotificationPermission | "no-soportado";
+  yaInstalada: boolean;
+  proximo: { nombre: string; hora: string; falta: string } | null;
+  onProbar: () => void;
+}) {
+  const filas: { bien: boolean; titulo: string; detalle: string }[] = [
+    {
+      bien: permiso === "granted",
+      titulo: "Permiso de notificaciones",
+      detalle:
+        permiso === "granted"
+          ? "Concedido."
+          : permiso === "denied"
+            ? "Bloqueado. Actívalo en los ajustes del sistema para esta app."
+            : "Sin conceder. Pulsa «Activar» más abajo.",
+    },
+    {
+      bien: yaInstalada,
+      titulo: "App instalada",
+      detalle: yaInstalada
+        ? "Abierta desde el icono."
+        : "Estás en el navegador. Instálala: las alarmas aguantan mucho mejor.",
+    },
+    {
+      bien: proximo !== null,
+      titulo: "Hay un aviso programado",
+      detalle: proximo
+        ? `«${proximo.nombre}» a las ${proximo.hora} · ${proximo.falta}`
+        : "Hoy ya no queda ninguno. Añade una tarea con hora desde la pantalla Hoy.",
+    },
+  ];
+
+  return (
+    <Tarjeta>
+      <Etiqueta>comprobar la alarma</Etiqueta>
+      <div className="mt-3 flex flex-col gap-2.5">
+        {filas.map((f) => (
+          <div key={f.titulo} className="flex gap-2.5">
+            <span
+              className={`mt-0.5 shrink-0 text-sm ${f.bien ? "text-logro" : "text-fallo"}`}
+              aria-hidden
+            >
+              {f.bien ? "✓" : "✕"}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm">{f.titulo}</span>
+              <span className="block text-xs text-tenue">{f.detalle}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4">
+        <Boton variante="fuerte" ancho onClick={onProbar}>
+          Probar la alarma ahora
+        </Boton>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-tenue">
+        Debe llenarse la pantalla y sonar el timbre. Si suena aquí pero no te sonó a su
+        hora, el problema es la programación, no la alarma.
+      </p>
+    </Tarjeta>
   );
 }
 

@@ -3,6 +3,13 @@ import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type Categoria, type Tarea, type Timbre } from "@/datos/tipos";
 import { Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta, colorDe } from "./piezas";
 
+/** "HH:MM" de dentro de `minutos`, en hora local. */
+function desdeAhora(minutos: number): string {
+  const f = new Date();
+  f.setMinutes(f.getMinutes() + minutos, 0, 0);
+  return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
+}
+
 export function DialogoTarea({
   fecha,
   onGuardar,
@@ -14,11 +21,7 @@ export function DialogoTarea({
 }) {
   const [nombre, setNombre] = useState("");
   const [conHora, setConHora] = useState(true);
-  const [hora, setHora] = useState(() => {
-    const ahora = new Date();
-    ahora.setMinutes(ahora.getMinutes() + 30, 0, 0);
-    return `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
-  });
+  const [hora, setHora] = useState(() => desdeAhora(30));
   const [duracionMin, setDuracion] = useState(30);
   const [categoria, setCategoria] = useState<Categoria>("trabajo");
   const [timbre, setTimbre] = useState<Timbre>("pulso");
@@ -54,20 +57,37 @@ export function DialogoTarea({
           </label>
 
           {conHora ? (
-            <div className="grid grid-cols-2 gap-3">
-              <Campo etiqueta="Hora">
-                <Entrada type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
-              </Campo>
-              <Campo etiqueta="Duración (min)">
-                <Entrada
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={duracionMin}
-                  onChange={(e) => setDuracion(Math.max(5, Number(e.target.value) || 5))}
-                />
-              </Campo>
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo etiqueta="Hora">
+                  <Entrada type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+                </Campo>
+                <Campo etiqueta="Duración (min)">
+                  <Entrada
+                    type="number"
+                    min={5}
+                    step={5}
+                    value={duracionMin}
+                    onChange={(e) => setDuracion(Math.max(5, Number(e.target.value) || 5))}
+                  />
+                </Campo>
+              </div>
+              {/* Atajos: sin ellos hay que pelearse con el selector de hora para
+                  poner algo dentro de dos minutos, que es lo que hace falta para
+                  probar que la alarma suena. */}
+              <div className="-mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-tenue">dentro de</span>
+                {[2, 5, 15, 30, 60].map((min) => (
+                  <button
+                    key={min}
+                    onClick={() => setHora(desdeAhora(min))}
+                    className="rounded-full border border-borde px-2.5 py-1 text-xs text-tenue transition hover:border-acento hover:text-acento"
+                  >
+                    {min < 60 ? `${min} min` : "1 h"}
+                  </button>
+                ))}
+              </div>
+            </>
           ) : null}
 
           <div>
