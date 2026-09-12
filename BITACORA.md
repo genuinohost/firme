@@ -66,15 +66,52 @@ de una hora — y la rutina de ejemplo tiene dos de 120 minutos y uno de 90. Aho
 bloque a las 00:05 con aviso de 10 minutos) se quedaba esperando un minuto que nunca
 llegaba. Ahora se descarta.
 
-## ⏭️ Por dónde se sigue
+## ✅ Instalada en el móvil
 
-1. **Instalarla:** abrir https://genuino-pro.web.app en el móvil → menú de Chrome →
-   *Instalar aplicación*. Dentro, Ajustes → *Activar* notificaciones.
-2. **Personalizarla:** la rutina que trae es un ejemplo. Poner la suya y, sobre todo,
-   **escribir su porqué** — sigue con el texto de relleno.
-3. **Usarla unos días y ver si la alarma falla de verdad.** Ese es el único criterio para
-   decidir si se monta el web push (ver los precios más abajo, en la entrada del día 10).
-4. Revisar las citas bíblicas (Reina-Valera 1909).
+Alex la instaló el mismo día. **La app ya está en su teléfono.**
+
+## ⏭️ Por dónde se sigue: la prueba que decide lo siguiente
+
+Antes de montar nada de servidor hay que saber si de verdad hace falta. Quedó pendiente
+esto, que son quince minutos:
+
+### Primero, el ajuste de Android que puede ahorrarlo todo
+
+Android mata las apps en segundo plano, y eso es exactamente lo que rompe las alarmas.
+Se quita por app:
+
+> **Ajustes → Aplicaciones → Firme → Batería → Sin restricciones**
+
+La ruta cambia según fabricante (Xiaomi lo llama «Ahorro de batería», Samsung «Sin
+restricciones»). Al estar instalada, Firme aparece como una app normal en la lista.
+Comprobar de paso que las **notificaciones** estén permitidas.
+
+**Es gratis y puede evitar todo el trabajo del web push.**
+
+### Las tres pruebas
+
+Poner tres tareas de una vez desde **+ tarea**, con alarma:
+
+| | Cuándo | Qué hace | Qué significa |
+|---|---|---|---|
+| **A** | +2 min | deja la app abierta | si falla aquí hay un fallo real que arreglar |
+| **B** | +5 min | sale al inicio y **apaga la pantalla** | **la que decide.** Es su día real |
+| **C** | +10 min | cierra la app del todo (deslizándola de recientes) | la que probablemente falle; es el límite conocido |
+
+### El criterio acordado
+
+| Resultado | Decisión |
+|---|---|
+| **B suena** | no se monta nada; la app sirve tal cual |
+| **B falla** | se monta el web push en Cloudflare Workers (gratis, unas horas) |
+| **C falla pero B suena** | es lo esperado. Decide Alex si le compensa |
+
+## Lo que sigue pendiente de él
+
+1. **Escribir su porqué** — sigue con el texto de relleno, y es la pieza de la que cuelga
+   todo lo demás: sale en la pantalla de Hoy y en cada alarma.
+2. **Poner su rutina de verdad.** La que trae es un ejemplo.
+3. Revisar las citas bíblicas (Reina-Valera 1909).
 
 ---
 
