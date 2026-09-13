@@ -10,6 +10,11 @@
     "desplegar": "npm run build && firebase deploy --only hosting:firme"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/local-notifications": "^8.3.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

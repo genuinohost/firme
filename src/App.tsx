@@ -3,6 +3,7 @@ import { cargar, guardar } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
+import { esNativo, pedirPermisosNativos, reprogramar } from "@/logica/alarmasNativas";
 import { rachaActual } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
 import { elegirFrase } from "@/logica/elegirFrase";
@@ -35,6 +36,21 @@ export default function App() {
   const ahora = useReloj();
 
   useEffect(() => guardar(datos), [datos]);
+
+  /**
+   * En la app de Android las horas se le entregan al sistema, que es quien
+   * despierta aunque la pantalla esté apagada. Se rehace la cola entera cada
+   * vez que cambian los datos y cada vez que la app vuelve a primer plano.
+   */
+  useEffect(() => {
+    if (!esNativo()) return;
+    void pedirPermisosNativos().then(() => reprogramar(datos));
+    const alVolver = () => {
+      if (document.visibilityState === "visible") void reprogramar(datos);
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, [datos]);
 
   // El audio solo arranca tras un gesto del usuario; el primer toque lo habilita.
   useEffect(() => {

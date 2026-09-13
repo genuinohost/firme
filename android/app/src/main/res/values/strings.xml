@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Firme</string>
+    <string name="title_activity_main">Firme</string>
+    <string name="package_name">app.genuino.firme</string>
+    <string name="custom_url_scheme">app.genuino.firme</string>
+</resources>
