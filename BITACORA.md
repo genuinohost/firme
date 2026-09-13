@@ -8,6 +8,77 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 12 de septiembre de 2026 — no sonó nada, y las herramientas para saber por qué
+
+## 🔴 El reporte: «no sonó nada y ya di permiso de batería»
+
+Ni siquiera la prueba A, con la app abierta delante. **Eso no es la limitación conocida
+de la plataforma** —esa solo afecta a la app cerrada— sino un fallo distinto.
+
+El problema de fondo: el fallo está en su móvil y no hay forma de verlo desde aquí. Así
+que en vez de adivinar, se construyeron las herramientas para que lo diagnostique él.
+
+## La causa más probable, y encaja
+
+**El diálogo de tarea ponía la hora a +30 minutos por defecto.** Si creó las tres tareas
+sin pelearse con el selector de hora, sus alarmas estaban a media hora vista y él esperó
+quince minutos. **No habían llegado.**
+
+Comprobado en pantalla: a las 10:49 el diálogo proponía las 11:19.
+
+Ahora hay atajos — **2 · 5 · 15 · 30 min · 1 h** — para que poner una prueba sea un toque.
+
+⚠️ **Sigue sin confirmarse.** Es la hipótesis que mejor explica que no sonara *nada*, pero
+falta que él mire el panel.
+
+## Lo que se construyó para diagnosticarlo
+
+En **Ajustes**, un panel «Comprobar la alarma» con las tres condiciones que tienen que
+cumplirse, cada una con ✓ o ✕:
+
+1. **Permiso de notificaciones** — concedido, sin conceder o bloqueado
+2. **App instalada** — o si está corriendo en el navegador
+3. **Hay un aviso programado** — cuál, a qué hora y cuánto falta
+
+Y un botón **«Probar la alarma ahora»** que dispara la alarma de verdad al instante.
+
+> 💡 **Ese botón es la pieza clave del diagnóstico:** si suena ahí pero no sonó a su hora,
+> el problema es la programación, no la alarma. Son dos fallos distintos y hasta ahora no
+> se podían separar.
+
+Desplegado y verificado en producción. genuinohost.com intacta.
+
+## 🔴 El token de Firebase caduca cada día
+
+Tercer día seguido pidiendo `firebase login --reauth`. El patrón está claro: el token
+expira de madrugada.
+
+**Causa probable:** `auto@genuinohost.com` es una cuenta de **Google Workspace**, y esos
+dominios suelen tener una política que caduca la sesión de Google Cloud a diario.
+
+**Solución de raíz, si molesta:** una cuenta de servicio con permiso solo de Hosting.
+Credencial que no expira, diez minutos de trabajo, y no se vuelve a tocar. **Ofrecido a
+Alex, pendiente de que diga si lo montamos.**
+
+## ⏭️ Esperando
+
+Que Alex mire el panel en el móvil y diga:
+
+- Qué pone en las tres líneas (✓ o ✕ en cada una)
+- Qué pasa al pulsar «Probar la alarma ahora»
+
+| Lo que vea | Qué significa |
+|---|---|
+| el botón **suena** | la alarma funciona; el fallo era la hora (+30 min) |
+| **llena la pantalla pero no suena** | es el audio: volumen del móvil o el deslizador de Ajustes |
+| **no hace nada** | fallo real, a buscarlo con lo que diga el panel |
+
+⚠️ **Antes de nada tiene que forzar la actualización de la app:** cerrarla del todo
+(deslizarla de recientes) y volver a abrirla, o seguirá viendo la versión cacheada sin
+el panel.
+
+---
+
 # 🧭 11 de septiembre de 2026 — desplegada, y la bala que pasó rozando
 
 ## 🟢 Firme está en producción: **https://genuino-pro.web.app**
