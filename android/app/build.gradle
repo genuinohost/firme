@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// La firma vive en firma.properties, fuera de git. Si el archivo no está, la
+// compilación de release sigue adelante sin firmar en vez de romperse: así el
+// proyecto compila en una máquina que no tenga el almacén.
+def firma = new Properties()
+def archivoFirma = rootProject.file("firma.properties")
+if (archivoFirma.exists()) {
+    firma.load(new FileInputStream(archivoFirma))
+}
+
 android {
     namespace = "app.genuino.firme"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +25,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (archivoFirma.exists()) {
+                storeFile rootProject.file(firma['almacen'])
+                storePassword firma['clave']
+                keyAlias firma['alias']
+                keyPassword firma['clave']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (archivoFirma.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
