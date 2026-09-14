@@ -15,6 +15,7 @@ import { PantallaRutina } from "@/componentes/PantallaRutina";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
 import { PantallaMensaje } from "@/componentes/PantallaMensaje";
 import { PantallaComunidad } from "@/componentes/PantallaComunidad";
+import { AvisoActualizacion } from "@/componentes/AvisoActualizacion";
 import { PantallaMas, ConVuelta } from "@/componentes/PantallaMas";
 import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
@@ -179,6 +180,8 @@ export default function App() {
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col">
       <main className="zona-segura-arriba flex-1 pb-24">
+        <AvisoActualizacion />
+
         {pestaña === "hoy" ? (
           <PantallaHoy
             fecha={fecha}

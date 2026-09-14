@@ -1,0 +1,13 @@
+{
+  "_lee_esto": "Lo generan los scripts; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play y las actualizaciones serán automáticas.",
+  "codigo": 10,
+  "nombre": "2.4",
+  "enlace": "https://genuino-pro.web.app/Firme.apk",
+  "novedades": [
+    "Aviso dentro de la app cuando hay version nueva",
+    "Pantalla Comunidad: grupos y reuniones en vivo",
+    "Banco de 190 mensajes",
+    "Arreglado el color de los botones"
+  ],
+  "importante": false
+}
