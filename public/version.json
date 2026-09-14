@@ -1,13 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 12,
-  "nombre": "3.0",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.0.apk",
+  "codigo": 13,
+  "nombre": "3.1",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.1.apk",
   "novedades": [
-    "Banco completo: 365 mensajes, uno para cada dia del año",
-    "Nuevos temas: estar lejos de casa, empezar de cero, la escasez, el hijo que se fue",
-    "Firma @GenuinoLove al compartir",
-    "Corazon para guardar desde la busqueda"
+    "Planes con racha propia: madrugar, santidad, lectura, trabajo y once mas",
+    "Repaso de la noche para el plan de santidad",
+    "La app te dice donde mas te cuesta, no solo un porcentaje"
   ],
   "importante": false
 }
