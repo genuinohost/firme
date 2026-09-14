@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { compartirFrase, type ResultadoCompartir } from "@/logica/compartir";
 import { CATEGORIAS, type Categoria } from "@/datos/tipos";
 
 export function colorDe(categoria: Categoria): string {
@@ -122,21 +123,46 @@ export function Cita({
   texto,
   fuente,
   grande,
+  compartible = true,
 }: {
   texto: string;
   fuente?: string;
   grande?: boolean;
+  /** Las frases efímeras (el aviso al cumplir) no llevan botón. */
+  compartible?: boolean;
 }) {
+  const [estado, setEstado] = useState<ResultadoCompartir | null>(null);
+
+  // El aviso de «copiado» se retira solo.
+  useEffect(() => {
+    if (!estado) return;
+    const id = window.setTimeout(() => setEstado(null), 2200);
+    return () => clearTimeout(id);
+  }, [estado]);
+
   return (
     <figure className="m-0">
       <blockquote className={`cita m-0 ${grande ? "text-lg" : "text-[15px]"}`}>
         «{texto}»
       </blockquote>
-      {fuente ? (
-        <figcaption className="mt-1.5 text-xs tracking-wide text-tenue">
-          — {fuente}
+      <div className="mt-1.5 flex items-center justify-between gap-3">
+        <figcaption className="text-xs tracking-wide text-tenue">
+          {fuente ? `— ${fuente}` : ""}
         </figcaption>
-      ) : null}
+        {compartible ? (
+          <button
+            onClick={async () => setEstado(await compartirFrase({ texto, fuente }))}
+            className="-mr-1 shrink-0 rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-acento"
+            aria-label="Compartir esta frase"
+          >
+            {estado === "copiado"
+              ? "copiada ✓"
+              : estado === "fallo"
+                ? "no se pudo"
+                : "compartir"}
+          </button>
+        ) : null}
+      </div>
     </figure>
   );
 }
