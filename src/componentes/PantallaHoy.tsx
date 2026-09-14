@@ -21,6 +21,7 @@ type Props = {
   onDeshacer: (suceso: Suceso) => void;
   onCambiarDia: (dias: number) => void;
   onNuevaTarea: () => void;
+  onEditarTarea: (id: string) => void;
   onVerPorque: () => void;
 };
 
@@ -65,7 +66,7 @@ function quedanDe(suceso: Suceso, ahora: Date): string {
 export function PantallaHoy(props: Props) {
   const {
     fecha, fechaObjeto, esHoy, ahora, sucesos, ajustes, motivos, racha, alarma,
-    onCumplir, onSaltar, onDeshacer, onCambiarDia, onNuevaTarea, onVerPorque,
+    onCumplir, onSaltar, onDeshacer, onCambiarDia, onNuevaTarea, onEditarTarea, onVerPorque,
   } = props;
 
   const [saltando, setSaltando] = useState<Suceso | null>(null);
@@ -223,6 +224,7 @@ export function PantallaHoy(props: Props) {
               setExcusa("");
             }}
             onDeshacer={() => onDeshacer(s)}
+            onAbrir={() => onEditarTarea(s.id)}
           />
         ))}
 
@@ -244,6 +246,7 @@ export function PantallaHoy(props: Props) {
                   setExcusa("");
                 }}
                 onDeshacer={() => onDeshacer(s)}
+                onAbrir={() => onEditarTarea(s.id)}
               />
             ))}
           </>
@@ -370,6 +373,7 @@ function FilaSuceso({
   onCumplir,
   onSaltar,
   onDeshacer,
+  onAbrir,
 }: {
   suceso: Suceso;
   fase: ReturnType<typeof faseDe>;
@@ -378,6 +382,9 @@ function FilaSuceso({
   onCumplir: () => void;
   onSaltar: () => void;
   onDeshacer: () => void;
+  /** Abre el editor. Solo las tareas sueltas se editan desde aquí; los
+      bloques fijos se tocan en la pestaña Rutina. */
+  onAbrir: () => void;
 }) {
   const registro = suceso.registro;
   const cumplido = registro?.estado === "cumplido";
@@ -395,9 +402,24 @@ function FilaSuceso({
       </div>
       <Punto categoria={suceso.categoria} />
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
-          {suceso.nombre}
-        </p>
+        {suceso.origen === "tarea" ? (
+          <button
+            onClick={onAbrir}
+            className="flex w-full items-center gap-1.5 text-left"
+            aria-label={`Editar ${suceso.nombre}`}
+          >
+            <span className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
+              {suceso.nombre}
+            </span>
+            <span className="shrink-0 text-xs text-tenue" aria-hidden>
+              ✎
+            </span>
+          </button>
+        ) : (
+          <p className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
+            {suceso.nombre}
+          </p>
+        )}
         {saltado && registro?.excusa ? (
           <p className="truncate text-xs text-fallo">{registro.excusa}</p>
         ) : vencido ? (

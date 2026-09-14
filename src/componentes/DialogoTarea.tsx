@@ -3,34 +3,50 @@ import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type Categoria, type Tarea, type Timbre } from "@/datos/tipos";
 import { Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta, colorDe } from "./piezas";
 
-/** "HH:MM" de dentro de `minutos`, en hora local. */
+/**
+ * "HH:MM" de dentro de `minutos`, en hora local.
+ *
+ * Una alarma solo tiene hora y minuto, así que al poner los segundos a cero se
+ * perdía lo que quedaba del minuto en curso: a las 18:15:45, «2 min» daba las
+ * 18:17, o sea minuto y cuarto. Se redondea hacia arriba para que «2 min» nunca
+ * sea menos de dos minutos.
+ */
 function desdeAhora(minutos: number): string {
   const f = new Date();
-  f.setMinutes(f.getMinutes() + minutos, 0, 0);
+  const extra = f.getSeconds() > 0 ? 1 : 0;
+  f.setMinutes(f.getMinutes() + minutos + extra, 0, 0);
   return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
 }
 
 export function DialogoTarea({
   fecha,
+  tarea,
   onGuardar,
+  onBorrar,
   onCerrar,
 }: {
   fecha: string;
+  /** La tarea que se está editando. Si falta, se crea una nueva. */
+  tarea?: Tarea;
   onGuardar: (tarea: Tarea) => void;
+  onBorrar?: () => void;
   onCerrar: () => void;
 }) {
-  const [nombre, setNombre] = useState("");
-  const [conHora, setConHora] = useState(true);
-  const [hora, setHora] = useState(() => desdeAhora(30));
-  const [duracionMin, setDuracion] = useState(30);
-  const [categoria, setCategoria] = useState<Categoria>("trabajo");
-  const [timbre, setTimbre] = useState<Timbre>("pulso");
+  const editando = tarea !== undefined;
+  const [nombre, setNombre] = useState(tarea?.nombre ?? "");
+  const [conHora, setConHora] = useState(tarea ? tarea.hora !== null : true);
+  const [hora, setHora] = useState(tarea?.hora ?? (() => desdeAhora(30)));
+  const [duracionMin, setDuracion] = useState(tarea?.duracionMin ?? 30);
+  const [categoria, setCategoria] = useState<Categoria>(tarea?.categoria ?? "trabajo");
+  const [timbre, setTimbre] = useState<Timbre>(
+    tarea?.timbre && tarea.timbre !== "ninguno" ? tarea.timbre : "pulso",
+  );
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-fondo/90 p-4 backdrop-blur-sm sm:items-center">
       <Tarjeta className="entrar w-full max-w-md !bg-superficie-alta">
         <div className="flex items-center justify-between">
-          <Etiqueta>tarea de hoy</Etiqueta>
+          <Etiqueta>{editando ? "editar tarea" : "tarea de hoy"}</Etiqueta>
           <button onClick={onCerrar} className="px-2 text-tenue transition hover:text-texto">
             ✕
           </button>
@@ -42,7 +58,7 @@ export function DialogoTarea({
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Llamar al proveedor"
-              autoFocus
+              autoFocus={!editando}
             />
           </Campo>
 
@@ -125,25 +141,32 @@ export function DialogoTarea({
           ) : null}
         </div>
 
-        <div className="mt-5">
-          <Boton
-            variante="fuerte"
-            ancho
-            deshabilitado={!nombre.trim()}
-            onClick={() =>
-              onGuardar({
-                id: idNuevo(),
-                fecha,
-                nombre: nombre.trim(),
-                hora: conHora ? hora : null,
-                duracionMin,
-                categoria,
-                timbre: conHora ? timbre : "ninguno",
-              })
-            }
-          >
-            Añadir al día
-          </Boton>
+        <div className="mt-5 flex gap-2">
+          <div className="flex-1">
+            <Boton
+              variante="fuerte"
+              ancho
+              deshabilitado={!nombre.trim()}
+              onClick={() =>
+                onGuardar({
+                  id: tarea?.id ?? idNuevo(),
+                  fecha: tarea?.fecha ?? fecha,
+                  nombre: nombre.trim(),
+                  hora: conHora ? hora : null,
+                  duracionMin,
+                  categoria,
+                  timbre: conHora ? timbre : "ninguno",
+                })
+              }
+            >
+              {editando ? "Guardar" : "Añadir al día"}
+            </Boton>
+          </div>
+          {editando && onBorrar ? (
+            <Boton variante="fallo" onClick={onBorrar}>
+              Borrar
+            </Boton>
+          ) : null}
         </div>
       </Tarjeta>
     </div>

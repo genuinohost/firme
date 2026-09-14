@@ -31,7 +31,8 @@ export default function App() {
   const [datos, setDatos] = useState<Datos>(cargar);
   const [pestaña, setPestaña] = useState<Pestaña>("hoy");
   const [desplazamiento, setDesplazamiento] = useState(0); // días respecto a hoy
-  const [nuevaTarea, setNuevaTarea] = useState(false);
+  /** null = cerrado · "nueva" = creando · un id = editando esa tarea. */
+  const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
 
   const ahora = useReloj();
@@ -102,7 +103,7 @@ export default function App() {
     sucesosHoy,
     datos.ajustes,
     ahora,
-    !nuevaTarea,
+    tareaAbierta === null,
   );
 
   // El siguiente aviso, ya redactado para la pantalla de comprobación.
@@ -181,7 +182,8 @@ export default function App() {
               })
             }
             onCambiarDia={(n) => setDesplazamiento((v) => v + n)}
-            onNuevaTarea={() => setNuevaTarea(true)}
+            onNuevaTarea={() => setTareaAbierta("nueva")}
+            onEditarTarea={(id) => setTareaAbierta(id)}
             onVerPorque={() => setPestaña("porque")}
           />
         ) : null}
@@ -243,14 +245,31 @@ export default function App() {
         </div>
       </nav>
 
-      {nuevaTarea ? (
+      {tareaAbierta ? (
         <DialogoTarea
           fecha={fecha}
+          tarea={datos.tareas.find((t) => t.id === tareaAbierta)}
           onGuardar={(tarea: Tarea) => {
-            setDatos((d) => ({ ...d, tareas: [...d.tareas, tarea] }));
-            setNuevaTarea(false);
+            setDatos((d) => ({
+              ...d,
+              tareas: d.tareas.some((t) => t.id === tarea.id)
+                ? d.tareas.map((t) => (t.id === tarea.id ? tarea : t))
+                : [...d.tareas, tarea],
+            }));
+            setTareaAbierta(null);
           }}
-          onCerrar={() => setNuevaTarea(false)}
+          onBorrar={() => {
+            setDatos((d) => {
+              // Se va la tarea y también lo que se hubiera anotado de ella.
+              const registros = { ...d.registros };
+              for (const clave of Object.keys(registros)) {
+                if (clave.endsWith(`|${tareaAbierta}`)) delete registros[clave];
+              }
+              return { ...d, tareas: d.tareas.filter((t) => t.id !== tareaAbierta), registros };
+            });
+            setTareaAbierta(null);
+          }}
+          onCerrar={() => setTareaAbierta(null)}
         />
       ) : null}
 
