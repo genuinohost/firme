@@ -1,10 +1,39 @@
 import { defineConfig } from "vite";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwind from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+/**
+ * La versión, leída de `build.gradle` al compilar.
+ *
+ * Antes vivía escrita a mano en `.env.local`, que además está en `.gitignore`.
+ * Se quedó congelada en la 2.5 mientras la app iba por la 3.4, así que el aviso
+ * de versión nueva enseñaba un número falso y en otra máquina no habría existido
+ * siquiera. Un número que hay que acordarse de actualizar acaba desfasado
+ * siempre; este sale del mismo sitio del que lo saca Android.
+ */
+function versionDeAndroid(): { codigo: number; nombre: string } {
+  const gradle = readFileSync(
+    fileURLToPath(new URL("./android/app/build.gradle", import.meta.url)),
+    "utf8",
+  );
+  const codigo = gradle.match(/versionCode\s+(\d+)/);
+  const nombre = gradle.match(/versionName\s+"([^"]+)"/);
+  if (!codigo || !nombre) {
+    throw new Error("No se pudo leer la versión de android/app/build.gradle");
+  }
+  return { codigo: Number(codigo[1]), nombre: nombre[1] };
+}
+
+const version = versionDeAndroid();
+
 export default defineConfig({
+  define: {
+    __VERSION_CODIGO__: JSON.stringify(version.codigo),
+    __VERSION_NOMBRE__: JSON.stringify(version.nombre),
+  },
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },

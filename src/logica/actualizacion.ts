@@ -17,8 +17,15 @@ const URL_VERSION = "https://genuino-pro.web.app/version.json";
 const ULTIMA_CONSULTA = "firme.version.consulta";
 const DESCARTADA = "firme.version.descartada";
 
-/** Cada cuánto se pregunta. Más a menudo no aporta nada. */
-const HORAS_ENTRE_CONSULTAS = 12;
+/**
+ * Cada cuánto se pregunta sola.
+ *
+ * Mientras la app se instala a mano y se publica varias veces al día, doce horas
+ * eran demasiadas: se actualizaba por la mañana y no volvía a enterarse de nada
+ * hasta la noche. Para no depender de esto hay además un botón en Ajustes que
+ * pregunta al momento.
+ */
+const HORAS_ENTRE_CONSULTAS = 4;
 
 export type VersionPublicada = {
   /** El `versionCode` de Android: un número que solo sube. */
@@ -36,15 +43,18 @@ export type VersionPublicada = {
 /**
  * La versión instalada.
  *
- * Se inyecta al compilar desde `build.gradle`, para que no haya dos números que
- * se puedan desincronizar.
+ * Se lee de `android/app/build.gradle` al compilar (ver `vite.config.ts`), que
+ * es el mismo sitio del que la saca Android. Antes vivía a mano en `.env.local`
+ * y se quedó congelada en la 2.5 mientras la app iba por la 3.4: el aviso
+ * enseñaba un número falso. Un número que hay que acordarse de actualizar acaba
+ * desfasado siempre.
  */
 export function versionInstalada(): number {
-  return Number(import.meta.env.VITE_VERSION_CODIGO ?? 0);
+  return __VERSION_CODIGO__;
 }
 
 export function nombreInstalado(): string {
-  return String(import.meta.env.VITE_VERSION_NOMBRE ?? "—");
+  return __VERSION_NOMBRE__;
 }
 
 function tocaConsultar(): boolean {

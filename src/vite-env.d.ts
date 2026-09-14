@@ -3,10 +3,12 @@
 
 /** La versión que lleva dentro la app. La escribe scripts/publicar-version.mjs. */
 interface ImportMetaEnv {
-  readonly VITE_VERSION_CODIGO: string;
-  readonly VITE_VERSION_NOMBRE: string;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** La versión, inyectada desde android/app/build.gradle en vite.config.ts. */
+declare const __VERSION_CODIGO__: number;
+declare const __VERSION_NOMBRE__: string;

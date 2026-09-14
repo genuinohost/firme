@@ -22,6 +22,11 @@ import {
   MODELO_POR_DEFECTO,
 } from "@/logica/generador";
 import { activarFirma, firmaActiva, leerFirma } from "@/logica/compartir";
+import {
+  hayVersionNueva,
+  nombreInstalado,
+  type VersionPublicada,
+} from "@/logica/actualizacion";
 import { parar, sonar } from "@/logica/sonido";
 import { AreaTexto, Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta } from "./piezas";
 
@@ -73,6 +78,8 @@ export function PantallaAjustes({
       />
 
       <ComprobacionSistema />
+
+      <Version />
 
       <Tarjeta>
         <Etiqueta>avisos y alarma</Etiqueta>
@@ -671,5 +678,70 @@ function Interruptor({
         className="size-5 shrink-0 accent-[var(--color-acento)]"
       />
     </label>
+  );
+}
+
+/**
+ * La versión instalada, y un botón para buscar una nueva al momento.
+ *
+ * El aviso de versión nueva aparece solo, pero **sólo pregunta cada cuatro
+ * horas**: si acabas de actualizar por la mañana, no vuelve a enterarse de nada
+ * hasta la tarde. Mientras la app se instala a mano y se publica varias veces al
+ * día, hacía falta poder preguntar a mano. Esto es eso.
+ */
+function Version() {
+  const [estado, setEstado] = useState<"quieto" | "buscando" | "aldia">("quieto");
+  const [nueva, setNueva] = useState<VersionPublicada | null>(null);
+
+  const buscar = async () => {
+    setEstado("buscando");
+    const hay = await hayVersionNueva(true);
+    setNueva(hay);
+    setEstado(hay ? "quieto" : "aldia");
+  };
+
+  return (
+    <Tarjeta>
+      <Etiqueta>versión</Etiqueta>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm">
+            Genuino <span className="cifras">{nombreInstalado()}</span>
+          </p>
+          <p className="text-xs text-tenue">
+            {estado === "aldia"
+              ? "Estás al día."
+              : nueva
+                ? `Hay una versión nueva: la ${nueva.nombre}.`
+                : "Las actualizaciones se instalan a mano hasta que esté en Google Play."}
+          </p>
+        </div>
+        <Boton onClick={() => void buscar()}>
+          {estado === "buscando" ? "Buscando…" : "Buscar"}
+        </Boton>
+      </div>
+
+      {nueva ? (
+        <div className="mt-3 border-t border-borde pt-3">
+          <ul className="flex flex-col gap-1">
+            {nueva.novedades.map((n, i) => (
+              <li key={i} className="flex gap-2 text-xs leading-relaxed text-tenue">
+                <span aria-hidden>·</span>
+                <span>{n}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3">
+            <Boton variante="fuerte" ancho onClick={() => window.open(nueva.enlace, "_blank")}>
+              Descargar la {nueva.nombre}
+            </Boton>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            Se descarga el archivo y Android pregunta si quieres instalarlo encima.
+            No se pierde nada: tu rutina, tu porqué y tus rachas siguen donde están.
+          </p>
+        </div>
+      ) : null}
+    </Tarjeta>
   );
 }
