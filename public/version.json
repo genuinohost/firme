@@ -1,12 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 11,
-  "nombre": "2.5",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-2.5.apk",
+  "codigo": 12,
+  "nombre": "3.0",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.0.apk",
   "novedades": [
-    "Firma @GenuinoLove y enlace de descarga al compartir",
-    "Corazon para guardar desde los resultados de busqueda",
-    "Banco de 315 mensajes"
+    "Banco completo: 365 mensajes, uno para cada dia del año",
+    "Nuevos temas: estar lejos de casa, empezar de cero, la escasez, el hijo que se fue",
+    "Firma @GenuinoLove al compartir",
+    "Corazon para guardar desde la busqueda"
   ],
   "importante": false
 }
