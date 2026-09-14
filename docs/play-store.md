@@ -83,6 +83,26 @@ publicado. El título visible sí.
 - **Cuenta de organización** (Alexa Lounge, C.A.): se salta esa regla, pero
   necesita número **D-U-N-S** (gratis, semanas de espera).
 
+✅ **Decidido: empezar con cuenta personal y pasar a organización después.**
+
+El tipo de cuenta **no se puede convertir** —personal y organización son cosas
+distintas y Google no cambia una por otra—, pero **la app sí se transfiere**, que
+es lo que hace viable el plan:
+
+| Se conserva al transferir | Se queda atrás |
+|---|---|
+| nombre del paquete | informes de pagos y ganancias |
+| usuarios y descargas | promociones |
+| comentarios y valoraciones | grupos de prueba |
+| estadísticas y suscripciones | — |
+
+Sin coste de transferencia; solo los $25 de la cuenta nueva. Tarda unos dos días
+laborables. Si la app usa Firebase, hay que desvincularla y volverla a vincular.
+
+**El precio de empezar personal son los 12 probadores durante 14 días**, que
+encaja con la semana de prueba interna que pidió Alex — solo que son dos semanas
+y doce hermanos.
+
 ### Ficha
 
 | Recurso | Requisito |
@@ -106,7 +126,7 @@ publicado. El título visible sí.
 
 ---
 
-## 4. Tres decisiones de producto antes de publicar
+## 4. Decisiones de producto antes de publicar
 
 ### 4.1 El generador necesita un servidor propio
 
@@ -134,7 +154,32 @@ Para otro hombre, el primer minuto decide si se queda o la borra. **Falta un
 recibimiento** que le pregunte a qué hora se levanta, qué áreas quiere cuidar, y
 sobre todo **que escriba su porqué antes de nada**.
 
-### 4.3 Los versículos
+### 4.3 ⚠️ Las donaciones no pueden ir por fuera
+
+Alex quiere que quien lo desee pueda donar, para que el proyecto se sostenga.
+Bien, pero **no con un enlace a PayPal o similar**.
+
+La política de pagos de Google obliga a que el dinero pase por su sistema. Hay
+una excepción para donaciones, pero es solo para **organizaciones sin ánimo de
+lucro registradas**, que deben acreditarlo con documentación. Alexa Lounge, C.A.
+es una empresa: **no califica**.
+
+> No es teoría: en 2026 le retiraron a **AnkiDroid** —un proyecto grande y
+> respetado— la posibilidad de enlazar sus donaciones de Open Collective.
+
+| Vía | Comisión | Riesgo |
+|---|---|---|
+| **Google Play Billing**, productos tipo «Apoyar el proyecto» | **15 %** | ninguno |
+| Enlace externo a PayPal, Binance… | 0 % | **pueden retirar la app** |
+| Constituir una ONG y acogerse a la excepción | 0 % | mucho trabajo |
+
+**Recomendado: Google Play Billing.** De cada $10 donados llegan $8,50. Caro,
+pero es lo que mantiene la app en la tienda, y una app retirada no recibe nada.
+
+Productos sugeridos: **$1 · $5 · $10**, de una vez, sin suscripción y sin dar
+nada a cambio dentro de la app — que la app entera siga siendo gratis para todos.
+
+### 4.4 Los versículos
 
 El banco va en **Reina-Valera 1909**, de dominio público. Correcto para publicar.
 La RV1960 que pide Alex **no se puede empaquetar**: es de Sociedades Bíblicas
@@ -156,9 +201,9 @@ Nombre y generador ya están decididos. Queda:
 5. **Compilar AAB** y preparar la firma de subida.
 6. **Gráficos:** icono 512×512, destacado 1024×500 y capturas de pantalla.
 7. **Descripción corta y larga**, con las palabras del punto 1.
-8. **Cuenta de Play** ($25) y decidir personal u organización — cambia si hacen
-   falta los 12 probadores.
-9. **Semana de prueba interna**, como pidió Alex.
+8. **Cuenta de Play personal** ($25) y reunir a los 12 probadores.
+9. **Donaciones** con Google Play Billing (4.3), después de publicar.
+10. **Prueba interna** de dos semanas con los doce, como pidió Alex.
 
 > 📌 El orden importa: del 1 al 3 es trabajo de producto, y sin eso la ficha más
 > bonita del mundo consigue descargas que se desinstalan al día siguiente.
