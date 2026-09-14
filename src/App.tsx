@@ -4,7 +4,12 @@ import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/dato
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, pedirPermisosNativos } from "@/logica/alarmasNativas";
-import { programarDespertador } from "@/logica/despertador";
+import type { AlarmaPerdida } from "@/logica/despertador";
+import {
+  alarmasPerdidas,
+  pararDespertador,
+  programarDespertador,
+} from "@/logica/despertador";
 import { proximaAlarma } from "@/logica/avisos";
 import { rachaActual } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
@@ -16,6 +21,7 @@ import { PantallaPlanes } from "@/componentes/PantallaPlanes";
 import { ExamenDelPlan } from "@/componentes/ExamenDelPlan";
 import { ExamenDeSantidad } from "@/componentes/ExamenDeSantidad";
 import { DetallePlan } from "@/componentes/DetallePlan";
+import { AvisoAlarmaPerdida } from "@/componentes/AvisoAlarmaPerdida";
 import { claveRegistro, diasRestaurados, registroDe } from "@/logica/planes";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
@@ -61,6 +67,8 @@ export default function App() {
   /** Id del plan cuya ficha está abierta. */
   const [planAbierto, setPlanAbierto] = useState<string | null>(null);
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
+  /** Alarmas que tenían que haber sonado y no sonaron. Se dicen en voz alta. */
+  const [perdidas, setPerdidas] = useState<AlarmaPerdida[]>([]);
 
   const ahora = useReloj();
 
@@ -73,10 +81,19 @@ export default function App() {
    */
   useEffect(() => {
     if (!esNativo()) return;
+
+    // Se pregunta por las perdidas ANTES de reprogramar, porque programar borra
+    // la cola con la que se comparan. Una alarma que no sonó tiene que verse.
+    const rehacer = async () => {
+      const faltaron = await alarmasPerdidas();
+      if (faltaron.length > 0) setPerdidas(faltaron);
+      await programarDespertador(datos);
+    };
+
     // El permiso es el mismo para todo; el despertador es quien programa.
-    void pedirPermisosNativos().then(() => programarDespertador(datos));
+    void pedirPermisosNativos().then(rehacer);
     const alVolver = () => {
-      if (document.visibilityState === "visible") void programarDespertador(datos);
+      if (document.visibilityState === "visible") void rehacer();
     };
     document.addEventListener("visibilitychange", alVolver);
     return () => document.removeEventListener("visibilitychange", alVolver);
@@ -425,6 +442,15 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
         );
       })() : null}
 
+      {/*
+        Una alarma que no sonó no puede quedarse callada también por la mañana.
+        Si el sistema se comió alguna, se dice, y se ofrece el ajuste que casi
+        siempre es la causa.
+      */}
+      {perdidas.length > 0 ? (
+        <AvisoAlarmaPerdida perdidas={perdidas} onCerrar={() => setPerdidas([])} />
+      ) : null}
+
       {disparo ? (
         <PantallaAlarma
           disparo={disparo}
@@ -432,15 +458,23 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
           motivos={datos.motivos}
           fecha={fechaHoy}
           onCumplir={() => {
+            void pararDespertador();
             registrar(disparo.suceso, "cumplido", undefined, fechaHoy);
             cerrar();
           }}
           onSaltar={() => {
+            void pararDespertador();
             registrar(disparo.suceso, "saltado", "Saltado desde la alarma", fechaHoy);
             cerrar();
           }}
-          onPosponer={posponer}
-          onCerrar={cerrar}
+          onPosponer={(minutos) => {
+            void pararDespertador();
+            posponer(minutos);
+          }}
+          onCerrar={() => {
+            void pararDespertador();
+            cerrar();
+          }}
         />
       ) : null}
     </div>

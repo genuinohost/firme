@@ -11,6 +11,8 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -25,29 +27,29 @@ import org.json.JSONObject;
 /**
  * Alarmas de despertador de verdad.
  *
- * El plugin de notificaciones de Capacitor programa avisos normales, y un aviso
- * normal lo silencia el modo No molestar. Para un bloque de oración a las tres
- * de la madrugada eso no sirve.
+ * Aqui se programa. El ruido lo hace {@link ServicioAlarma}; el aviso de que
+ * llego la hora lo recoge {@link ReceptorAlarma}.
  *
- * Aquí se usa lo que usan los despertadores:
- *
- *  - `setAlarmClock()`, la unica forma de programar que Android respeta por
+ *  - `setAlarmClock()` es la unica forma de programar que Android respeta por
  *    encima de Doze y del ahorro de bateria. Ademas enseña el icono del reloj
- *    en la barra de estado.
- *  - Un canal cuyo sonido va por el **canal de audio de alarma**, que el modo
- *    No molestar no silencia.
- *  - Un aviso a pantalla completa, que con el movil bloqueado abre la app
- *    directamente en vez de quedarse en la bandeja.
+ *    en la barra de estado, que es la señal de que esta puesta de verdad.
+ *  - El canal de respaldo lleva sonido de alarma, por si el servicio no puede
+ *    arrancar en algun movil raro.
+ *  - El diagnostico pregunta **al sistema**, no a nuestras propias notas: es la
+ *    diferencia entre saber y suponer.
  */
 @CapacitorPlugin(name = "AlarmaExacta")
 public class AlarmaExacta extends Plugin {
 
-    /** Canal propio, aparte del de los avisos corrientes. */
+    /** Canal de respaldo, con sonido. Solo se usa si el servicio no arranca. */
     public static final String CANAL = "despertador-firme";
 
     /** Donde se guarda la cola, para poder rehacerla tras reiniciar el movil. */
     public static final String PREFS = "firme.alarmas";
-    private static final String CLAVE_COLA = "cola";
+    public static final String CLAVE_COLA = "cola";
+    /** Apuntes de cada disparo, para detectar las que no sonaron. */
+    public static final String CLAVE_DIARIO = "diario";
+    public static final String CLAVE_ULTIMO_FALLO = "ultimoFallo";
 
     /** Margen para no reprogramar algo que acaba de sonar. */
     private static final long MARGEN_MS = 2000;
@@ -58,8 +60,8 @@ public class AlarmaExacta extends Plugin {
     }
 
     /**
-     * El canal manda sobre el sonido, y no se puede cambiar una vez creado: si
-     * hay que tocar algo de aqui, hay que estrenar identificador.
+     * El canal de respaldo. Manda sobre el sonido y no se puede cambiar una vez
+     * creado: si hay que tocar algo de aqui, hay que estrenar identificador.
      */
     static void crearCanal(Context contexto) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
@@ -74,8 +76,6 @@ public class AlarmaExacta extends Plugin {
         );
         canal.setDescription("Las alarmas de la rutina. Suenan aunque el movil este en silencio.");
 
-        // La pieza clave: marcar el sonido como alarma. El modo No molestar
-        // silencia las notificaciones, pero deja pasar las alarmas.
         AudioAttributes atributos = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -90,6 +90,8 @@ public class AlarmaExacta extends Plugin {
         canal.setBypassDnd(true); // solo surte efecto si el usuario da el acceso
         gestor.createNotificationChannel(canal);
     }
+
+    // ------------------------------------------------------------- programar
 
     /**
      * Recibe la lista entera de alarmas y la deja programada, borrando lo que
@@ -136,13 +138,27 @@ public class AlarmaExacta extends Plugin {
             return;
         }
 
-        // Se deja constancia para poder rehacerlas cuando el movil se reinicie.
         SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         prefs.edit().putString(CLAVE_COLA, guardadas.toString()).apply();
 
+        // Se comprueba en el acto que el sistema las acepto de verdad. Decir
+        // «programadas: 136» cuando el sistema guardo cero seria mentir.
         JSObject respuesta = new JSObject();
         respuesta.put("programadas", puestas);
+        respuesta.put("confirmadas", cuantasTieneElSistema(contexto));
         llamada.resolve(respuesta);
+    }
+
+    static PendingIntent intencionDe(Context contexto, int id, boolean crear) {
+        Intent intencion = new Intent(contexto, ReceptorAlarma.class);
+        intencion.setAction("app.genuino.firme.ALARMA");
+        // Sin datos distintos, Android reutilizaria el mismo PendingIntent para
+        // todas y solo quedaria viva la ultima.
+        intencion.setData(Uri.parse("firme://alarma/" + id));
+
+        int banderas = PendingIntent.FLAG_IMMUTABLE
+                | (crear ? PendingIntent.FLAG_UPDATE_CURRENT : PendingIntent.FLAG_NO_CREATE);
+        return PendingIntent.getBroadcast(contexto, id, intencion, banderas);
     }
 
     static void programarUna(
@@ -158,13 +174,12 @@ public class AlarmaExacta extends Plugin {
 
         Intent intencion = new Intent(contexto, ReceptorAlarma.class);
         intencion.setAction("app.genuino.firme.ALARMA");
+        intencion.setData(Uri.parse("firme://alarma/" + id));
         intencion.putExtra("id", id);
         intencion.putExtra("titulo", titulo);
         intencion.putExtra("cuerpo", cuerpo);
         intencion.putExtra("idSuceso", idSuceso);
-        // Sin datos distintos, Android reutilizaria el mismo PendingIntent para
-        // todas y solo quedaria viva la ultima.
-        intencion.setData(Uri.parse("firme://alarma/" + id));
+        intencion.putExtra("cuando", cuando);
 
         PendingIntent pendiente = PendingIntent.getBroadcast(
                 contexto,
@@ -173,7 +188,6 @@ public class AlarmaExacta extends Plugin {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // Lo que el usuario ve al tocar el icono del reloj de la barra.
         Intent abrir = new Intent(contexto, MainActivity.class);
         PendingIntent mostrar = PendingIntent.getActivity(
                 contexto,
@@ -196,21 +210,91 @@ public class AlarmaExacta extends Plugin {
             JSONArray cola = new JSONArray(crudo);
             for (int i = 0; i < cola.length(); i++) {
                 int id = cola.getJSONObject(i).optInt("id", i + 1);
-                Intent intencion = new Intent(contexto, ReceptorAlarma.class);
-                intencion.setAction("app.genuino.firme.ALARMA");
-                intencion.setData(Uri.parse("firme://alarma/" + id));
-                PendingIntent pendiente = PendingIntent.getBroadcast(
-                        contexto,
-                        id,
-                        intencion,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-                );
-                if (gestor != null) gestor.cancel(pendiente);
+                PendingIntent pendiente = intencionDe(contexto, id, true);
+                if (gestor != null && pendiente != null) gestor.cancel(pendiente);
             }
         } catch (Exception ignorada) {
             // Una cola ilegible no debe impedir programar la nueva.
         }
         prefs.edit().remove(CLAVE_COLA).apply();
+    }
+
+    // ----------------------------------------------------------- diagnostico
+
+    /**
+     * Cuantas alarmas tiene **el sistema**, no cuantas creemos nosotros.
+     *
+     * Un `PendingIntent` con `FLAG_NO_CREATE` devuelve null si no existe. Es la
+     * unica forma honrada de saber si una alarma sigue en pie: hasta ahora el
+     * diagnostico leia nuestras propias notas y por eso salia verde aunque el
+     * sistema las hubiera tirado todas.
+     */
+    private static int cuantasTieneElSistema(Context contexto) {
+        int vivas = 0;
+        try {
+            SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            JSONArray cola = new JSONArray(prefs.getString(CLAVE_COLA, "[]"));
+            long ahora = System.currentTimeMillis();
+            for (int i = 0; i < cola.length(); i++) {
+                JSONObject a = cola.getJSONObject(i);
+                if (a.optLong("cuando", 0) <= ahora) continue;
+                if (intencionDe(contexto, a.optInt("id", i + 1), false) != null) vivas++;
+            }
+        } catch (Exception ignorada) {
+            return 0;
+        }
+        return vivas;
+    }
+
+    /**
+     * Las que tenian que haber sonado y no sonaron.
+     *
+     * Se compara la cola guardada con el diario de disparos reales: lo que ya
+     * paso de hora y no tiene apunte, no sono. Hay que llamarlo **antes** de
+     * reprogramar, porque programar borra la cola.
+     *
+     * Esto es lo que convierte un fallo mudo en un fallo que se ve. Sin ello,
+     * una alarma perdida de madrugada no deja rastro en ninguna parte.
+     */
+    @PluginMethod
+    public void revisarPerdidas(PluginCall llamada) {
+        Context contexto = getContext();
+        SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        JSONArray perdidas = new JSONArray();
+
+        try {
+            JSONArray cola = new JSONArray(prefs.getString(CLAVE_COLA, "[]"));
+            JSONArray diario = new JSONArray(prefs.getString(CLAVE_DIARIO, "[]"));
+            long ahora = System.currentTimeMillis();
+
+            for (int i = 0; i < cola.length(); i++) {
+                JSONObject a = cola.getJSONObject(i);
+                long cuando = a.optLong("cuando", 0);
+                // Un minuto de margen: lo que acaba de vencer aun puede sonar.
+                if (cuando <= 0 || cuando > ahora - 60_000) continue;
+
+                boolean sono = false;
+                for (int j = 0; j < diario.length(); j++) {
+                    JSONObject d = diario.getJSONObject(j);
+                    if (d.optLong("prevista", -1) == cuando) {
+                        sono = true;
+                        break;
+                    }
+                }
+                if (sono) continue;
+
+                JSONObject fallo = new JSONObject();
+                fallo.put("cuando", cuando);
+                fallo.put("titulo", a.optString("titulo", "Firme"));
+                perdidas.put(fallo);
+            }
+        } catch (Exception ignorada) {
+            // Sin datos legibles no se puede afirmar que faltara ninguna.
+        }
+
+        JSObject respuesta = new JSObject();
+        respuesta.put("perdidas", perdidas.toString());
+        llamada.resolve(respuesta);
     }
 
     /** Lo que hay programado ahora mismo, para la pantalla de comprobacion. */
@@ -241,20 +325,78 @@ public class AlarmaExacta extends Plugin {
             puedeExactas = gestor.canScheduleExactAlarms();
         }
 
-        // El volumen de alarma en cero deja muda la alarma aunque todo lo demas
-        // este bien, y es un despiste facil de cometer.
+        // La que el sistema tiene por siguiente, sea de quien sea. Si esta es la
+        // nuestra, el icono del reloj de la barra esta puesto por nosotros.
+        long proximaDelSistema = 0;
+        if (gestor != null) {
+            AlarmManager.AlarmClockInfo siguiente = gestor.getNextAlarmClock();
+            if (siguiente != null) proximaDelSistema = siguiente.getTriggerTime();
+        }
+
         android.media.AudioManager audio =
                 (android.media.AudioManager) contexto.getSystemService(Context.AUDIO_SERVICE);
         int volumen = audio == null ? -1 : audio.getStreamVolume(android.media.AudioManager.STREAM_ALARM);
         int volumenMaximo = audio == null ? -1 : audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM);
 
         respuesta.put("enCola", enCola);
+        respuesta.put("confirmadas", cuantasTieneElSistema(contexto));
         respuesta.put("proxima", proxima);
+        respuesta.put("proximaDelSistema", proximaDelSistema);
         respuesta.put("puedeExactas", puedeExactas);
         respuesta.put("volumenAlarma", volumen);
         respuesta.put("volumenAlarmaMaximo", volumenMaximo);
+        respuesta.put("exentaDeBateria", exentaDeBateria(contexto));
+        respuesta.put("accesoNoMolestar", accesoNoMolestar(contexto));
+        respuesta.put("avisosActivos", avisosActivos(contexto));
+        respuesta.put("canalActivo", canalActivo(contexto));
+        respuesta.put("sonandoAhora", ServicioAlarma.SONANDO);
+        respuesta.put("ultimoFallo", prefs.getString(CLAVE_ULTIMO_FALLO, ""));
+        respuesta.put("diario", prefs.getString(CLAVE_DIARIO, "[]"));
         llamada.resolve(respuesta);
     }
+
+    private static boolean exentaDeBateria(Context contexto) {
+        try {
+            PowerManager energia = contexto.getSystemService(PowerManager.class);
+            return energia != null
+                    && energia.isIgnoringBatteryOptimizations(contexto.getPackageName());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean accesoNoMolestar(Context contexto) {
+        try {
+            NotificationManager gestor = contexto.getSystemService(NotificationManager.class);
+            return gestor != null && gestor.isNotificationPolicyAccessGranted();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean avisosActivos(Context contexto) {
+        try {
+            return androidx.core.app.NotificationManagerCompat.from(contexto)
+                    .areNotificationsEnabled();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Un canal apagado a mano deja el respaldo mudo sin que nadie se entere. */
+    private static boolean canalActivo(Context contexto) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
+        try {
+            NotificationManager gestor = contexto.getSystemService(NotificationManager.class);
+            if (gestor == null) return false;
+            NotificationChannel canal = gestor.getNotificationChannel(CANAL);
+            return canal == null || canal.getImportance() != NotificationManager.IMPORTANCE_NONE;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ---------------------------------------------------------------- pruebas
 
     /** Una prueba dentro de unos segundos, por la misma via que las de verdad. */
     @PluginMethod
@@ -274,25 +416,95 @@ public class AlarmaExacta extends Plugin {
         llamada.resolve(respuesta);
     }
 
+    /** Hace sonar el servicio ya mismo, sin esperar. Prueba del ruido en si. */
+    @PluginMethod
+    public void sonarYa(PluginCall llamada) {
+        Context contexto = getContext();
+        Intent sonar = new Intent(contexto, ServicioAlarma.class);
+        sonar.setAction(ServicioAlarma.ACCION_SONAR);
+        sonar.putExtra("id", 999001);
+        sonar.putExtra("titulo", "Prueba en voz alta");
+        sonar.putExtra("cuerpo", "Asi suena la alarma. Pulsa para pararla.");
+        sonar.putExtra("idSuceso", "prueba");
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                contexto.startForegroundService(sonar);
+            } else {
+                contexto.startService(sonar);
+            }
+            llamada.resolve();
+        } catch (Exception e) {
+            llamada.reject("No arranco el servicio: " + e.getMessage());
+        }
+    }
+
+    /** Callar la alarma que esta repicando. */
+    @PluginMethod
+    public void parar(PluginCall llamada) {
+        ServicioAlarma.callar(getContext());
+        llamada.resolve();
+    }
+
+    // -------------------------------------------------------------- permisos
+
     /** Abre el ajuste del sistema donde se conceden las alarmas exactas. */
     @PluginMethod
     public void pedirPermisoExactas(PluginCall llamada) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Intent intencion = new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
-            intencion.setData(Uri.parse("package:" + getContext().getPackageName()));
-            intencion.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(intencion);
+            abrir(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    .setData(Uri.parse("package:" + getContext().getPackageName())));
         }
+        llamada.resolve();
+    }
+
+    /**
+     * Pide quedar fuera del ahorro de bateria.
+     *
+     * Es el ajuste que mas alarmas mata en los moviles baratos: el sistema
+     * congela la app y sus alarmas se quedan esperando. El permiso ya estaba
+     * declarado, pero nunca se pedia.
+     */
+    @PluginMethod
+    public void pedirExencionBateria(PluginCall llamada) {
+        Context contexto = getContext();
+        if (exentaDeBateria(contexto)) {
+            llamada.resolve();
+            return;
+        }
+        try {
+            abrir(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:" + contexto.getPackageName())));
+        } catch (Exception e) {
+            // Algunos fabricantes lo bloquean: queda la lista general.
+            abrir(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+        }
+        llamada.resolve();
+    }
+
+    /**
+     * Pide el acceso a la directiva de notificaciones. Sin el, `setBypassDnd`
+     * no hace nada y el respaldo se queda mudo con No molestar puesto.
+     */
+    @PluginMethod
+    public void pedirAccesoNoMolestar(PluginCall llamada) {
+        abrir(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
         llamada.resolve();
     }
 
     /** Abre los ajustes de la app, donde estan bateria y No molestar. */
     @PluginMethod
     public void abrirAjustesDeLaApp(PluginCall llamada) {
-        Intent intencion = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-        intencion.setData(Uri.parse("package:" + getContext().getPackageName()));
-        intencion.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        getContext().startActivity(intencion);
+        abrir(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse("package:" + getContext().getPackageName())));
         llamada.resolve();
+    }
+
+    private void abrir(Intent intencion) {
+        try {
+            intencion.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intencion);
+        } catch (Exception ignorada) {
+            // Si el sistema lo rechaza no hay nada que hacer desde aqui.
+        }
     }
 }

@@ -6,8 +6,12 @@ import {
   abrirAjustesDeLaApp,
   estadoDespertador,
   hayDespertador,
+  pararDespertador,
+  pedirAccesoNoMolestar,
+  pedirExencionBateria,
   pedirPermisoExactas,
   probarDespertador,
+  sonarYa,
   type EstadoDespertador,
 } from "@/logica/despertador";
 import {
@@ -400,30 +404,81 @@ function ComprobacionSistema() {
           }
         />
         <Linea
+          bien={estado.exentaDeBateria}
+          titulo="Fuera del ahorro de batería"
+          detalle={
+            estado.exentaDeBateria
+              ? "Sí. El sistema no puede congelar la app."
+              : "No, y esto es lo que más alarmas mata. Tócalo abajo."
+          }
+        />
+        <Linea
           bien={volumenBien}
           titulo={`Volumen de alarma al ${porcentaje} %`}
           detalle={
             volumenBien
-              ? "Sonará."
-              : "Está a cero. Súbelo con los botones del móvil mientras suena una alarma."
+              ? "Sonará. Y si lo dejas a cero, la app lo sube sola al llegar la hora."
+              : "Está a cero, pero la app lo subirá al sonar."
+          }
+        />
+        {/*
+          Esta es la línea que antes no existía y por la que un fallo podía
+          pasar desapercibido: hasta ahora se contaba lo que nosotros creíamos
+          haber programado, no lo que el sistema tiene de verdad.
+        */}
+        <Linea
+          bien={estado.confirmadas > 0 && estado.confirmadas >= estado.enCola}
+          titulo={`${estado.confirmadas} alarmas puestas en el sistema`}
+          detalle={
+            estado.confirmadas === 0
+              ? "Ninguna. Revisa que tu rutina tenga bloques con timbre."
+              : estado.confirmadas < estado.enCola
+                ? `Android se guardó ${estado.confirmadas} de las ${estado.enCola} que le dimos.`
+                : estado.proxima > 0
+                  ? `La próxima, a las ${reloj(estado.proxima)}.`
+                  : "Confirmadas por Android, una a una."
           }
         />
         <Linea
-          bien={estado.enCola > 0}
-          titulo={`${estado.enCola} alarmas programadas`}
+          bien={estado.avisosActivos && estado.canalActivo}
+          titulo="Los avisos están permitidos"
           detalle={
-            estado.enCola === 0
-              ? "Ninguna. Revisa que tu rutina tenga bloques con timbre."
-              : estado.proxima > 0
-                ? `La próxima, a las ${reloj(estado.proxima)}.`
-                : "Programadas."
+            estado.avisosActivos && estado.canalActivo
+              ? "Sí."
+              : "No. Sin esto la alarma no puede asomarse a la pantalla."
           }
         />
       </div>
 
+      {estado.ultimoFallo ? (
+        <p className="mt-3 rounded-xl border border-fallo/30 bg-fallo/[0.06] px-3 py-2.5 text-xs leading-relaxed">
+          Último tropiezo del sistema al sonar:{" "}
+          <b>{estado.ultimoFallo.split("|").slice(1).join("|")}</b>
+        </p>
+      ) : null}
+
       <div className="mt-4 flex flex-col gap-2">
         <Boton
           variante="fuerte"
+          ancho
+          onClick={async () => {
+            const fallo = await sonarYa();
+            setAviso(
+              fallo
+                ? `No arrancó: ${fallo}`
+                : "Debería estar sonando ya. Púlsalo en «Parar» cuando lo oigas.",
+            );
+            void refrescar();
+          }}
+        >
+          Hacerla sonar ahora mismo
+        </Boton>
+        {estado.sonandoAhora ? (
+          <Boton variante="fallo" ancho onClick={() => void pararDespertador().then(refrescar)}>
+            Parar
+          </Boton>
+        ) : null}
+        <Boton
           ancho
           onClick={async () => {
             const cuando = await probarDespertador(60);
@@ -437,9 +492,19 @@ function ComprobacionSistema() {
         >
           Probar con la pantalla apagada (1 min)
         </Boton>
+        {!estado.exentaDeBateria ? (
+          <Boton ancho onClick={() => void pedirExencionBateria()}>
+            Sacar Firme del ahorro de batería
+          </Boton>
+        ) : null}
         {!estado.puedeExactas ? (
           <Boton ancho onClick={() => void pedirPermisoExactas()}>
             Conceder alarmas exactas
+          </Boton>
+        ) : null}
+        {!estado.accesoNoMolestar ? (
+          <Boton ancho onClick={() => void pedirAccesoNoMolestar()}>
+            Permitir saltarse No molestar
           </Boton>
         ) : null}
         <Boton ancho onClick={() => void abrirAjustesDeLaApp()}>
@@ -450,9 +515,9 @@ function ComprobacionSistema() {
       {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
 
       <p className="mt-2 text-xs leading-relaxed text-tenue">
-        Si la prueba no suena con el móvil bloqueado, en los ajustes de Android hay que
-        quitarle a Firme la restricción de batería y, en Xiaomi, activar el inicio
-        automático.
+        Si aun así falla: en Xiaomi hay que activar el inicio automático, y en Samsung
+        quitar Firme de «Aplicaciones en suspensión». Son ajustes del fabricante y
+        ninguna app puede tocarlos por su cuenta.
       </p>
     </Tarjeta>
   );

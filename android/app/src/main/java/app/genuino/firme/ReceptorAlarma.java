@@ -6,18 +6,32 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.PowerManager;
+import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 
 /**
  * Lo que ocurre cuando llega la hora.
  *
- * Android despierta este receptor aunque la app lleve horas cerrada. Desde aqui
- * se levanta la pantalla y se lanza un aviso de los que no se pueden ignorar:
- * categoria de alarma, prioridad maxima y pantalla completa, que con el movil
- * bloqueado abre la app en vez de dejar el aviso en la bandeja.
+ * Android despierta este receptor aunque la app lleve dias cerrada, y aqui solo
+ * hay que hacer dos cosas, en este orden:
+ *
+ *  1. **Arrancar el servicio que repica** (`ServicioAlarma`). Es el que
+ *     reproduce el audio por el flujo de alarma y no se calla hasta que alguien
+ *     lo para. Arrancarlo desde aqui esta permitido aunque el movil este
+ *     dormido, porque la alarma se programo con `setAlarmClock` y la app tiene
+ *     `USE_EXACT_ALARM`: eso exime de la restriccion de servicios en segundo
+ *     plano.
+ *
+ *  2. Si eso falla —el fabricante lo prohibe, el sistema lo rechaza—, publicar
+ *     la notificacion sonora de toda la vida. Es peor, pero es ruido, y el
+ *     silencio no es una opcion.
+ *
+ * Ademas se deja anotado que la alarma sono. Sin ese apunte, un fallo de
+ * madrugada es invisible: nadie puede distinguir «no sono» de «sono y no me
+ * enteré», y lo que no se mide no se arregla.
  */
 public class ReceptorAlarma extends BroadcastReceiver {
 
@@ -27,14 +41,48 @@ public class ReceptorAlarma extends BroadcastReceiver {
         String titulo = intencion.getStringExtra("titulo");
         String cuerpo = intencion.getStringExtra("cuerpo");
         String idSuceso = intencion.getStringExtra("idSuceso");
+        long prevista = intencion.getLongExtra("cuando", 0L);
         if (titulo == null) titulo = "Firme";
         if (cuerpo == null) cuerpo = "Es la hora.";
 
-        encenderPantalla(contexto);
+        anotarQueSono(contexto, id, prevista);
+
+        if (arrancarElServicio(contexto, id, titulo, cuerpo, idSuceso)) return;
+
+        // Red de seguridad: la notificacion sonora de siempre.
+        avisoDeRespaldo(contexto, id, titulo, cuerpo, idSuceso);
+    }
+
+    private boolean arrancarElServicio(
+            Context contexto, int id, String titulo, String cuerpo, String idSuceso) {
+        try {
+            Intent sonar = new Intent(contexto, ServicioAlarma.class);
+            sonar.setAction(ServicioAlarma.ACCION_SONAR);
+            sonar.putExtra("id", id);
+            sonar.putExtra("titulo", titulo);
+            sonar.putExtra("cuerpo", cuerpo);
+            sonar.putExtra("idSuceso", idSuceso);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                contexto.startForegroundService(sonar);
+            } else {
+                contexto.startService(sonar);
+            }
+            return true;
+        } catch (Exception e) {
+            anotarElFallo(contexto, e.getClass().getSimpleName() + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * El aviso de respaldo, por el canal que si lleva sonido. Solo se usa si el
+     * servicio no pudo arrancar.
+     */
+    private void avisoDeRespaldo(
+            Context contexto, int id, String titulo, String cuerpo, String idSuceso) {
         AlarmaExacta.crearCanal(contexto);
 
-        // Al tocar el aviso —o al abrirse solo con el movil bloqueado— se entra
-        // en la app, que enseña su propia pantalla de alarma y suena en bucle.
         Intent abrir = new Intent(contexto, MainActivity.class);
         abrir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         abrir.putExtra("alarma", true);
@@ -42,54 +90,66 @@ public class ReceptorAlarma extends BroadcastReceiver {
         abrir.setData(Uri.parse("firme://alarma/" + id));
 
         PendingIntent entrar = PendingIntent.getActivity(
-                contexto,
-                id,
-                abrir,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+                contexto, id, abrir,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        NotificationCompat.Builder aviso = new NotificationCompat.Builder(contexto, AlarmaExacta.CANAL)
+        Notification aviso = new NotificationCompat.Builder(contexto, AlarmaExacta.CANAL)
                 .setSmallIcon(R.drawable.ic_stat_firme)
                 .setColor(0xFFC9A227)
                 .setContentTitle(titulo)
                 .setContentText(cuerpo)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(cuerpo))
                 .setPriority(NotificationCompat.PRIORITY_MAX)
-                // Categoria de alarma: es lo que la distingue de un aviso
-                // cualquiera y lo que hace que No molestar la deje pasar.
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
-                .setOngoing(false)
                 .setContentIntent(entrar)
-                // Con la pantalla bloqueada, esto abre la app directamente.
-                .setFullScreenIntent(entrar, true);
+                .setFullScreenIntent(entrar, true)
+                .build();
 
         NotificationManager gestor =
                 (NotificationManager) contexto.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (gestor != null) {
-            gestor.notify(id, aviso.build());
+        if (gestor != null) gestor.notify(id, aviso);
+    }
+
+    // ------------------------------------------------------------- la bitacora
+
+    /**
+     * Deja constancia de cada disparo. La app lo lee al abrirse y lo compara con
+     * lo que tenia que haber sonado, para poder decir en voz alta «esta alarma
+     * no sono» en vez de dejarlo pasar.
+     */
+    private void anotarQueSono(Context contexto, int id, long prevista) {
+        try {
+            SharedPreferences prefs =
+                    contexto.getSharedPreferences(AlarmaExacta.PREFS, Context.MODE_PRIVATE);
+            org.json.JSONArray diario =
+                    new org.json.JSONArray(prefs.getString(AlarmaExacta.CLAVE_DIARIO, "[]"));
+
+            org.json.JSONObject apunte = new org.json.JSONObject();
+            apunte.put("id", id);
+            apunte.put("prevista", prevista);
+            apunte.put("real", System.currentTimeMillis());
+            diario.put(apunte);
+
+            // Solo interesan los ultimos dias; lo viejo se tira.
+            org.json.JSONArray recorte = new org.json.JSONArray();
+            int desde = Math.max(0, diario.length() - 120);
+            for (int i = desde; i < diario.length(); i++) recorte.put(diario.get(i));
+
+            prefs.edit().putString(AlarmaExacta.CLAVE_DIARIO, recorte.toString()).apply();
+        } catch (Exception ignorada) {
+            // Un diario que no se puede escribir no debe impedir que suene.
         }
     }
 
-    /**
-     * Enciende la pantalla unos segundos. Sin esto, el aviso a pantalla completa
-     * puede quedarse esperando a que alguien toque el movil.
-     */
-    private void encenderPantalla(Context contexto) {
+    private void anotarElFallo(Context contexto, String motivo) {
         try {
-            PowerManager energia = (PowerManager) contexto.getSystemService(Context.POWER_SERVICE);
-            if (energia == null) return;
-            @SuppressWarnings("deprecation")
-            PowerManager.WakeLock despertador = energia.newWakeLock(
-                    PowerManager.FULL_WAKE_LOCK
-                            | PowerManager.ACQUIRE_CAUSES_WAKEUP
-                            | PowerManager.ON_AFTER_RELEASE,
-                    "firme:alarma"
-            );
-            despertador.acquire(10_000);
-        } catch (Exception ignorada) {
-            // Si el fabricante no lo permite, queda el aviso igualmente.
-        }
+            contexto.getSharedPreferences(AlarmaExacta.PREFS, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(AlarmaExacta.CLAVE_ULTIMO_FALLO,
+                            System.currentTimeMillis() + "|" + motivo)
+                    .apply();
+        } catch (Exception ignorada) { }
     }
 }

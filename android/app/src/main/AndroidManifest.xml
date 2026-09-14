@@ -37,6 +37,17 @@
             android:exported="false"
             android:directBootAware="true" />
 
+        <!--
+          El que hace ruido. Va en primer plano porque tiene que seguir sonando
+          con el movil bloqueado y la app cerrada, y reproduce el tono el mismo
+          por el flujo de alarma: asi No molestar no lo silencia.
+        -->
+        <service
+            android:name=".ServicioAlarma"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback"
+            android:directBootAware="true" />
+
         <receiver
             android:name=".ReceptorArranque"
             android:exported="true"
@@ -87,6 +98,20 @@
       Android lo reserva a despertadores y llamadas, que es justo lo que es.
     -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!--
+      El servicio que repica. Tiene que estar en primer plano para que Android
+      no lo mate a mitad de la alarma, y reproduce el tono él mismo por el flujo
+      de alarma: esa es la única forma de que No molestar no lo silencie.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!--
+      Para que «saltar No molestar» del canal de respaldo no sea papel mojado.
+      Sin este acceso, setBypassDnd() se ignora en silencio.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <!-- Encender la pantalla al sonar, en vez de esperar a que alguien la toque. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />

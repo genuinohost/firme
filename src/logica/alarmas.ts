@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Ajustes, Suceso } from "@/datos/tipos";
 import { aHora, claveFecha, minutoActual } from "./dia";
@@ -186,9 +187,15 @@ export function useAlarmas(
         escribirDisparadas(fecha, disparadas);
         pospuestas.current.delete(clave);
         setDisparo(nuevo);
-        if (tipo === "inicio") sonar(suceso.timbre, ajustes.volumen);
-        else sonar("pulso", ajustes.volumen * 0.6);
-        void avisarSistema(nuevo, suceso.porque);
+
+        // En Android el ruido lo pone el servicio nativo, que repica por el
+        // canal de alarma y no se calla hasta que alguien lo para. Tocar aquí
+        // además el tono web sonaría encima, desacompasado.
+        if (!Capacitor.isNativePlatform()) {
+          if (tipo === "inicio") sonar(suceso.timbre, ajustes.volumen);
+          else sonar("pulso", ajustes.volumen * 0.6);
+          void avisarSistema(nuevo, suceso.porque);
+        }
         return;
       }
     }

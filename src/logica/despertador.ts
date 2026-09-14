@@ -20,19 +20,47 @@ type AlarmaParaAndroid = {
 };
 
 export type EstadoDespertador = {
+  /** Cuántas creemos nosotros que quedan por sonar. */
   enCola: number;
+  /**
+   * Cuántas tiene **el sistema** de verdad.
+   *
+   * Es la cifra que vale. Hasta la 3.3 el diagnóstico leía nuestras propias
+   * notas y salía verde aunque Android las hubiera tirado todas.
+   */
+  confirmadas: number;
   /** Marca de tiempo de la próxima, o 0 si no hay ninguna. */
   proxima: number;
+  /** La siguiente alarma que tiene el sistema, sea de la app que sea. */
+  proximaDelSistema: number;
   puedeExactas: boolean;
   volumenAlarma: number;
   volumenAlarmaMaximo: number;
+  /** Fuera del ahorro de batería: lo que más alarmas mata si falta. */
+  exentaDeBateria: boolean;
+  /** Sin esto, «saltar No molestar» del canal de respaldo no hace nada. */
+  accesoNoMolestar: boolean;
+  avisosActivos: boolean;
+  canalActivo: boolean;
+  sonandoAhora: boolean;
+  /** Lo último que impidió que sonara, si algo lo impidió. */
+  ultimoFallo: string;
+  /** Apuntes de los disparos reales, en JSON. */
+  diario: string;
 };
 
 type PluginAlarmaExacta = {
-  programar(opciones: { alarmas: AlarmaParaAndroid[] }): Promise<{ programadas: number }>;
+  programar(opciones: {
+    alarmas: AlarmaParaAndroid[];
+  }): Promise<{ programadas: number; confirmadas: number }>;
   estado(): Promise<EstadoDespertador>;
   probar(opciones: { segundos: number }): Promise<{ cuando: number }>;
+  sonarYa(): Promise<void>;
+  parar(): Promise<void>;
+  revisarPerdidas(): Promise<{ perdidas: string }>;
   pedirPermisoExactas(): Promise<void>;
+  pedirExencionBateria(): Promise<void>;
+  pedirAccesoNoMolestar(): Promise<void>;
   abrirAjustesDeLaApp(): Promise<void>;
 };
 
@@ -71,6 +99,14 @@ export async function programarDespertador(
 
   try {
     const r = await AlarmaExacta.programar({ alarmas });
+    // Si el sistema aceptó menos de las que le dimos, eso es un fallo que hay
+    // que decir, no una cifra que maquillar.
+    if (r.confirmadas < r.programadas) {
+      return {
+        programadas: r.confirmadas,
+        error: `Android solo guardó ${r.confirmadas} de ${r.programadas} alarmas.`,
+      };
+    }
     return { programadas: r.programadas, error: null };
   } catch (e) {
     return { programadas: 0, error: e instanceof Error ? e.message : String(e) };
@@ -96,12 +132,77 @@ export async function probarDespertador(segundos = 60): Promise<Date | null> {
   }
 }
 
+export type AlarmaPerdida = { cuando: Date; titulo: string };
+
+/**
+ * Las que tenían que haber sonado y no sonaron.
+ *
+ * Hay que preguntarlo **antes** de reprogramar, porque programar borra la cola.
+ * Es lo que convierte un fallo mudo en un fallo que se ve: sin esto, una alarma
+ * perdida de madrugada no deja rastro en ninguna parte y nadie puede
+ * distinguirla de un despiste propio.
+ */
+export async function alarmasPerdidas(): Promise<AlarmaPerdida[]> {
+  if (!hayDespertador()) return [];
+  try {
+    const r = await AlarmaExacta.revisarPerdidas();
+    const crudas = JSON.parse(r.perdidas) as { cuando: number; titulo: string }[];
+    return crudas.map((p) => ({ cuando: new Date(p.cuando), titulo: p.titulo }));
+  } catch {
+    return [];
+  }
+}
+
+/** Hace repicar el servicio ahora mismo: es la prueba del ruido en sí. */
+export async function sonarYa(): Promise<string | null> {
+  if (!hayDespertador()) return "Esto solo funciona en la app de Android.";
+  try {
+    await AlarmaExacta.sonarYa();
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
+
+/** Calla la alarma que esté repicando. */
+export async function pararDespertador(): Promise<void> {
+  if (!hayDespertador()) return;
+  try {
+    await AlarmaExacta.parar();
+  } catch {
+    /* si ya no suena, no hay nada que parar */
+  }
+}
+
 export async function pedirPermisoExactas(): Promise<void> {
   if (!hayDespertador()) return;
   try {
     await AlarmaExacta.pedirPermisoExactas();
   } catch {
     /* en Android anterior al 12 no hace falta */
+  }
+}
+
+/**
+ * El ahorro de batería es lo que más alarmas mata en los móviles baratos: el
+ * sistema congela la app y sus alarmas se quedan esperando. El permiso estaba
+ * declarado desde el principio, pero nunca se llegaba a pedir.
+ */
+export async function pedirExencionBateria(): Promise<void> {
+  if (!hayDespertador()) return;
+  try {
+    await AlarmaExacta.pedirExencionBateria();
+  } catch {
+    /* algunos fabricantes lo bloquean */
+  }
+}
+
+export async function pedirAccesoNoMolestar(): Promise<void> {
+  if (!hayDespertador()) return;
+  try {
+    await AlarmaExacta.pedirAccesoNoMolestar();
+  } catch {
+    /* no todas las versiones lo ofrecen */
   }
 }
 

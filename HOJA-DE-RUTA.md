@@ -18,6 +18,8 @@ Hoja de ruta
 |---|---|---|
 | ✅ | Rutina fija por días + tareas sueltas del día | `PantallaHoy` |
 | ✅ | **Despertador nativo** con `setAlarmClock`, atraviesa No molestar | `AlarmaExacta.java` |
+| ✅ | **La alarma repica ella misma** por el flujo de alarma, hasta que la paran | `ServicioAlarma.java` |
+| ✅ | **Detecta la alarma que no sonó** y lo dice al abrir | `AvisoAlarmaPerdida` |
 | ✅ | Alarma a pantalla completa, con el porqué y una frase | `PantallaAlarma` |
 | ✅ | Frases de ánimo por área y momento | `datos/frases.ts` |
 | ✅ | «Mi porqué»: los motivos, con uno de ancla | `PantallaPorque` |
@@ -45,6 +47,46 @@ Hoja de ruta
 > bonito que sea.
 
 La app es de la comunidad **Genuino Love**.
+
+---
+
+## Por qué fallaban las alarmas de madrugada · **14-09, versión 3.4**
+
+Alex: «hoy en las alarmas de la madrugada no sonó». Es el fallo más grave que
+puede tener esta app, porque de ella dependen sus compromisos con Dios.
+
+**La causa: la app nunca reprodujo sonido alguno.** Se limitaba a publicar una
+notificación y confiaba en que Android tocase el tono del canal. Eso falla de
+madrugada por tres motivos distintos, y bastaba uno:
+
+1. Una notificación suena **una vez y tres segundos**. No repica, y a nadie
+   dormido lo levanta un pitido de tres segundos.
+2. A las tres de la mañana el móvil está en **No molestar / modo Descanso**, y
+   ahí la notificación se silencia. El código llamaba a `setBypassDnd(true)`,
+   pero eso **no hace nada** sin el acceso a la directiva de notificaciones, que
+   nunca se pidió. Por eso la prueba de media mañana sí sonaba: sin No molestar.
+3. `FULL_WAKE_LOCK` está obsoleto desde Android 4.2 y no enciende la pantalla.
+
+Y un cuarto, que es el que hacía todo lo demás invisible: **el diagnóstico
+mentía.** Leía nuestras propias notas —«programé 136 alarmas»— en vez de
+preguntarle al sistema. Podía salir todo verde con la cola vacía.
+
+**Lo que se hizo:**
+
+- `ServicioAlarma`: un servicio en primer plano que **reproduce el tono él
+  mismo** por `STREAM_ALARM`, en bucle, hasta que alguien lo para. Ese flujo no
+  pasa por el filtro de notificaciones: No molestar deja pasar las alarmas por
+  definición. Tres redes por debajo (tono de alarma → de llamada → generado).
+- Sube el volumen de alarma si está por debajo del 70 %. A cero no suena nada
+  por bien que esté todo lo demás.
+- El diagnóstico pregunta al sistema, uno por uno, con `FLAG_NO_CREATE`.
+- **Detecta las que no sonaron** y lo dice al abrir la app, con el ajuste que
+  casi siempre es la causa: el ahorro de batería.
+- Se pide de verdad la exención de batería y el acceso a No molestar. Los
+  permisos estaban declarados desde el principio pero no se pedían nunca.
+
+> ⚠️ **Falta la prueba de fuego:** que Alex confirme que sonó a las 3:00 con el
+> móvil bloqueado. Hasta que eso pase, esto no está cerrado.
 
 ---
 
