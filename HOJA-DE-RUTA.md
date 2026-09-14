@@ -57,15 +57,13 @@ Esto es lo que hace que la app sirva. Antes de Play Store, antes de cuentas.
 
 ### 1.3 Lo que falta de los planes
 
-- [ ] **Elegir la debilidad propia.** El modelo ya la admite (`plan.debilidades`)
-      y el repaso la destaca con ★, pero **falta la pantalla para marcarla**. Es
-      lo que personaliza la racha: un hombre marcará lujuria, una mujer quizá
-      murmuración, y vencer ahí es la victoria que más cuenta.
-- [ ] **Que el repaso de la noche suene.** La hora del examen todavía no genera
-      alarma; sin eso hay que acordarse de abrirlo.
-- [ ] Editar un plan: horas, puntos propios, pausarlo, dejarlo.
-- [ ] Detalle de cada plan con su historia: racha máxima, días limpios, días
-      restaurados, y cómo va con su debilidad declarada.
+- [x] ✅ **Elegir la debilidad propia**, en la ficha de cada plan. El repaso la
+      destaca con ★ y se lleva su balance aparte.
+- [ ] ⚠️ **Que el repaso de la noche suene.** La hora del examen todavía no
+      genera alarma; sin eso hay que acordarse de abrirlo. **Es lo siguiente.**
+- [ ] Añadir puntos propios a un plan, y crear uno desde cero.
+- [x] ✅ Editar horas, pausar y eliminar un plan, desde su ficha.
+- [x] ✅ Ficha de cada plan: racha, récord, días limpios y días restaurados.
 
 ### 1.3 Diario personal · **pedido el 14-09**
 Espacio libre y **privado**: aprendizajes, batallas, oraciones. Sin formato

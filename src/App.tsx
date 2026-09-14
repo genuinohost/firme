@@ -15,6 +15,7 @@ import { PantallaRutina } from "@/componentes/PantallaRutina";
 import { PantallaPlanes } from "@/componentes/PantallaPlanes";
 import { ExamenDelPlan } from "@/componentes/ExamenDelPlan";
 import { ExamenDeSantidad } from "@/componentes/ExamenDeSantidad";
+import { DetallePlan } from "@/componentes/DetallePlan";
 import { claveRegistro, diasRestaurados, registroDe } from "@/logica/planes";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
@@ -57,6 +58,8 @@ export default function App() {
   const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
   /** Id del plan cuyo repaso está abierto. */
   const [examen, setExamen] = useState<string | null>(null);
+  /** Id del plan cuya ficha está abierta. */
+  const [planAbierto, setPlanAbierto] = useState<string | null>(null);
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
 
   const ahora = useReloj();
@@ -257,14 +260,41 @@ export default function App() {
           </ConVuelta>
         ) : null}
 
-        {pestaña === "planes" ? (
+        {pestaña === "planes" && planAbierto ? (() => {
+          const plan = (datos.planes ?? []).find((p) => p.id === planAbierto);
+          if (!plan) return null;
+          return (
+            <DetallePlan
+              plan={plan}
+              datos={datos}
+              ahora={ahora}
+              onRepasar={() => setExamen(plan.id)}
+              onCambiar={(nuevo) =>
+                setDatos((d) => ({
+                  ...d,
+                  planes: (d.planes ?? []).map((p) => (p.id === nuevo.id ? nuevo : p)),
+                }))
+              }
+              onEliminar={() => {
+                setDatos((d) => ({
+                  ...d,
+                  planes: (d.planes ?? []).filter((p) => p.id !== plan.id),
+                }));
+                setPlanAbierto(null);
+              }}
+              onVolver={() => setPlanAbierto(null)}
+            />
+          );
+        })() : null}
+
+        {pestaña === "planes" && !planAbierto ? (
           <PantallaPlanes
             datos={datos}
             ahora={ahora}
             onCrear={(plan: Plan) =>
               setDatos((d) => ({ ...d, planes: [...(d.planes ?? []), plan] }))
             }
-            onAbrir={(id) => setExamen(id)}
+            onAbrir={(id) => setPlanAbierto(id)}
           />
         ) : null}
 
