@@ -11,7 +11,7 @@ export const TANDA_2: MensajeDiario[] = [
     titulo: "ÍNTEGRO EN LO OCULTO",
     emoji: "🛡️",
     cuerpo:
-      "Lo que haces cuando nadie mira es lo que verdaderamente eres. No cuides tu imagen: cuida tu integridad, y la imagen se cuidará sola.",
+      "Lo que haces cuando nadie mira es lo que verdaderamente eres. No gastes fuerzas en cuidar tu imagen: cuida tu integridad, que la imagen se cuida sola. El hombre entero duerme tranquilo porque no tiene nada que esconder.",
     versiculo:
       "El que camina en integridad, anda confiado: mas el que pervierte sus caminos, será quebrantado.",
     cita: "Proverbios 10:9",
@@ -51,7 +51,7 @@ export const TANDA_2: MensajeDiario[] = [
     titulo: "ESPERA SIN AFÁN",
     emoji: "🌿",
     cuerpo:
-      "No adelantes lo que aún no está maduro. La prisa arruina lo que la paciencia perfecciona. Espera bien: esperar también es obedecer.",
+      "No adelantes lo que todavía no está maduro. La prisa arruina en un día lo que la paciencia perfecciona en meses. Espera bien y con el ánimo firme, porque esperar en su tiempo también es obedecer.",
     versiculo:
       "Aguarda á Jehová, esfuérzate, y aliéntese tu corazón: sí, espera á Jehová.",
     cita: "Salmos 27:14",
@@ -181,7 +181,7 @@ export const TANDA_2: MensajeDiario[] = [
     titulo: "SUELTA EL RENCOR",
     emoji: "🕊️",
     cuerpo:
-      "Guardar rencor es beber veneno esperando que le duela al otro. Perdona hoy, no porque lo merezca, sino porque tú necesitas caminar ligero.",
+      "Guardar rencor es beber veneno esperando que le duela al otro. Perdona hoy, no porque quien te hirió lo merezca, sino porque tú necesitas caminar ligero. Suelta esa carga y recupera el paso.",
     versiculo:
       "Antes sed los unos con los otros benignos, misericordiosos, perdonándoos los unos á los otros, como también Dios os perdonó en Cristo.",
     cita: "Efesios 4:32",

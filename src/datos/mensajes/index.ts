@@ -1,6 +1,8 @@
 import type { MensajeDiario } from "./tipos";
 import { TANDA_1 } from "./tanda1";
 import { TANDA_2 } from "./tanda2";
+import { TANDA_3 } from "./tanda3";
+import { TANDA_4 } from "./tanda4";
 
 export type { MensajeDiario } from "./tipos";
 export { componer } from "./tipos";
@@ -11,7 +13,7 @@ export { componer } from "./tipos";
  * Crece por tandas temáticas para que cada archivo siga siendo legible y para
  * poder revisar los versículos por bloques.
  */
-export const MENSAJES: MensajeDiario[] = [...TANDA_1, ...TANDA_2];
+export const MENSAJES: MensajeDiario[] = [...TANDA_1, ...TANDA_2, ...TANDA_3, ...TANDA_4];
 
 /** Quita tildes y mayúsculas: así «oración» encuentra «ORACION». */
 function normalizar(texto: string): string {
