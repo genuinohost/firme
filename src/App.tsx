@@ -12,6 +12,10 @@ import { elegirFrase } from "@/logica/elegirFrase";
 import { PantallaHoy } from "@/componentes/PantallaHoy";
 import { PantallaPorque } from "@/componentes/PantallaPorque";
 import { PantallaRutina } from "@/componentes/PantallaRutina";
+import { PantallaPlanes } from "@/componentes/PantallaPlanes";
+import { ExamenDelPlan } from "@/componentes/ExamenDelPlan";
+import { claveRegistro, registroDe } from "@/logica/planes";
+import type { Plan } from "@/datos/planes/tipos";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
 import { PantallaMensaje } from "@/componentes/PantallaMensaje";
 import { PantallaComunidad } from "@/componentes/PantallaComunidad";
@@ -26,6 +30,7 @@ type Pestaña =
   | "hoy"
   | "mensaje"
   | "comunidad"
+  | "planes"
   | "rutina"
   | "mas"
   | "porque"
@@ -33,13 +38,13 @@ type Pestaña =
   | "ajustes";
 
 /** Las que se usan a diario van en la barra; el resto, dentro de «Más». */
-const EN_LA_BARRA: Pestaña[] = ["hoy", "mensaje", "comunidad", "rutina", "mas"];
+const EN_LA_BARRA: Pestaña[] = ["hoy", "mensaje", "comunidad", "planes", "mas"];
 
 const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
   { id: "hoy", nombre: "Hoy", icono: "◎" },
   { id: "mensaje", nombre: "Mensaje", icono: "✉" },
   { id: "comunidad", nombre: "Juntos", icono: "◈" },
-  { id: "rutina", nombre: "Rutina", icono: "≡" },
+  { id: "planes", nombre: "Planes", icono: "≡" },
   { id: "mas", nombre: "Más", icono: "⋯" },
 ];
 
@@ -49,6 +54,8 @@ export default function App() {
   const [desplazamiento, setDesplazamiento] = useState(0); // días respecto a hoy
   /** null = cerrado · "nueva" = creando · un id = editando esa tarea. */
   const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
+  /** Id del plan cuyo repaso está abierto. */
+  const [examen, setExamen] = useState<string | null>(null);
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
 
   const ahora = useReloj();
@@ -249,6 +256,17 @@ export default function App() {
           </ConVuelta>
         ) : null}
 
+        {pestaña === "planes" ? (
+          <PantallaPlanes
+            datos={datos}
+            ahora={ahora}
+            onCrear={(plan: Plan) =>
+              setDatos((d) => ({ ...d, planes: [...(d.planes ?? []), plan] }))
+            }
+            onAbrir={(id) => setExamen(id)}
+          />
+        ) : null}
+
         {pestaña === "rutina" ? (
           <PantallaRutina
             rutina={datos.rutina}
@@ -336,6 +354,29 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
           onCerrar={() => setTareaAbierta(null)}
         />
       ) : null}
+
+      {/* El repaso de la noche, encima de lo que haya. */}
+      {examen ? (() => {
+        const plan = (datos.planes ?? []).find((p) => p.id === examen);
+        if (!plan) return null;
+        return (
+          <ExamenDelPlan
+            plan={plan}
+            registro={registroDe(datos, fechaHoy, plan.id)}
+            onGuardar={(puntos) => {
+              setDatos((d) => ({
+                ...d,
+                planesRegistros: {
+                  ...d.planesRegistros,
+                  [claveRegistro(fechaHoy, plan.id)]: { puntos, repasado: Date.now() },
+                },
+              }));
+              setExamen(null);
+            }}
+            onCerrar={() => setExamen(null)}
+          />
+        );
+      })() : null}
 
       {disparo ? (
         <PantallaAlarma

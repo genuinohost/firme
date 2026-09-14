@@ -47,6 +47,33 @@ export function minutoActual(ahora = new Date()): number {
 export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
   const diaSemana = desdeClave(fecha).getDay();
 
+  /**
+   * Los compromisos de los planes se convierten en bloques del día.
+   *
+   * Así heredan de una vez las alarmas, la línea del día y las rachas, sin
+   * repetir esa lógica en otro sitio: para el resto de la app un compromiso de
+   * un plan es un bloque más, solo que con dueño.
+   */
+  const dePlanes: Suceso[] = (datos.planes ?? [])
+    .filter((plan) => plan.activo && fecha >= plan.desde)
+    .flatMap((plan) =>
+      plan.compromisos
+        .filter((c) => c.dias.includes(diaSemana))
+        .map((c) => ({
+          id: c.id,
+          origen: "rutina" as const,
+          nombre: c.nombre,
+          minuto: aMinutos(c.hora),
+          hora: c.hora,
+          duracionMin: c.duracionMin,
+          categoria: plan.categoria,
+          porque: c.porque || plan.proposito,
+          timbre: c.timbre,
+          avisoPrevioMin: c.avisoPrevioMin,
+          registro: datos.registros[`${fecha}|${c.id}`] ?? null,
+        })),
+    );
+
   const deRutina: Suceso[] = datos.rutina
     .filter((b) => b.activo && b.dias.includes(diaSemana))
     .map((b) => ({
@@ -79,7 +106,7 @@ export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
       registro: datos.registros[`${fecha}|${t.id}`] ?? null,
     }));
 
-  return [...deRutina, ...deTareas].sort((a, b) => {
+  return [...dePlanes, ...deRutina, ...deTareas].sort((a, b) => {
     if (a.minuto === null) return b.minuto === null ? 0 : 1;
     if (b.minuto === null) return -1;
     return a.minuto - b.minuto;
