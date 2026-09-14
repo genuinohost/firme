@@ -90,6 +90,30 @@ preguntarle al sistema. Podía salir todo verde con la cola vacía.
 
 ---
 
+## La app se llama **Genuino** · **14-09, decidido por Alex**
+
+Antes se llamaba **Firme**, de 1 Corintios 15:58. El cambio lo propuso él y es
+mejor: **«Genuino» es su marca desde 2014** y hay 7.000 personas que ya la
+reconocen. Eso es distribución real, y las primeras instalaciones van a venir de
+su gente, no de buscar en Play Store. Además consolida la casa: **Genuino Host**
+el negocio, **Genuino Love** la comunidad, **Genuino** la app.
+
+| | |
+|---|---|
+| Título de Play Store | `Genuino: Disciplina Cristiana` (29 de 30) |
+| Descripción corta | `Despertador cristiano, agenda diaria y rachas para crecer en disciplina` (71 de 80) |
+| Icono | La **G** de oro, dibujada como trazo en `scripts/iconos.mjs` |
+
+> ⚠️ **El identificador interno `app.genuino.firme` NO se cambia.** No lo ve
+> nadie, y cambiarlo haría que Android tratase la app como otra distinta: no se
+> actualizaría sobre la instalada y **el usuario perdería su rutina, su porqué y
+> sus rachas**. Lo irreversible al publicar es el identificador, no el nombre.
+
+El razonamiento completo, incluido por qué el título dice «Disciplina» y no
+«Despertador», está en `docs/play-store.md`.
+
+---
+
 ## Fase 1 — Terminar lo empezado
 
 Esto es lo que hace que la app sirva. Antes de Play Store, antes de cuentas.
@@ -170,8 +194,8 @@ Decisiones ya tomadas, en `docs/play-store.md`.
 
 | Decidido | |
 |---|---|
-| Título (30) | `Firme: Despertador Cristiano` |
-| Descripción corta (80) | `Despertador y agenda diaria para cristianos disciplinados` |
+| Título (30) | `Genuino: Disciplina Cristiana` |
+| Descripción corta (80) | `Despertador cristiano, agenda diaria y rachas para crecer en disciplina` |
 | Cuenta | **personal ahora**, transferir a Alexa Lounge con el D-U-N-S |
 | Donaciones | **Google Play Billing**, 15 % — nunca un enlace a PayPal |
 | Posicionamiento | despertador y disciplina, **no** «devocional» (saturado) |
@@ -208,7 +232,7 @@ No vender «una app de hábitos». El gancho es lo que nadie más resuelve:
 
 > **«¿Cuántas veces le prometiste a Dios que mañana te levantabas a orar?»**
 
-Ese es el dolor real y el hueco del mercado. Firme es lo único que **te despierta
+Ese es el dolor real y el hueco del mercado. Genuino es lo único que **te despierta
 de verdad** —alarma que atraviesa el No molestar— y luego te pide cuentas.
 
 Lo que debería salir en el vídeo, por orden de fuerza:

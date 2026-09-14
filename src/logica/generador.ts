@@ -109,7 +109,7 @@ export async function generarMensaje(tema: string): Promise<ResultadoGenerar> {
         Authorization: `Bearer ${clave}`,
         "Content-Type": "application/json",
         // OpenRouter usa esto para las estadísticas de la cuenta.
-        "X-Title": "Firme",
+        "X-Title": "Genuino",
       },
       body: JSON.stringify({
         model: leerModelo(),

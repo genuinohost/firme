@@ -16,7 +16,7 @@ const ORO = "#c9a227";
 const FONDO = "#0b0d10";
 
 /** El nombre va suelto para poder cambiarlo sin rehacer el diseño. */
-const NOMBRE = process.argv[2] ?? "Firme";
+const NOMBRE = process.argv[2] ?? "Genuino";
 const LEMA = process.argv[3] ?? "El despertador que sí te levanta a orar";
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">

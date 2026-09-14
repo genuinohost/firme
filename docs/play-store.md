@@ -1,12 +1,12 @@
 Plan de publicación en Google Play
 =================================
 
-Alex quiere que Firme esté en Play Store para que otros hermanos la usen. Este
+Alex quiere que Genuino esté en Play Store para que otros hermanos la usen. Este
 documento recoge el análisis y lo que falta, y se va actualizando.
 
 ---
 
-## 1. Dónde compite Firme, y dónde no
+## 1. Dónde compite Genuino, y dónde no
 
 Buscando lo que ya existe aparece un nicho **saturado**: decenas de apps casi
 idénticas llamadas *Devocionales Cristianos*, *Devocional Diario*, *Devocional
@@ -16,9 +16,9 @@ equipo detrás.
 > ⚠️ **Entrar como «devocional diario» es pelea perdida.** Misma promesa, mismo
 > nombre, y enfrente empresas con presupuesto.
 
-**Firme no es un devocional.** Es otra cosa, y esa diferencia es el activo:
+**Genuino no es un devocional.** Es otra cosa, y esa diferencia es el activo:
 
-| Las apps de devocionales | Firme |
+| Las apps de devocionales | Genuino |
 |---|---|
 | Te dan un texto para leer | Te **despierta** y te pide cuentas |
 | Contenido para consumir | Una rutina que **cumples o no cumples** |
@@ -26,7 +26,7 @@ equipo detrás.
 | Miden lecturas | Mide **rachas y cumplimiento** |
 | Para leer | Para **compartir** con tus grupos |
 
-Ninguna app de devocionales te levanta a las tres de la madrugada. Firme sí, y
+Ninguna app de devocionales te levanta a las tres de la madrugada. Genuino sí, y
 está construida sobre eso.
 
 ### El hueco real
@@ -50,26 +50,48 @@ De más específica (poca competencia, alta intención) a más general:
 ## 2. El nombre
 
 El título de Play Store admite **30 caracteres** y es lo que más pesa para que te
-encuentren. «Firme» a secas es corto y bonito, pero **nadie busca «firme»**.
+encuentren. La fórmula que funciona: **nombre propio + lo que hace**.
 
-La fórmula que funciona: **nombre propio + lo que hace**.
+### ✅ La app se llama **Genuino**. Decidido por Alex el 14 de septiembre de 2026.
 
-✅ **Decidido con Alex el 14 de septiembre de 2026.**
+Antes se llamaba «Firme», de 1 Corintios 15:58. El cambio lo propuso él y es
+mejor, por una razón que ningún nombre inventado podía tener: **«Genuino» es su
+marca desde 2014** y hay 7.000 personas que ya la reconocen. Eso es distribución
+real, y pesa más que cualquier palabra clave — sobre todo sabiendo que la
+publicidad pagada nunca le ha dado resultados. Las primeras instalaciones no van
+a venir de Play Store: van a venir de su gente.
 
-Él propuso «Despertador y agenda diaria para cristianos», que describe muy bien la
-app y usa las dos palabras que mejor la encuentran. **No cabe: son 43 caracteres.**
-Se reparte en dos campos:
+Además consolida la casa: **Genuino Host** el negocio, **Genuino Love** la
+comunidad, **Genuino** la app.
 
 | Campo | Límite | Texto |
 |---|---|---|
-| **Título** | 30 | `Firme: Despertador Cristiano` (28) |
-| **Descripción corta** | 80 | `Despertador y agenda diaria para cristianos disciplinados` (57) |
+| **Título** | 30 | `Genuino: Disciplina Cristiana` (29) |
+| **Descripción corta** | 80 | `Despertador cristiano, agenda diaria y rachas para crecer en disciplina` (71) |
 
-Así el título conserva la marca —lo que se recuerda y se recomienda— y su frase
-entera sale bajo el icono, que es donde se lee.
+⚠️ **Por qué «Disciplina» y no «Despertador» en el título.** Yo recomendaba
+«Despertador», que es el término con más búsquedas y el hueco que nadie ocupa.
+Alex eligió «Disciplina» y tiene razón: **el título describe la app entera, no
+una función.** La app es rutina, planes con racha, el repaso de santidad, el
+mensaje diario y las estadísticas; «despertador» nombra una pieza. Y coincide
+con el propósito escrito en la hoja de ruta, que es lo que evita que el producto
+se desvíe. También envejece mejor: cuando lleguen cuentas, amigos y grupos,
+«Despertador» se habría quedado pequeño.
 
-El **nombre del paquete** (`app.genuino.firme`) no se puede cambiar nunca una vez
-publicado. El título visible sí.
+**El coste se paga en la descripción corta**, donde «despertador», «cristiano» y
+«agenda» siguen estando y Play también las indexa. Y el título se puede cambiar
+cuando se quiera: si en unos meses nadie nos encuentra, se prueba otro.
+
+### El identificador interno no se toca
+
+`app.genuino.firme` se queda como está, aunque la app ya no se llame Firme.
+
+No lo ve nunca nadie —ni en la ficha, ni en el móvil— y cambiarlo tendría un
+precio real: **Android trataría la app como otra distinta.** No se actualizaría
+sobre la instalada y el usuario perdería su rutina, su porqué y sus rachas.
+Además ya lleva «genuino» dentro.
+
+Lo irreversible al publicar es el identificador, no el nombre.
 
 ---
 

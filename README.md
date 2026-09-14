@@ -1,4 +1,6 @@
-# Firme
+# Genuino
+
+> **Disciplina Cristiana** · de la comunidad **Genuino Love**.
 
 > 🧭 **[HOJA-DE-RUTA.md](HOJA-DE-RUTA.md) primero.** Recoge todo lo pedido, lo hecho
 > y lo que falta. Se lee al empezar cada sesión y se actualiza al terminarla.
@@ -72,7 +74,9 @@ El proyecto de Firebase es **`genuino-host`**, el mismo que aloja **genuinohost.
 Ese es el *site* por defecto: un `firebase deploy --only hosting` a secas **sustituiría
 la web pública por esta app**.
 
-Por eso Firme vive en un site aparte, `genuino-pro`, atado al target `firme`:
+Por eso la app vive en un site aparte, `genuino-pro`, atado al target `firme`
+(el target conserva el nombre viejo a propósito: es interno, y renombrarlo solo
+añadiría riesgo a un despliegue que puede llevarse por delante la web pública):
 
 - `.firebaserc` asocia el target `firme` → site `genuino-pro`
 - `firebase.json` declara `"target": "firme"` en su bloque de hosting

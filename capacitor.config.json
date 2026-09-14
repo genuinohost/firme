@@ -1,6 +1,6 @@
 {
   "appId": "app.genuino.firme",
-  "appName": "Firme",
+  "appName": "Genuino",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false

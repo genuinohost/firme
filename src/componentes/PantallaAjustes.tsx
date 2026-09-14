@@ -494,7 +494,7 @@ function ComprobacionSistema() {
         </Boton>
         {!estado.exentaDeBateria ? (
           <Boton ancho onClick={() => void pedirExencionBateria()}>
-            Sacar Firme del ahorro de batería
+            Sacar Genuino del ahorro de batería
           </Boton>
         ) : null}
         {!estado.puedeExactas ? (
@@ -508,7 +508,7 @@ function ComprobacionSistema() {
           </Boton>
         ) : null}
         <Boton ancho onClick={() => void abrirAjustesDeLaApp()}>
-          Abrir los ajustes de Firme en Android
+          Abrir los ajustes de Genuino en Android
         </Boton>
       </div>
 
@@ -516,7 +516,7 @@ function ComprobacionSistema() {
 
       <p className="mt-2 text-xs leading-relaxed text-tenue">
         Si aun así falla: en Xiaomi hay que activar el inicio automático, y en Samsung
-        quitar Firme de «Aplicaciones en suspensión». Son ajustes del fabricante y
+        quitar Genuino de «Aplicaciones en suspensión». Son ajustes del fabricante y
         ninguna app puede tocarlos por su cuenta.
       </p>
     </Tarjeta>

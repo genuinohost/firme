@@ -22,8 +22,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
       },
       manifest: {
-        name: "Firme — disciplina diaria",
-        short_name: "Firme",
+        name: "Genuino — disciplina cristiana",
+        short_name: "Genuino",
         description:
           "Tu rutina, tus tareas y tus razones. Con alarma en cada bloque y una frase para no desmayar.",
         lang: "es",

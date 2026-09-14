@@ -40,7 +40,7 @@ const repo = remoto.replace(/^.*github\.com[:/]/, "").replace(/\.git$/, "");
 console.log(`Publicando ${etiqueta} en ${repo}…`);
 
 // Un nombre con la versión: así el que lo descarga sabe qué tiene.
-const nombreArchivo = `Firme-${nombre}.apk`;
+const nombreArchivo = `Genuino-${nombre}.apk`;
 execFileSync("cp", [APK, nombreArchivo]);
 
 const cuerpo =
@@ -51,9 +51,9 @@ const cuerpo =
 try {
   gh(
     "release", "create", etiqueta,
-    `${nombreArchivo}#Firme ${nombre} para Android`,
+    `${nombreArchivo}#Genuino ${nombre} para Android`,
     "--repo", repo,
-    "--title", `Firme ${nombre}`,
+    "--title", `Genuino ${nombre}`,
     "--notes", cuerpo,
   );
   console.log(`  Release ${etiqueta} creada.`);

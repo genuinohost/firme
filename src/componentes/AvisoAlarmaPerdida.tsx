@@ -72,12 +72,12 @@ export function AvisoAlarmaPerdida({
           <Etiqueta>lo que casi siempre lo causa</Etiqueta>
           <p className="mt-2 text-sm leading-relaxed">
             El ahorro de batería congela la app y el sistema se traga sus alarmas.
-            Sacar a Firme de esa lista lo arregla, y no gasta batería de forma
+            Sacar a Genuino de esa lista lo arregla, y no gasta batería de forma
             apreciable: el despertador no hace nada hasta que llega la hora.
           </p>
           <div className="mt-3">
             <Boton variante="fuerte" ancho onClick={() => void pedirExencionBateria()}>
-              Sacar Firme del ahorro de batería
+              Sacar Genuino del ahorro de batería
             </Boton>
           </div>
         </Tarjeta>

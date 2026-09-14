@@ -27,7 +27,7 @@ export function AvisoActualizacion() {
     <div className="entrar mx-4 mt-3 rounded-2xl border border-acento/40 bg-acento/[0.07] p-4">
       <Etiqueta>hay una versión nueva</Etiqueta>
       <p className="mt-1 text-[15px] font-semibold">
-        Firme {version.nombre}
+        Genuino {version.nombre}
         <span className="ml-2 text-xs font-normal text-tenue">
           tienes la {nombreInstalado()}
         </span>
