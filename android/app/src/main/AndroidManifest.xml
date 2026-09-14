@@ -15,7 +15,9 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -23,6 +25,28 @@
             </intent-filter>
 
         </activity>
+
+        <!--
+          Los dos receptores del despertador. El primero es el que Android
+          despierta a la hora, aunque la app lleve dias cerrada. El segundo
+          rehace la cola cuando se reinicia el movil, porque al reiniciar
+          Android olvida todas las alarmas programadas.
+        -->
+        <receiver
+            android:name=".ReceptorAlarma"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <receiver
+            android:name=".ReceptorArranque"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -57,4 +81,17 @@
 
     <!-- Volver a poner la cola de alarmas después de reiniciar el teléfono. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+      Abrir la app a pantalla completa cuando suena, con el móvil bloqueado.
+      Android lo reserva a despertadores y llamadas, que es justo lo que es.
+    -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- Encender la pantalla al sonar, en vez de esperar a que alguien la toque. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+
+    <!-- Pedir que el sistema no congele la app, que es lo que mata las alarmas. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 </manifest>

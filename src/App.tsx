@@ -3,7 +3,8 @@ import { cargar, guardar } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
-import { esNativo, pedirPermisosNativos, reprogramar } from "@/logica/alarmasNativas";
+import { esNativo, pedirPermisosNativos } from "@/logica/alarmasNativas";
+import { programarDespertador } from "@/logica/despertador";
 import { proximaAlarma } from "@/logica/avisos";
 import { rachaActual } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
@@ -46,9 +47,10 @@ export default function App() {
    */
   useEffect(() => {
     if (!esNativo()) return;
-    void pedirPermisosNativos().then(() => reprogramar(datos));
+    // El permiso es el mismo para todo; el despertador es quien programa.
+    void pedirPermisosNativos().then(() => programarDespertador(datos));
     const alVolver = () => {
-      if (document.visibilityState === "visible") void reprogramar(datos);
+      if (document.visibilityState === "visible") void programarDespertador(datos);
     };
     document.addEventListener("visibilitychange", alVolver);
     return () => document.removeEventListener("visibilitychange", alVolver);

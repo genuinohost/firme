@@ -3,11 +3,13 @@ import type { Ajustes, Datos } from "@/datos/tipos";
 import { exportar, importar } from "@/datos/almacen";
 import { pedirPermisoAvisos } from "@/logica/alarmas";
 import {
-  abrirAjusteAlarmasExactas,
-  estadoNativo,
-  probarAlarmaDelSistema,
-  type EstadoNativo,
-} from "@/logica/alarmasNativas";
+  abrirAjustesDeLaApp,
+  estadoDespertador,
+  hayDespertador,
+  pedirPermisoExactas,
+  probarDespertador,
+  type EstadoDespertador,
+} from "@/logica/despertador";
 import { parar, sonar } from "@/logica/sonido";
 import { AreaTexto, Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta } from "./piezas";
 
@@ -343,10 +345,10 @@ function Comprobacion({
  * se arreglan en sitios distintos.
  */
 function ComprobacionSistema() {
-  const [estado, setEstado] = useState<EstadoNativo | null>(null);
+  const [estado, setEstado] = useState<EstadoDespertador | null>(null);
   const [aviso, setAviso] = useState("");
 
-  const refrescar = async () => setEstado(await estadoNativo());
+  const refrescar = async () => setEstado(await estadoDespertador());
 
   useEffect(() => {
     void refrescar();
@@ -354,44 +356,54 @@ function ComprobacionSistema() {
     return () => clearInterval(id);
   }, []);
 
-  if (!estado?.nativo) return null;
+  if (!hayDespertador() || !estado) return null;
 
-  const reloj = (f: Date) =>
-    `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
+  const reloj = (ms: number) => {
+    const f = new Date(ms);
+    return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const volumenBien = estado.volumenAlarma > 0;
+  const porcentaje =
+    estado.volumenAlarmaMaximo > 0
+      ? Math.round((estado.volumenAlarma / estado.volumenAlarmaMaximo) * 100)
+      : 0;
 
   return (
     <Tarjeta>
-      <Etiqueta>lo que dice android</Etiqueta>
-
-      {estado.error ? (
-        <p className="mt-2 rounded-xl border border-fallo/40 bg-fallo/10 px-3 py-2 text-xs leading-relaxed">
-          Error del sistema: {estado.error}
-        </p>
-      ) : null}
+      <Etiqueta>el despertador</Etiqueta>
+      <p className="mt-1 text-xs leading-relaxed text-tenue">
+        Las alarmas van por el canal de alarma del teléfono, el mismo que usa el
+        despertador. No molestar no lo silencia.
+      </p>
 
       <div className="mt-3 flex flex-col gap-2.5">
         <Linea
-          bien={estado.avisos}
-          titulo="Puede mostrar avisos"
-          detalle={estado.avisos ? "Sí." : "No. Concede el permiso de notificaciones."}
-        />
-        <Linea
-          bien={estado.exactas}
+          bien={estado.puedeExactas}
           titulo="Puede despertar a la hora exacta"
           detalle={
-            estado.exactas
-              ? "Sí."
-              : "No. Sin esto Android agrupa los avisos y los retrasa."
+            estado.puedeExactas
+              ? "Sí. Android no puede retrasarlas."
+              : "No. Sin esto el sistema las agrupa y las retrasa."
+          }
+        />
+        <Linea
+          bien={volumenBien}
+          titulo={`Volumen de alarma al ${porcentaje} %`}
+          detalle={
+            volumenBien
+              ? "Sonará."
+              : "Está a cero. Súbelo con los botones del móvil mientras suena una alarma."
           }
         />
         <Linea
           bien={estado.enCola > 0}
-          titulo={`${estado.enCola} alarmas en la cola del sistema`}
+          titulo={`${estado.enCola} alarmas programadas`}
           detalle={
             estado.enCola === 0
-              ? "Vacía. Los avisos no se están llegando a programar."
-              : estado.primero
-                ? `La primera, a las ${reloj(estado.primero)}.`
+              ? "Ninguna. Revisa que tu rutina tenga bloques con timbre."
+              : estado.proxima > 0
+                ? `La próxima, a las ${reloj(estado.proxima)}.`
                 : "Programadas."
           }
         />
@@ -402,30 +414,33 @@ function ComprobacionSistema() {
           variante="fuerte"
           ancho
           onClick={async () => {
-            const r = await probarAlarmaDelSistema(60);
+            const cuando = await probarDespertador(60);
             setAviso(
-              r.error
-                ? `No se pudo programar: ${r.error}`
-                : "Listo. Bloquea el móvil y espera un minuto sin tocarlo.",
+              cuando
+                ? `Sonará a las ${reloj(cuando.getTime())}. Bloquea el móvil y no lo toques.`
+                : "No se pudo programar la prueba.",
             );
             void refrescar();
           }}
         >
           Probar con la pantalla apagada (1 min)
         </Boton>
-        {!estado.exactas ? (
-          <Boton ancho onClick={() => void abrirAjusteAlarmasExactas()}>
-            Abrir el ajuste de alarmas exactas
+        {!estado.puedeExactas ? (
+          <Boton ancho onClick={() => void pedirPermisoExactas()}>
+            Conceder alarmas exactas
           </Boton>
         ) : null}
+        <Boton ancho onClick={() => void abrirAjustesDeLaApp()}>
+          Abrir los ajustes de Firme en Android
+        </Boton>
       </div>
 
       {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
 
       <p className="mt-2 text-xs leading-relaxed text-tenue">
-        Esta prueba va por la misma vía que las alarmas de verdad. Si suena con el móvil
-        bloqueado, funcionan; si no suena pero la cola tiene alarmas, es el teléfono el
-        que las está silenciando.
+        Si la prueba no suena con el móvil bloqueado, en los ajustes de Android hay que
+        quitarle a Firme la restricción de batería y, en Xiaomi, activar el inicio
+        automático.
       </p>
     </Tarjeta>
   );
