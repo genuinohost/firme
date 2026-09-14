@@ -7,9 +7,10 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "comment_rewrites": "La app es de una sola página, así que todo va a index.html. Se excluyen los archivos que se descargan: si no, pedir un .apk devolvería el HTML de la app con código 200, y quien lo descargara se bajaría basura sin enterarse.",
     "rewrites": [
       {
-        "source": "**",
+        "source": "!/**/*.@(apk|aab|json|png|jpg|svg|webmanifest|js|css|txt|pdf)",
         "destination": "/index.html"
       }
     ],
