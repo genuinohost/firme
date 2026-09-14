@@ -45,6 +45,17 @@ export type PuntoDeExamen = {
 
 export type Compromiso = CompromisoConHora;
 
+/**
+ * Cómo se repasa el día.
+ *
+ * - `puntoAPunto`: se responde uno por uno. Sirve para planes donde cada cosa
+ *   es independiente —trabajo, familia, gratitud.
+ * - `unSoloCheck`: una sola pregunta para todo, con la posibilidad de decir en
+ *   qué se falló. Es lo que pide la santidad: no se anda midiendo el día en
+ *   porcentajes, se guardó o no se guardó.
+ */
+export type ModoExamen = "puntoAPunto" | "unSoloCheck";
+
 export type Plan = {
   id: string;
   /** De qué plantilla salió. Sirve para saber qué frases usar. */
@@ -66,6 +77,28 @@ export type Plan = {
   activo: boolean;
   /** Cuándo se empezó, para poder decir «llevas 34 días». */
   desde: string;
+
+  /** Cómo se repasa. Si falta, se responde punto por punto. */
+  modoExamen?: ModoExamen;
+
+  /**
+   * ¿Una caída reconocida y llevada a Dios en arrepentimiento mantiene la racha?
+   *
+   * Tratar una caída confesada igual que una escondida sería mal consejo: lo que
+   * rompe la comunión no es tropezar, es quedarse en el suelo. En estos planes
+   * un día con caída **y arrepentimiento** cuenta como restaurado, y la racha
+   * sigue en pie — pero se lleva la cuenta aparte, porque acudir muy seguido al
+   * arrepentimiento es señal de algo que hay que mirar.
+   */
+  admiteRestauracion?: boolean;
+
+  /**
+   * Las áreas donde la persona reconoce su mayor debilidad.
+   *
+   * Cada uno tiene la suya, y la app no puede suponerla. Estas se preguntan
+   * siempre y se destacan: vencer justo ahí es la victoria que más cuenta.
+   */
+  debilidades?: string[];
 };
 
 /**
@@ -79,18 +112,42 @@ export type RegistroPlan = {
   puntos: Record<string, boolean>;
   /** Cuándo se hizo el repaso. 0 si aún no se ha hecho. */
   repasado: number;
+
+  /**
+   * Hubo caída, y se llevó a Dios en oración de arrepentimiento.
+   *
+   * El día cuenta como ganado y la racha no se rompe, pero queda constancia: la
+   * cuenta de días restaurados es lo que permite decirle a alguien, sin
+   * condenarlo, que lleva demasiadas veces volviendo por lo mismo.
+   */
+  restaurado?: boolean;
+
+  /** En qué áreas se falló, si se quisieron señalar. Ids de puntos. */
+  caidas?: string[];
+
+  /** ¿Se venció la debilidad que la persona declaró como la suya? */
+  vencioSuDebilidad?: boolean;
 };
 
 /**
- * Un día de un plan está ganado cuando se cumplieron sus bloques **y** todos
- * sus puntos de examen. La santidad no admite el ochenta por ciento.
+ * Cómo acabó un día.
+ *
+ * `restaurado` es un día en que hubo caída y hubo arrepentimiento: cuenta como
+ * ganado para la racha, pero se distingue para poder llevarle la cuenta.
  */
-export type EstadoDia = "ganado" | "fallado" | "pendiente" | "sinNada";
+export type EstadoDia = "ganado" | "restaurado" | "fallado" | "pendiente" | "sinNada";
 
 /** Una plantilla es un plan listo para estrenar, sin identificadores todavía. */
 export type PlantillaPlan = Omit<
   Plan,
-  "id" | "activo" | "desde" | "compromisos" | "puntos" | "horaExamen" | "timbreExamen"
+  | "id"
+  | "activo"
+  | "desde"
+  | "compromisos"
+  | "puntos"
+  | "horaExamen"
+  | "timbreExamen"
+  | "debilidades"
 > & {
   /** Solo los planes con puntos de examen los necesitan. */
   horaExamen?: string;

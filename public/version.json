@@ -1,12 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 13,
-  "nombre": "3.1",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.1.apk",
+  "codigo": 14,
+  "nombre": "3.2",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.2.apk",
   "novedades": [
-    "Planes con racha propia: madrugar, santidad, lectura, trabajo y once mas",
-    "Repaso de la noche para el plan de santidad",
-    "La app te dice donde mas te cuesta, no solo un porcentaje"
+    "Santidad: una caida llevada a Dios en arrepentimiento no rompe la racha",
+    "Un solo check al final del dia, en vez de ocho",
+    "La app lleva la cuenta de los dias restaurados, para que veas el patron"
   ],
   "importante": false
 }

@@ -103,6 +103,10 @@ export const PLANTILLAS: PlantillaPlan[] = [
     ],
     horaExamen: "21:30",
     timbreExamen: "campana",
+    // Una sola pregunta: la santidad no se mide en porcentajes.
+    modoExamen: "unSoloCheck",
+    // Y una caída llevada a Dios no rompe la racha.
+    admiteRestauracion: true,
   },
 
   {

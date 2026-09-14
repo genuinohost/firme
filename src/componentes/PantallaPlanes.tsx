@@ -97,12 +97,14 @@ function FilaPlan({
   const dias = diasDesdeElComienzo(plan, ahora);
   const flojo = useMemo(() => puntoMasFlojo(plan, datos, 30, ahora), [plan, datos, ahora]);
 
-  const leyenda = {
+  const leyenda: Record<typeof estado, { texto: string; color: string }> = {
     ganado: { texto: "hoy, cumplido", color: "text-logro" },
+    restaurado: { texto: "hoy, restaurado", color: "text-acento" },
     fallado: { texto: "hoy falló algo", color: "text-fallo" },
     pendiente: { texto: "pendiente hoy", color: "text-acento" },
     sinNada: { texto: "sin nada hoy", color: "text-tenue" },
-  }[estado];
+  };
+  const hoyDice = leyenda[estado];
 
   return (
     <button
@@ -117,7 +119,7 @@ function FilaPlan({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold">{plan.nombre}</p>
-          <p className={`mt-0.5 text-xs ${leyenda.color}`}>{leyenda.texto}</p>
+          <p className={`mt-0.5 text-xs ${hoyDice.color}`}>{hoyDice.texto}</p>
         </div>
         <div className="shrink-0 text-right leading-none">
           <span className="cifras text-2xl font-bold text-acento">{racha}</span>

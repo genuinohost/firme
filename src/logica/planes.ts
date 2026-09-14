@@ -34,6 +34,9 @@ export function crearDesdePlantilla(
     puntos: plantilla.puntos.map((p) => ({ ...p, id: idNuevo() })),
     horaExamen: plantilla.horaExamen ?? "21:30",
     timbreExamen: plantilla.timbreExamen ?? "campana",
+    modoExamen: plantilla.modoExamen ?? "puntoAPunto",
+    admiteRestauracion: plantilla.admiteRestauracion ?? false,
+    debilidades: [],
     activo: true,
     desde: claveFecha(hoy),
   };
@@ -89,14 +92,33 @@ export function estadoDelDia(
 
   const bloquesFallados = sucesos.some((s) => s.registro?.estado === "saltado");
   const bloquesSinMarcar = sucesos.some((s) => !s.registro);
-  const puntosFallados = hayPuntos && registro
-    ? plan.puntos.some((p) => registro.puntos[p.id] === false)
-    : false;
   const sinRepasar = hayPuntos && (!registro || registro.repasado === 0);
 
-  if (bloquesFallados || puntosFallados) return "fallado";
+  if (bloquesFallados) return "fallado";
   if (bloquesSinMarcar || sinRepasar) return esHoy ? "pendiente" : "fallado";
+
+  if (hayPuntos && registro) {
+    const hubocaida = plan.puntos.some((p) => registro.puntos[p.id] === false);
+    if (hubocaida) {
+      /**
+       * Una caída llevada a Dios en arrepentimiento no rompe la racha.
+       *
+       * Contar igual una caída confesada que una escondida enseñaría lo
+       * contrario de lo que enseña el evangelio: lo que aparta no es tropezar,
+       * es quedarse en el suelo. El día queda marcado como restaurado para
+       * poder llevarle la cuenta aparte.
+       */
+      if (plan.admiteRestauracion && registro.restaurado) return "restaurado";
+      return "fallado";
+    }
+  }
+
   return "ganado";
+}
+
+/** Los dos estados que mantienen viva la racha. */
+function cuentaComoGanado(estado: EstadoDia): boolean {
+  return estado === "ganado" || estado === "restaurado";
 }
 
 function restarDias(f: Date, n: number): Date {
@@ -113,14 +135,14 @@ function restarDias(f: Date, n: number): Date {
  */
 export function rachaDelPlan(plan: Plan, datos: Datos, hoy = new Date()): number {
   let racha = 0;
-  if (estadoDelDia(plan, claveFecha(hoy), datos, true) === "ganado") racha = 1;
+  if (cuentaComoGanado(estadoDelDia(plan, claveFecha(hoy), datos, true))) racha = 1;
 
   for (let i = 1; i < 400; i++) {
     const fecha = claveFecha(restarDias(hoy, i));
     if (fecha < plan.desde) break;
     const estado = estadoDelDia(plan, fecha, datos, false);
     if (estado === "sinNada") continue;
-    if (estado !== "ganado") break;
+    if (!cuentaComoGanado(estado)) break;
     racha++;
   }
   return racha;
@@ -134,7 +156,7 @@ export function rachaMaximaDelPlan(plan: Plan, datos: Datos, hoy = new Date()): 
     if (fecha < plan.desde) continue;
     const estado = estadoDelDia(plan, fecha, datos, i === 0);
     if (estado === "sinNada" || estado === "pendiente") continue;
-    if (estado === "ganado") {
+    if (cuentaComoGanado(estado)) {
       corriente++;
       if (corriente > mejor) mejor = corriente;
     } else {
@@ -173,6 +195,60 @@ export function puntoMasFlojo(
     if (punto && (!peor || fallos > peor.fallos)) peor = { texto: punto.texto, fallos };
   }
   return peor;
+}
+
+/**
+ * Cuántos días de los últimos `dias` se salvaron por arrepentimiento.
+ *
+ * Es la cifra que permite decirle a alguien, sin condenarlo, que lleva
+ * demasiadas veces volviendo por lo mismo. La misericordia no se agota, pero
+ * acudir a ella cada tres días es señal de algo que hay que mirar de frente.
+ */
+export function diasRestaurados(
+  plan: Plan,
+  datos: Datos,
+  dias = 30,
+  hoy = new Date(),
+): number {
+  let cuenta = 0;
+  for (let i = 0; i < dias; i++) {
+    const registro = registroDe(datos, claveFecha(restarDias(hoy, i)), plan.id);
+    if (registro?.restaurado) cuenta++;
+  }
+  return cuenta;
+}
+
+/** Días guardados sin ninguna caída, de los últimos `dias`. */
+export function diasLimpios(plan: Plan, datos: Datos, dias = 30, hoy = new Date()): number {
+  let cuenta = 0;
+  for (let i = 0; i < dias; i++) {
+    const fecha = claveFecha(restarDias(hoy, i));
+    if (estadoDelDia(plan, fecha, datos, i === 0) === "ganado") cuenta++;
+  }
+  return cuenta;
+}
+
+/**
+ * Cómo le va con la debilidad que declaró suya.
+ *
+ * Vencer justo ahí es la victoria que más cuenta, y verla medida aparte es lo
+ * que convierte una buena intención en un propósito con seguimiento.
+ */
+export function balanceDeLaDebilidad(
+  plan: Plan,
+  datos: Datos,
+  dias = 30,
+  hoy = new Date(),
+): { vencidos: number; caidos: number } {
+  let vencidos = 0;
+  let caidos = 0;
+  for (let i = 0; i < dias; i++) {
+    const registro = registroDe(datos, claveFecha(restarDias(hoy, i)), plan.id);
+    if (!registro || registro.vencioSuDebilidad === undefined) continue;
+    if (registro.vencioSuDebilidad) vencidos++;
+    else caidos++;
+  }
+  return { vencidos, caidos };
 }
 
 /** ¿Toca ya el repaso de la noche? */

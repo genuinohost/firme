@@ -28,7 +28,23 @@ Hoja de ruta
 | ✅ | ♥ Guardar frases y mensajes, con buscador | `logica/favoritas.ts` |
 | ✅ | Mensaje diario para los grupos: banco + generador | `PantallaMensaje` |
 | ✅ | Comunidad: grupos y reuniones en vivo | `PantallaComunidad` |
-| ✅ | Modelo de **planes** con racha propia y 15 plantillas | `datos/planes/` |
+| ✅ | **15 planes** con racha propia, propósito y versículo | `PantallaPlanes` |
+| ✅ | **Repaso de la noche**, punto por punto | `ExamenDelPlan` |
+| ✅ | **Santidad con restauración**: una caída llevada a Dios no rompe la racha | `ExamenDeSantidad` |
+| ✅ | Banco de **365 mensajes**, uno por día del año | `datos/mensajes/` |
+| ✅ | Firma **@GenuinoLove** y enlace de descarga al compartir | `logica/compartir.ts` |
+| ✅ | **Aviso de versión nueva** dentro de la app | `AvisoActualizacion` |
+| ✅ | Código en GitHub y APK en Releases | `scripts/publicar-release.mjs` |
+
+---
+
+## El propósito, que manda sobre todo lo demás
+
+> **Fortalecer a los cristianos en su disciplina y su fidelidad diaria para con
+> Dios.** Cada cosa que se añada tiene que servir a eso; lo que no, sobra por
+> bonito que sea.
+
+La app es de la comunidad **Genuino Love**.
 
 ---
 
@@ -36,16 +52,20 @@ Hoja de ruta
 
 Esto es lo que hace que la app sirva. Antes de Play Store, antes de cuentas.
 
-### 1.1 Banco de mensajes a 365 · **190 hechos, faltan 175**
-Escritos a mano, versículos verificados uno a uno. `scripts/revisar-banco.mjs`
-avisa de repeticiones y de formato.
+### 1.1 ✅ Banco de 365 mensajes — hecho
+### 1.2 ✅ Pantallas de planes y repaso de la noche — hecho
 
-### 1.2 Pantallas de planes · **el motor está, falta la interfaz**
-- Elegir plan de las 15 plantillas, con su propósito y su versículo.
-- Plan de madrugar con sus tres horas: 3:00, 5:00, 6:00 o la que quiera.
-- **Examen de la noche**: los puntos, con alarma que lo recuerda.
-- Racha por plan y «llevas 34 días».
-- Editar los puntos y añadir los propios.
+### 1.3 Lo que falta de los planes
+
+- [ ] **Elegir la debilidad propia.** El modelo ya la admite (`plan.debilidades`)
+      y el repaso la destaca con ★, pero **falta la pantalla para marcarla**. Es
+      lo que personaliza la racha: un hombre marcará lujuria, una mujer quizá
+      murmuración, y vencer ahí es la victoria que más cuenta.
+- [ ] **Que el repaso de la noche suene.** La hora del examen todavía no genera
+      alarma; sin eso hay que acordarse de abrirlo.
+- [ ] Editar un plan: horas, puntos propios, pausarlo, dejarlo.
+- [ ] Detalle de cada plan con su historia: racha máxima, días limpios, días
+      restaurados, y cómo va con su debilidad declarada.
 
 ### 1.3 Diario personal · **pedido el 14-09**
 Espacio libre y **privado**: aprendizajes, batallas, oraciones. Sin formato
@@ -125,6 +145,49 @@ Decisiones ya tomadas, en `docs/play-store.md`.
 - [ ] Cuenta de desarrollador, **$25**
 - [ ] **12 probadores durante 14 días** ← el cuello de botella
 - [ ] Donaciones con Play Billing, después de publicar
+
+---
+
+## Fase 4 — Los vídeos y la publicidad
+
+Alex es buen orador y graba bien. Eso es un activo que la mayoría de las apps no
+tiene, y conviene usarlo como lo que es: **él delante de la cámara vale más que
+cualquier animación bonita**.
+
+### Lo que hay que preparar antes de grabar
+
+- [ ] **Guion de 30 segundos** para el anuncio pagado. Un solo mensaje, un solo
+      problema, una sola promesa.
+- [ ] **Guion de 15 segundos** para vídeo vertical (Reels, Shorts).
+- [ ] **Vídeo de 2 minutos** para la ficha de Play Store, contando la app entera.
+- [ ] **Capturas de pantalla** que se intercalen con él hablando.
+
+### El ángulo, que no es el obvio
+
+No vender «una app de hábitos». El gancho es lo que nadie más resuelve:
+
+> **«¿Cuántas veces le prometiste a Dios que mañana te levantabas a orar?»**
+
+Ese es el dolor real y el hueco del mercado. Firme es lo único que **te despierta
+de verdad** —alarma que atraviesa el No molestar— y luego te pide cuentas.
+
+Lo que debería salir en el vídeo, por orden de fuerza:
+
+1. La alarma de las 3:00 **sonando** con el móvil bloqueado. Eso es la prueba.
+2. La racha: días seguidos, en grande.
+3. El repaso de santidad, y que **una caída llevada a Dios no rompe la racha**.
+   Eso emociona y distingue: no es una app que te castiga.
+4. El mensaje diario para compartir en el grupo, con la firma.
+
+### Lo que hace falta saber antes de pagar publicidad
+
+⚠️ **Antes de invertir en anuncios, la app tiene que retener.** Pagar tráfico
+hacia una app que se desinstala al tercer día es tirar el dinero — y eso ya pasó
+con la publicidad del negocio, que nunca dio reuniones porque el problema no era
+el mensaje.
+
+Primero los 12 probadores durante 14 días. Si ellos siguen usándola al final de
+las dos semanas, entonces sí.
 
 ---
 

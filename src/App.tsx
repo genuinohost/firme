@@ -14,8 +14,9 @@ import { PantallaPorque } from "@/componentes/PantallaPorque";
 import { PantallaRutina } from "@/componentes/PantallaRutina";
 import { PantallaPlanes } from "@/componentes/PantallaPlanes";
 import { ExamenDelPlan } from "@/componentes/ExamenDelPlan";
-import { claveRegistro, registroDe } from "@/logica/planes";
-import type { Plan } from "@/datos/planes/tipos";
+import { ExamenDeSantidad } from "@/componentes/ExamenDeSantidad";
+import { claveRegistro, diasRestaurados, registroDe } from "@/logica/planes";
+import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
 import { PantallaMensaje } from "@/componentes/PantallaMensaje";
 import { PantallaComunidad } from "@/componentes/PantallaComunidad";
@@ -359,20 +360,36 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
       {examen ? (() => {
         const plan = (datos.planes ?? []).find((p) => p.id === examen);
         if (!plan) return null;
+        const anotar = (registro: RegistroPlan) => {
+          setDatos((d) => ({
+            ...d,
+            planesRegistros: {
+              ...d.planesRegistros,
+              [claveRegistro(fechaHoy, plan.id)]: registro,
+            },
+          }));
+          setExamen(null);
+        };
+
+        // La santidad se repasa de otra manera: una sola pregunta, y lo que
+        // decide el día no es la caída sino qué se hizo con ella.
+        if (plan.modoExamen === "unSoloCheck") {
+          return (
+            <ExamenDeSantidad
+              plan={plan}
+              registro={registroDe(datos, fechaHoy, plan.id)}
+              restauradosEsteMes={diasRestaurados(plan, datos, 30, ahora)}
+              onGuardar={(r) => anotar({ ...r, repasado: Date.now() })}
+              onCerrar={() => setExamen(null)}
+            />
+          );
+        }
+
         return (
           <ExamenDelPlan
             plan={plan}
             registro={registroDe(datos, fechaHoy, plan.id)}
-            onGuardar={(puntos) => {
-              setDatos((d) => ({
-                ...d,
-                planesRegistros: {
-                  ...d.planesRegistros,
-                  [claveRegistro(fechaHoy, plan.id)]: { puntos, repasado: Date.now() },
-                },
-              }));
-              setExamen(null);
-            }}
+            onGuardar={(puntos) => anotar({ puntos, repasado: Date.now() })}
             onCerrar={() => setExamen(null)}
           />
         );
