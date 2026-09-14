@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import type { Ajustes, Datos } from "@/datos/tipos";
 import { exportar, importar } from "@/datos/almacen";
 import { pedirPermisoAvisos } from "@/logica/alarmas";
+import {
+  abrirAjusteAlarmasExactas,
+  estadoNativo,
+  probarAlarmaDelSistema,
+  type EstadoNativo,
+} from "@/logica/alarmasNativas";
 import { parar, sonar } from "@/logica/sonido";
 import { AreaTexto, Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta } from "./piezas";
 
@@ -51,6 +57,8 @@ export function PantallaAjustes({
         proximo={proximo}
         onProbar={onProbar}
       />
+
+      <ComprobacionSistema />
 
       <Tarjeta>
         <Etiqueta>avisos y alarma</Etiqueta>
@@ -324,6 +332,119 @@ function Comprobacion({
         hora, el problema es la programación, no la alarma.
       </p>
     </Tarjeta>
+  );
+}
+
+/**
+ * Lo que Android dice de sus propias alarmas.
+ *
+ * Sin esto, cuando una alarma no suena no hay forma de saber si es que no se
+ * llegó a programar o es que el móvil la silenció. Son dos fallos distintos y
+ * se arreglan en sitios distintos.
+ */
+function ComprobacionSistema() {
+  const [estado, setEstado] = useState<EstadoNativo | null>(null);
+  const [aviso, setAviso] = useState("");
+
+  const refrescar = async () => setEstado(await estadoNativo());
+
+  useEffect(() => {
+    void refrescar();
+    const id = window.setInterval(refrescar, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!estado?.nativo) return null;
+
+  const reloj = (f: Date) =>
+    `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
+
+  return (
+    <Tarjeta>
+      <Etiqueta>lo que dice android</Etiqueta>
+
+      {estado.error ? (
+        <p className="mt-2 rounded-xl border border-fallo/40 bg-fallo/10 px-3 py-2 text-xs leading-relaxed">
+          Error del sistema: {estado.error}
+        </p>
+      ) : null}
+
+      <div className="mt-3 flex flex-col gap-2.5">
+        <Linea
+          bien={estado.avisos}
+          titulo="Puede mostrar avisos"
+          detalle={estado.avisos ? "Sí." : "No. Concede el permiso de notificaciones."}
+        />
+        <Linea
+          bien={estado.exactas}
+          titulo="Puede despertar a la hora exacta"
+          detalle={
+            estado.exactas
+              ? "Sí."
+              : "No. Sin esto Android agrupa los avisos y los retrasa."
+          }
+        />
+        <Linea
+          bien={estado.enCola > 0}
+          titulo={`${estado.enCola} alarmas en la cola del sistema`}
+          detalle={
+            estado.enCola === 0
+              ? "Vacía. Los avisos no se están llegando a programar."
+              : estado.primero
+                ? `La primera, a las ${reloj(estado.primero)}.`
+                : "Programadas."
+          }
+        />
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2">
+        <Boton
+          variante="fuerte"
+          ancho
+          onClick={async () => {
+            const r = await probarAlarmaDelSistema(60);
+            setAviso(
+              r.error
+                ? `No se pudo programar: ${r.error}`
+                : "Listo. Bloquea el móvil y espera un minuto sin tocarlo.",
+            );
+            void refrescar();
+          }}
+        >
+          Probar con la pantalla apagada (1 min)
+        </Boton>
+        {!estado.exactas ? (
+          <Boton ancho onClick={() => void abrirAjusteAlarmasExactas()}>
+            Abrir el ajuste de alarmas exactas
+          </Boton>
+        ) : null}
+      </div>
+
+      {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
+
+      <p className="mt-2 text-xs leading-relaxed text-tenue">
+        Esta prueba va por la misma vía que las alarmas de verdad. Si suena con el móvil
+        bloqueado, funcionan; si no suena pero la cola tiene alarmas, es el teléfono el
+        que las está silenciando.
+      </p>
+    </Tarjeta>
+  );
+}
+
+function Linea({ bien, titulo, detalle }: { bien: boolean; titulo: string; detalle: string }) {
+  return (
+    <div className="flex gap-2.5">
+      <span
+        className={`mt-0.5 shrink-0 text-sm ${bien ? "text-logro" : "text-fallo"}`}
+        aria-hidden
+      >
+        {bien ? "✓" : "✕"}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm">{titulo}</span>
+        <span className="block text-xs text-tenue">{detalle}</span>
+      </span>
+    </div>
   );
 }
 
