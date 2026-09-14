@@ -54,14 +54,19 @@ encuentren. «Firme» a secas es corto y bonito, pero **nadie busca «firme»**.
 
 La fórmula que funciona: **nombre propio + lo que hace**.
 
-| Propuesta | Caracteres | A favor | En contra |
-|---|---|---|---|
-| **Firme: Disciplina con Dios** | 26 | Mantiene el nombre y dice para qué es | «disciplina» se busca menos que «oración» |
-| **Firme: Despertador de Oración** | 29 | Ataca la búsqueda que nadie ocupa | Suena solo a alarma, y hace más |
-| **Firme: Rutina y Oración Diaria** | 30 | Cubre las dos búsquedas principales | Menos memorable |
-| **Madruga con Dios — Firme** | 25 | Describe el uso real, muy evocador | Cambia la identidad de la app |
+✅ **Decidido con Alex el 14 de septiembre de 2026.**
 
-📌 **Pendiente: que Alex elija.** Es su app y el nombre lo condiciona todo.
+Él propuso «Despertador y agenda diaria para cristianos», que describe muy bien la
+app y usa las dos palabras que mejor la encuentran. **No cabe: son 43 caracteres.**
+Se reparte en dos campos:
+
+| Campo | Límite | Texto |
+|---|---|---|
+| **Título** | 30 | `Firme: Despertador Cristiano` (28) |
+| **Descripción corta** | 80 | `Despertador y agenda diaria para cristianos disciplinados` (57) |
+
+Así el título conserva la marca —lo que se recuerda y se recomienda— y su frase
+entera sale bajo el icono, que es donde se lee.
 
 El **nombre del paquete** (`app.genuino.firme`) no se puede cambiar nunca una vez
 publicado. El título visible sí.
@@ -103,20 +108,24 @@ publicado. El título visible sí.
 
 ## 4. Tres decisiones de producto antes de publicar
 
-### 4.1 El generador de mensajes no puede pedir una clave de OpenRouter
+### 4.1 El generador necesita un servidor propio
 
-Para Alex está bien; para un hermano cualquiera es un muro infranqueable. Nadie
-va a crearse una cuenta de OpenRouter para usar una app.
+Pedirle a un hermano cualquiera una clave de OpenRouter es un muro infranqueable.
+Nadie se crea una cuenta de OpenRouter para usar una app.
 
-| Opción | Coste para Alex | Experiencia |
-|---|---|---|
-| **Dejarlo oculto**, solo para quien ponga su clave | $0 | El banco es lo único que ve la mayoría |
-| **Servidor propio** que pague Alex | ~$0,09 por cada 1.000 mensajes | Funciona para todos, sin fricción |
-| **Quitarlo** de la versión pública | $0 | Más simple, se pierde función |
+✅ **Decidido con Alex:** monta un **servidor propio que él paga**, para que
+funcione sin fricción para todos.
 
-Con el coste medido, mil usuarios generando un mensaje al día costarían unos
-**$2,55 al mes**. No es prohibitivo, pero **escala con el éxito** y necesita un
-servidor. Ver `docs/mensajes-whatsapp.md`.
+- **Coste medido:** unos **9 céntimos de dólar por cada 1.000 mensajes**. Mil
+  usuarios generando uno al día salen por unos **2,55 dólares al mes**.
+- **Dónde:** Cloudflare Workers, gratis hasta 100.000 peticiones diarias.
+- ⚠️ **Lo que no puede faltar: control de abuso.** Sin un límite por dispositivo,
+  cualquiera puede vaciarle el saldo en una tarde. Hace falta tope diario por
+  aparato y un techo de gasto global.
+- ⚠️ La clave de OpenRouter vive **solo en el servidor**, nunca dentro del APK:
+  un APK se abre y se lee.
+
+Las reglas de estilo de los mensajes están en `docs/mensajes-whatsapp.md`.
 
 ### 4.2 El primer uso tiene que servirle a alguien que no es Alex
 
@@ -135,11 +144,21 @@ Unidas. Si se quiere, hay que pedirles permiso por escrito.
 
 ## 5. Por dónde seguir
 
-1. **Alex elige nombre.** Desbloquea todo lo demás.
-2. Decidir qué pasa con el generador (4.1).
-3. Construir el recibimiento del primer uso (4.2).
-4. Política de privacidad, alojada en genuinohost.com.
-5. Compilar AAB y preparar la firma de subida.
-6. Gráficos: icono, destacado y capturas.
-7. Redactar descripción corta y larga con las palabras del punto 1.
-8. Semana de prueba interna, como pidió Alex.
+Nombre y generador ya están decididos. Queda:
+
+1. **Terminar el banco** hasta los 365. Es lo que da valor el primer día a quien
+   la instale, y lo único que no se puede improvisar.
+2. **El recibimiento del primer uso** (4.2). Sin esto, el que la instale abre una
+   rutina que no es la suya y la borra.
+3. **El servidor del generador** en Cloudflare Workers, con tope por dispositivo.
+4. **Política de privacidad**, alojada en genuinohost.com. Es obligatoria y no
+   cuesta nada: la app no recoge datos, todo vive en el móvil.
+5. **Compilar AAB** y preparar la firma de subida.
+6. **Gráficos:** icono 512×512, destacado 1024×500 y capturas de pantalla.
+7. **Descripción corta y larga**, con las palabras del punto 1.
+8. **Cuenta de Play** ($25) y decidir personal u organización — cambia si hacen
+   falta los 12 probadores.
+9. **Semana de prueba interna**, como pidió Alex.
+
+> 📌 El orden importa: del 1 al 3 es trabajo de producto, y sin eso la ficha más
+> bonita del mundo consigue descargas que se desinstalan al día siguiente.
