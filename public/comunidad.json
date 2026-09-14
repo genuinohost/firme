@@ -1,0 +1,54 @@
+{
+  "_lee_esto": "Este archivo manda sobre la pantalla Comunidad de la app. Se edita aquí, se publica con 'npm run desplegar', y a todos les cambia en unas horas sin actualizar la app. Los campos que empiezan por guion bajo son notas y la app los ignora.",
+
+  "bienvenida": "Nadie persevera solo. Únete, anímate, y anima a otro.",
+
+  "_sobre_enlaces": "tipo puede ser whatsapp, telegram, instagram, youtube o web. Cuando un grupo de WhatsApp se llene (1024 personas), abre otro y cambia la url aquí.",
+  "enlaces": [
+    {
+      "id": "whatsapp-principal",
+      "tipo": "whatsapp",
+      "nombre": "Grupo de WhatsApp",
+      "descripcion": "El mensaje de cada madrugada y el ánimo de los hermanos",
+      "url": "https://chat.whatsapp.com/PON_AQUI_TU_ENLACE"
+    },
+    {
+      "id": "telegram",
+      "tipo": "telegram",
+      "nombre": "Canal de Telegram",
+      "descripcion": "Para quienes no usan WhatsApp",
+      "url": "https://t.me/PON_AQUI_TU_CANAL"
+    },
+    {
+      "id": "instagram",
+      "tipo": "instagram",
+      "nombre": "Instagram",
+      "descripcion": "Lo del día, en imágenes",
+      "url": "https://instagram.com/PON_AQUI_TU_CUENTA"
+    }
+  ],
+
+  "_sobre_reuniones": "dias: 0 es domingo y 6 es sábado; una lista vacía significa todos los días. zona es la del anfitrión, para que la hora salga bien en cualquier país: America/Caracas, America/Bogota, Europe/Madrid, America/Mexico_City...",
+  "reuniones": [
+    {
+      "id": "devocional-madrugada",
+      "nombre": "Devocional de la madrugada",
+      "descripcion": "Oración juntos para empezar el día",
+      "dias": [],
+      "hora": "03:00",
+      "duracionMin": 60,
+      "zona": "America/Caracas",
+      "url": "https://meet.google.com/PON_AQUI_TU_ENLACE"
+    },
+    {
+      "id": "ensenanza-semanal",
+      "nombre": "Enseñanza semanal",
+      "descripcion": "Estudio de la Palabra",
+      "dias": [3],
+      "hora": "20:00",
+      "duracionMin": 90,
+      "zona": "America/Caracas",
+      "url": "https://meet.google.com/PON_AQUI_TU_ENLACE"
+    }
+  ]
+}

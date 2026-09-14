@@ -50,17 +50,28 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-button {
-  font: inherit;
-  color: inherit;
-  -webkit-tap-highlight-color: transparent;
-}
+/*
+ * Estas van en @layer base a propósito.
+ *
+ * En CSS con capas, lo que está FUERA de toda capa gana a lo que está dentro.
+ * Tailwind pone sus utilidades en @layer utilities, así que un `button { color:
+ * inherit }` suelto anulaba todas las clases de color de todos los botones de
+ * la app, sin avisar. Metiéndolo en @layer base vuelve a ser lo que pretendía:
+ * un valor de partida que cualquier utilidad puede pisar.
+ */
+@layer base {
+  button {
+    font: inherit;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-input,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
 }
 
 /* Números tabulares para relojes y contadores: no bailan al cambiar. */

@@ -63,7 +63,18 @@ export const PLANTILLAS: PlantillaPlan[] = [
         cita: "Efesios 4:29",
       },
       {
-        texto: "Guardé mis ojos y mis pensamientos en pureza",
+        texto: "Aparté la mirada a tiempo y no alimenté la lujuria",
+        versiculo: "Hice pacto con mis ojos: ¿cómo pues había yo de pensar en virgen?",
+        cita: "Job 31:1",
+      },
+      {
+        texto: "Guardé mi cuerpo en pureza, lejos de toda fornicación",
+        versiculo:
+          "Pues la voluntad de Dios es vuestra santificación: que os apartéis de fornicación.",
+        cita: "1 Tesalonicenses 4:3",
+      },
+      {
+        texto: "Guardé limpio mi corazón, no solo mis actos",
         versiculo: "Bienaventurados los de limpio corazón: porque ellos verán á Dios.",
         cita: "Mateo 5:8",
       },

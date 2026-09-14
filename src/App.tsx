@@ -14,20 +14,32 @@ import { PantallaPorque } from "@/componentes/PantallaPorque";
 import { PantallaRutina } from "@/componentes/PantallaRutina";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
 import { PantallaMensaje } from "@/componentes/PantallaMensaje";
+import { PantallaComunidad } from "@/componentes/PantallaComunidad";
+import { PantallaMas, ConVuelta } from "@/componentes/PantallaMas";
 import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
-type Pestaña = "hoy" | "mensaje" | "porque" | "rutina" | "progreso" | "ajustes";
+type Pestaña =
+  | "hoy"
+  | "mensaje"
+  | "comunidad"
+  | "rutina"
+  | "mas"
+  | "porque"
+  | "progreso"
+  | "ajustes";
+
+/** Las que se usan a diario van en la barra; el resto, dentro de «Más». */
+const EN_LA_BARRA: Pestaña[] = ["hoy", "mensaje", "comunidad", "rutina", "mas"];
 
 const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
   { id: "hoy", nombre: "Hoy", icono: "◎" },
   { id: "mensaje", nombre: "Mensaje", icono: "✉" },
-  { id: "porque", nombre: "Porqué", icono: "✦" },
+  { id: "comunidad", nombre: "Juntos", icono: "◈" },
   { id: "rutina", nombre: "Rutina", icono: "≡" },
-  { id: "progreso", nombre: "Progreso", icono: "▟" },
-  { id: "ajustes", nombre: "Ajustes", icono: "⚙" },
+  { id: "mas", nombre: "Más", icono: "⋯" },
 ];
 
 export default function App() {
@@ -158,6 +170,8 @@ export default function App() {
     return () => clearTimeout(id);
   }, [brindis]);
 
+  const seleccionada: Pestaña = EN_LA_BARRA.includes(pestaña) ? pestaña : "mas";
+
   const cambiarAjustes = (ajustes: Ajustes) => setDatos((d) => ({ ...d, ajustes }));
   const cambiarRutina = (rutina: BloqueRutina[]) => setDatos((d) => ({ ...d, rutina }));
   const cambiarMotivos = (motivos: Motivo[]) => setDatos((d) => ({ ...d, motivos }));
@@ -194,8 +208,42 @@ export default function App() {
 
         {pestaña === "mensaje" ? <PantallaMensaje /> : null}
 
+        {pestaña === "comunidad" ? <PantallaComunidad /> : null}
+
+        {pestaña === "mas" ? (
+          <PantallaMas
+            nombre={datos.ajustes.nombre}
+            racha={racha}
+            opciones={[
+              {
+                id: "porque",
+                icono: "✦",
+                titulo: "Mi porqué",
+                detalle: "Las razones por las que te esfuerzas",
+                onIr: () => setPestaña("porque"),
+              },
+              {
+                id: "progreso",
+                icono: "▟",
+                titulo: "Progreso",
+                detalle: "Rachas, calendario y en qué estás fallando",
+                onIr: () => setPestaña("progreso"),
+              },
+              {
+                id: "ajustes",
+                icono: "⚙",
+                titulo: "Ajustes",
+                detalle: "Alarmas, frases y tus datos",
+                onIr: () => setPestaña("ajustes"),
+              },
+            ]}
+          />
+        ) : null}
+
         {pestaña === "porque" ? (
-          <PantallaPorque motivos={datos.motivos} onCambiar={cambiarMotivos} />
+          <ConVuelta titulo="Mi porqué" onVolver={() => setPestaña("mas")}>
+            <PantallaPorque motivos={datos.motivos} onCambiar={cambiarMotivos} />
+          </ConVuelta>
         ) : null}
 
         {pestaña === "rutina" ? (
@@ -206,9 +254,14 @@ export default function App() {
           />
         ) : null}
 
-        {pestaña === "progreso" ? <PantallaProgreso datos={datos} hoy={diaEstable} /> : null}
+        {pestaña === "progreso" ? (
+          <ConVuelta titulo="Progreso" onVolver={() => setPestaña("mas")}>
+            <PantallaProgreso datos={datos} hoy={diaEstable} />
+          </ConVuelta>
+        ) : null}
 
         {pestaña === "ajustes" ? (
+          <ConVuelta titulo="Ajustes" onVolver={() => setPestaña("mas")}>
           <PantallaAjustes
             datos={datos}
             onCambiarAjustes={cambiarAjustes}
@@ -216,6 +269,7 @@ export default function App() {
             proximo={proximo}
             onProbar={probar}
           />
+          </ConVuelta>
         ) : null}
       </main>
 
@@ -229,6 +283,7 @@ export default function App() {
         </div>
       ) : null}
 
+      {/* En las pantallas de dentro, «Más» queda marcada. */}
       <nav className="zona-segura-abajo fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-borde bg-fondo/95 backdrop-blur">
         <div className="flex">
           {PESTAÑAS.map((p) => (
@@ -239,7 +294,7 @@ export default function App() {
                 if (p.id === "hoy") setDesplazamiento(0);
               }}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] transition ${
-                pestaña === p.id ? "text-acento" : "text-tenue"
+seleccionada === p.id ? "text-acento" : "text-tenue"
               }`}
             >
               <span className="text-lg leading-none" aria-hidden>
