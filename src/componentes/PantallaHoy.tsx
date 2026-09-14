@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Ajustes, Motivo, Suceso } from "@/datos/tipos";
 import { estaVencido, faseDe, fechaLarga, finDe, minutoActual, sucesoEnCurso } from "@/logica/dia";
 import { elegirFrase } from "@/logica/elegirFrase";
+import { diaDe, faltaPara, type Aviso } from "@/logica/avisos";
 import { AreaTexto, Boton, Cita, Etiqueta, Punto, Tarjeta, Vacio, colorDe } from "./piezas";
 
 type Props = {
@@ -13,6 +14,8 @@ type Props = {
   ajustes: Ajustes;
   motivos: Motivo[];
   racha: number;
+  /** El próximo aviso que va a sonar, para la cuenta atrás. */
+  alarma: Aviso | null;
   onCumplir: (suceso: Suceso) => void;
   onSaltar: (suceso: Suceso, excusa: string) => void;
   onDeshacer: (suceso: Suceso) => void;
@@ -61,7 +64,7 @@ function quedanDe(suceso: Suceso, ahora: Date): string {
 
 export function PantallaHoy(props: Props) {
   const {
-    fecha, fechaObjeto, esHoy, ahora, sucesos, ajustes, motivos, racha,
+    fecha, fechaObjeto, esHoy, ahora, sucesos, ajustes, motivos, racha, alarma,
     onCumplir, onSaltar, onDeshacer, onCambiarDia, onNuevaTarea, onVerPorque,
   } = props;
 
@@ -122,6 +125,9 @@ export function PantallaHoy(props: Props) {
           </div>
         </div>
       </header>
+
+      {/* Cuánto falta para que suene la próxima alarma. Lo primero que se ve. */}
+      <ContadorAlarma alarma={alarma} ahora={ahora} />
 
       {/* El bloque que toca ahora: grande, con la razón y la frase. */}
       {actual && actual.minuto !== null ? (
@@ -301,6 +307,57 @@ export function PantallaHoy(props: Props) {
           </Tarjeta>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * La cuenta atrás hasta el próximo aviso.
+ *
+ * Sale de la misma lista que se le entrega a Android, así que lo que marca es
+ * lo que el sistema tiene programado de verdad, no una cuenta aparte.
+ */
+function ContadorAlarma({ alarma, ahora }: { alarma: Aviso | null; ahora: Date }) {
+  if (!alarma) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-borde px-3.5 py-2.5">
+        <span className="text-tenue" aria-hidden>
+          ⏰
+        </span>
+        <span className="text-sm text-tenue">No queda ninguna alarma por sonar.</span>
+      </div>
+    );
+  }
+
+  const cuando = alarma.cuando;
+  const inminente = cuando.getTime() - ahora.getTime() < 60_000;
+  const dia = diaDe(cuando, ahora);
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition ${
+        inminente ? "border-acento bg-acento/10" : "border-acento/30 bg-acento/[0.05]"
+      }`}
+    >
+      <span className={inminente ? "latido" : ""} aria-hidden>
+        ⏰
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm">
+          {alarma.previo ? `Aviso de «${alarma.nombreBloque}»` : alarma.nombreBloque}
+        </p>
+        <p className="cifras text-xs text-tenue">
+          {dia} a las{" "}
+          {`${String(cuando.getHours()).padStart(2, "0")}:${String(cuando.getMinutes()).padStart(2, "0")}`}
+        </p>
+      </div>
+      <span
+        className={`cifras shrink-0 text-xl font-semibold tracking-tight ${
+          inminente ? "text-acento" : ""
+        }`}
+      >
+        {faltaPara(cuando, ahora)}
+      </span>
     </div>
   );
 }

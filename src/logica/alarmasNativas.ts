@@ -1,7 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import type { Datos, Suceso } from "@/datos/tipos";
-import { claveFecha, sucesosDelDia } from "./dia";
+import type { Datos } from "@/datos/tipos";
+import { avisosPendientes } from "./avisos";
 
 /**
  * Alarmas del sistema operativo.
@@ -81,69 +81,6 @@ export async function abrirAjusteAlarmasExactas(): Promise<void> {
   }
 }
 
-function sumarDias(fecha: Date, n: number): Date {
-  const f = new Date(fecha);
-  f.setDate(f.getDate() + n);
-  return f;
-}
-
-type AvisoProgramable = {
-  cuando: Date;
-  titulo: string;
-  cuerpo: string;
-  idSuceso: string;
-};
-
-/**
- * Todos los avisos de los próximos días, en orden. Incluye el aviso previo de
- * los bloques que lo tengan, y salta lo ya marcado y lo que tiene el timbre
- * quitado.
- */
-function avisosPendientes(datos: Datos, desde: Date): AvisoProgramable[] {
-  const salida: AvisoProgramable[] = [];
-  const ahora = desde.getTime();
-
-  for (let i = 0; i < DIAS_POR_DELANTE; i++) {
-    const dia = sumarDias(desde, i);
-    const fecha = claveFecha(dia);
-
-    for (const suceso of sucesosDelDia(datos, fecha)) {
-      if (suceso.minuto === null || suceso.registro) continue;
-
-      const momentos: { minuto: number; previo: boolean }[] = [
-        { minuto: suceso.minuto, previo: false },
-      ];
-      const minutoPrevio = suceso.minuto - suceso.avisoPrevioMin;
-      if (suceso.avisoPrevioMin > 0 && minutoPrevio >= 0) {
-        momentos.push({ minuto: minutoPrevio, previo: true });
-      }
-
-      for (const m of momentos) {
-        // Un bloque sin timbre solo avisa si lo que toca es el aviso previo.
-        if (suceso.timbre === "ninguno" && !m.previo) continue;
-
-        const cuando = new Date(dia);
-        cuando.setHours(Math.floor(m.minuto / 60), m.minuto % 60, 0, 0);
-        if (cuando.getTime() <= ahora) continue;
-
-        salida.push({
-          cuando,
-          titulo: m.previo ? `En unos minutos: ${suceso.nombre}` : suceso.nombre,
-          cuerpo: textoDe(suceso, m.previo),
-          idSuceso: suceso.id,
-        });
-      }
-    }
-  }
-
-  return salida.sort((a, b) => a.cuando.getTime() - b.cuando.getTime()).slice(0, MAXIMO_AVISOS);
-}
-
-function textoDe(suceso: Suceso, previo: boolean): string {
-  if (suceso.porque) return suceso.porque;
-  return previo ? "Ve terminando lo que tienes entre manos." : "Es la hora. Empieza.";
-}
-
 /**
  * Entrega a Android la lista completa de avisos.
  *
@@ -160,7 +97,7 @@ export async function reprogramar(datos: Datos, ahora = new Date()): Promise<num
       await LocalNotifications.cancel({ notifications: pendientes.notifications });
     }
 
-    const avisos = avisosPendientes(datos, ahora);
+    const avisos = avisosPendientes(datos, ahora, DIAS_POR_DELANTE).slice(0, MAXIMO_AVISOS);
     if (avisos.length === 0) return 0;
 
     await LocalNotifications.schedule({

@@ -4,6 +4,7 @@ import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/dato
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, pedirPermisosNativos, reprogramar } from "@/logica/alarmasNativas";
+import { proximaAlarma } from "@/logica/avisos";
 import { rachaActual } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
 import { elegirFrase } from "@/logica/elegirFrase";
@@ -89,6 +90,14 @@ export default function App() {
   );
   const racha = useMemo(() => rachaActual(datos, diaEstable), [datos, diaEstable]);
 
+  // Se recalcula al cambiar de minuto, no a cada segundo: el contador usa esta
+  // fecha fija y le resta el reloj.
+  const alarma = useMemo(
+    () => proximaAlarma(datos, ahora),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [datos, fechaHoy, minutoActual(ahora)],
+  );
+
   const { disparo, cerrar, posponer, probar } = useAlarmas(
     sucesosHoy,
     datos.ajustes,
@@ -161,6 +170,7 @@ export default function App() {
             ajustes={datos.ajustes}
             motivos={datos.motivos}
             racha={racha}
+            alarma={alarma}
             onCumplir={(s) => registrar(s, "cumplido")}
             onSaltar={(s, excusa) => registrar(s, "saltado", excusa)}
             onDeshacer={(s) =>
