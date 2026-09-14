@@ -35,6 +35,8 @@ function motivosIniciales(): Motivo[] {
 export function datosIniciales(): Datos {
   return {
     version: VERSION,
+    planes: [],
+    planesRegistros: {},
     rutina: rutinaInicial(),
     tareas: [],
     registros: {},
@@ -57,16 +59,32 @@ export function cargar(): Datos {
     const crudo = localStorage.getItem(CLAVE);
     if (!crudo) return datosIniciales();
     const datos = JSON.parse(crudo) as Datos;
-    // Se completan huecos por si los datos vienen de una versión anterior.
-    const base = datosIniciales();
-    return {
-      ...base,
-      ...datos,
-      ajustes: { ...base.ajustes, ...datos.ajustes },
-    };
+    return completar(datos);
   } catch {
     return datosIniciales();
   }
+}
+
+/**
+ * Rellena lo que falte.
+ *
+ * Quien ya tenía la app instalada no tiene planes guardados, y el reparto de
+ * `...datos` pisaría con `undefined` lo que viniera vacío. Se completa campo a
+ * campo para que una versión nueva nunca rompa unos datos viejos.
+ */
+function completar(datos: Partial<Datos>): Datos {
+  const base = datosIniciales();
+  return {
+    ...base,
+    ...datos,
+    planes: datos.planes ?? base.planes,
+    planesRegistros: datos.planesRegistros ?? base.planesRegistros,
+    rutina: datos.rutina ?? base.rutina,
+    tareas: datos.tareas ?? base.tareas,
+    registros: datos.registros ?? base.registros,
+    motivos: datos.motivos ?? base.motivos,
+    ajustes: { ...base.ajustes, ...datos.ajustes },
+  };
 }
 
 export function guardar(datos: Datos): void {
@@ -85,8 +103,7 @@ export function importar(texto: string): Datos | null {
   try {
     const datos = JSON.parse(texto) as Datos;
     if (!Array.isArray(datos.rutina)) return null;
-    const base = datosIniciales();
-    return { ...base, ...datos, ajustes: { ...base.ajustes, ...datos.ajustes } };
+    return completar(datos);
   } catch {
     return null;
   }

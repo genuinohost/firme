@@ -95,6 +95,10 @@ export type Ajustes = {
 /** Todo el estado que se guarda. Una sola pieza, fácil de exportar. */
 export type Datos = {
   version: number;
+  /** Los planes en marcha. Cada uno lleva su propia racha. */
+  planes: import("./planes/tipos").Plan[];
+  /** Lo anotado de cada plan por día. La clave es `fecha|plan|idPlan`. */
+  planesRegistros: Record<string, import("./planes/tipos").RegistroPlan>;
   rutina: BloqueRutina[];
   tareas: Tarea[];
   registros: Record<string, Registro>;
