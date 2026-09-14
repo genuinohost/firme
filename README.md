@@ -1,5 +1,8 @@
 # Firme
 
+> 🧭 **[HOJA-DE-RUTA.md](HOJA-DE-RUTA.md) primero.** Recoge todo lo pedido, lo hecho
+> y lo que falta. Se lee al empezar cada sesión y se actualiza al terminarla.
+
 Aplicación de disciplina diaria: una rutina fija que se repite, las tareas del día
 encima, alarma en cada bloque, y en cada alarma el porqué y una frase para no
 desmayar.
