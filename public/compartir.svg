@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8c65a"/>
+      <stop offset="1" stop-color="#a8831c"/>
+    </linearGradient>
+    <radialGradient id="brillo" cx="0.78" cy="0.28" r="0.62">
+      <stop offset="0" stop-color="#c9a227" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#c9a227" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0b0d10"/>
+  <rect width="1200" height="630" fill="url(#brillo)"/>
+
+  <!-- El reloj: la promesa de la app en un solo dibujo, y a las 3:00. -->
+  <g transform="translate(940 315)" opacity="0.92">
+    <circle r="150" fill="none" stroke="#c9a227" stroke-opacity="0.22" stroke-width="3"/>
+    <circle r="128" fill="none" stroke="#c9a227" stroke-opacity="0.45" stroke-width="6"/>
+    <line x1="0.0" y1="-96.0" x2="0.0" y2="-116.0" stroke="#c9a227" stroke-opacity="0.85" stroke-width="7" stroke-linecap="round"/>
+    <line x1="53.0" y1="-91.8" x2="58.0" y2="-100.5" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="91.8" y1="-53.0" x2="100.5" y2="-58.0" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="96.0" y1="-0.0" x2="116.0" y2="-0.0" stroke="#c9a227" stroke-opacity="0.85" stroke-width="7" stroke-linecap="round"/>
+    <line x1="91.8" y1="53.0" x2="100.5" y2="58.0" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="53.0" y1="91.8" x2="58.0" y2="100.5" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="0.0" y1="96.0" x2="0.0" y2="116.0" stroke="#c9a227" stroke-opacity="0.85" stroke-width="7" stroke-linecap="round"/>
+    <line x1="-53.0" y1="91.8" x2="-58.0" y2="100.5" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-91.8" y1="53.0" x2="-100.5" y2="58.0" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-96.0" y1="0.0" x2="-116.0" y2="0.0" stroke="#c9a227" stroke-opacity="0.85" stroke-width="7" stroke-linecap="round"/>
+    <line x1="-91.8" y1="-53.0" x2="-100.5" y2="-58.0" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-53.0" y1="-91.8" x2="-58.0" y2="-100.5" stroke="#c9a227" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+    <!--
+      Las 3:00 en punto: la hora a la que Alex se levanta a orar, y la razón
+      de que esta app exista.
+
+      Las manecillas van en color plano a propósito. Un degradado se define
+      sobre el rectángulo que envuelve la figura, y el de una línea recta no
+      tiene ni ancho ni alto: el degradado queda indefinido y no se pinta nada.
+    -->
+    <line x1="0" y1="0" x2="0" y2="-62" stroke="#e8c65a" stroke-width="11" stroke-linecap="round"/>
+    <line x1="0" y1="0" x2="88" y2="0" stroke="#e8c65a" stroke-width="9" stroke-linecap="round"/>
+    <circle r="11" fill="#c9a227"/>
+  </g>
+
+  <!-- La comunidad primero: la app es suya, no de una persona. -->
+  <text x="96" y="168" font-family="Segoe UI, Arial, sans-serif" font-size="30"
+        font-weight="600" letter-spacing="7" fill="#c9a227" fill-opacity="0.95">GENUINO LOVE</text>
+  <line x1="96" y1="196" x2="396" y2="196" stroke="#c9a227" stroke-opacity="0.35" stroke-width="2"/>
+
+  <text x="96" y="338" font-family="Georgia, Times New Roman, serif" font-size="140"
+        font-weight="700" fill="url(#oro)">Firme</text>
+
+  <text x="96" y="412" font-family="Segoe UI, Arial, sans-serif" font-size="38"
+        fill="#e9ecef" fill-opacity="0.92">El despertador que sí te levanta a orar</text>
+
+  <text x="96" y="492" font-family="Georgia, Times New Roman, serif" font-size="29"
+        font-style="italic" fill="#e9ecef" fill-opacity="0.55">«Estad firmes y constantes,</text>
+  <text x="96" y="530" font-family="Georgia, Times New Roman, serif" font-size="29"
+        font-style="italic" fill="#e9ecef" fill-opacity="0.55">creciendo en la obra del Señor.»</text>
+  <text x="96" y="568" font-family="Segoe UI, Arial, sans-serif" font-size="24"
+        letter-spacing="2" fill="#c9a227" fill-opacity="0.8">1 CORINTIOS 15:58</text>
+</svg>

@@ -1,12 +1,14 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 15,
-  "nombre": "3.3",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.3.apk",
+  "codigo": 16,
+  "nombre": "3.4",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-3.4.apk",
   "novedades": [
-    "Elige tu batalla: marca donde esta tu mayor debilidad",
-    "Ficha de cada plan con racha, record, dias guardados y restaurados",
-    "Cambiar las horas, pausar o dejar un plan"
+    "La alarma ahora repica ella misma y no para hasta que la paras",
+    "Suena aunque el movil este en No molestar o en modo Descanso",
+    "Sube solo el volumen de alarma si lo tenias bajo",
+    "Te avisa si alguna alarma no llego a sonar",
+    "Boton para sacar Firme del ahorro de bateria"
   ],
   "importante": false
 }

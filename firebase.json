@@ -63,6 +63,16 @@
         ]
       },
       {
+        "comment": "Las dos rutas, y hacen falta las dos: Firebase compara la ruta que se pide, no el archivo que acaba sirviendo. Sin la regla de «/», el enlace que se comparte —que es «/» a secas— salía con una hora de caché, y WhatsApp podía leer la tarjeta vieja justo después de publicar.",
+        "source": "/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "/index.html",
         "headers": [
           {
