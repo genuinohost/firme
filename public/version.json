@@ -1,13 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 10,
-  "nombre": "2.4",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-2.4.apk",
+  "codigo": 11,
+  "nombre": "2.5",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Firme-2.5.apk",
   "novedades": [
-    "Aviso dentro de la app cuando hay version nueva",
-    "Pantalla Juntos: grupos y reuniones en vivo",
-    "Banco de 190 mensajes para compartir",
-    "Arreglado el color de los botones"
+    "Firma @GenuinoLove y enlace de descarga al compartir",
+    "Corazon para guardar desde los resultados de busqueda",
+    "Banco de 315 mensajes"
   ],
   "importante": false
 }

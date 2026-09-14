@@ -7,7 +7,7 @@ import {
   MENSAJES,
 } from "@/datos/mensajes";
 import { generarMensaje, hayClave } from "@/logica/generador";
-import { compartirFrase, copiar, type ResultadoCompartir } from "@/logica/compartir";
+import { compartirFrase, conFirma, copiar, type ResultadoCompartir } from "@/logica/compartir";
 import {
   alternar,
   buscar as buscarGuardadas,
@@ -39,6 +39,36 @@ function Corazon({
       }}
       className={`shrink-0 rounded-xl border px-3 text-lg transition ${
         guardada ? "border-acento text-acento" : "border-borde text-tenue hover:text-acento"
+      }`}
+      aria-label={guardada ? "Quitar de guardadas" : "Guardar este mensaje"}
+      aria-pressed={guardada}
+    >
+      {guardada ? "♥" : "♡"}
+    </button>
+  );
+}
+
+/** El mismo corazón, en tamaño de fila. */
+function CorazonPequeno({
+  texto,
+  tema,
+  onCambio,
+}: {
+  texto: string;
+  tema?: string;
+  onCambio: () => void;
+}) {
+  const [guardada, setGuardada] = useState(() => estaGuardada(texto));
+  useEffect(() => setGuardada(estaGuardada(texto)), [texto]);
+
+  return (
+    <button
+      onClick={() => {
+        setGuardada(alternar(texto, undefined, tema));
+        onCambio();
+      }}
+      className={`shrink-0 rounded-lg px-2 py-2 text-base transition ${
+        guardada ? "text-acento" : "text-tenue hover:text-acento"
       }`}
       aria-label={guardada ? "Quitar de guardadas" : "Guardar este mensaje"}
       aria-pressed={guardada}
@@ -139,15 +169,20 @@ export function PantallaMensaje() {
             <Etiqueta>en el banco ({coincidencias.length})</Etiqueta>
             <div className="mt-1.5 flex flex-col gap-1.5">
               {coincidencias.slice(0, 6).map((m, i) => (
-                <button
+                <div
                   key={i}
-                  onClick={() => mostrar(componer(m), "banco")}
-                  className="flex items-center gap-2 rounded-xl border border-borde px-3 py-2 text-left text-sm transition hover:border-acento"
+                  className="flex items-center gap-1 rounded-xl border border-borde pr-1 transition hover:border-acento"
                 >
-                  <span aria-hidden>{m.emoji}</span>
-                  <span className="min-w-0 flex-1 truncate">{m.titulo}</span>
-                  <span className="shrink-0 text-tenue">›</span>
-                </button>
+                  <button
+                    onClick={() => mostrar(componer(m), "banco")}
+                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm"
+                  >
+                    <span aria-hidden>{m.emoji}</span>
+                    <span className="min-w-0 flex-1 truncate">{m.titulo}</span>
+                    <span className="shrink-0 text-tenue">›</span>
+                  </button>
+                  <CorazonPequeno texto={componer(m)} tema={m.tema} onCambio={refrescarGuardadas} />
+                </div>
               ))}
             </div>
           </div>
@@ -187,7 +222,7 @@ export function PantallaMensaje() {
                 Compartir
               </Boton>
             </div>
-            <Boton onClick={async () => setCopiado(await copiar(texto))}>
+            <Boton onClick={async () => setCopiado(await copiar(conFirma(texto)))}>
               {copiado === "copiado" ? "copiado ✓" : "Copiar"}
             </Boton>
             <Corazon texto={texto} tema={tema.trim() || undefined} onCambio={refrescarGuardadas} />

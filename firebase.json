@@ -16,6 +16,25 @@
     ],
     "headers": [
       {
+        "comment": "Estos dos los consultan los moviles ya instalados. Sin esta regla Firebase los cachea una hora, y un cambio urgente —un enlace de reunion, un aviso de version— llega tarde o llega el valor viejo.",
+        "source": "/version.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, max-age=0"
+          }
+        ]
+      },
+      {
+        "source": "/comunidad.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, max-age=0"
+          }
+        ]
+      },
+      {
         "comment": "El service worker y el manifiesto no se cachean: si no, el móvil se queda con una versión vieja y las alarmas dejan de actualizarse.",
         "source": "/sw.js",
         "headers": [

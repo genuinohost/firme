@@ -17,6 +17,7 @@ import {
   leerModelo,
   MODELO_POR_DEFECTO,
 } from "@/logica/generador";
+import { activarFirma, firmaActiva, leerFirma } from "@/logica/compartir";
 import { parar, sonar } from "@/logica/sonido";
 import { AreaTexto, Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta } from "./piezas";
 
@@ -187,6 +188,8 @@ export function PantallaAjustes({
             valor={a.usarEstoicos}
             onCambiar={(v) => cambiar("usarEstoicos", v)}
           />
+          <FirmaAlCompartir />
+
           <div className="border-t border-borde pt-3">
             <Campo etiqueta="Tus propias frases (una por línea)">
               <AreaTexto
@@ -544,6 +547,38 @@ function ClaveOpenRouter() {
         </p>
       </div>
     </Tarjeta>
+  );
+}
+
+/**
+ * La firma que va al pie de lo que se comparte.
+ *
+ * Es lo que hace que una frase compartida traiga gente nueva: quien la recibe
+ * ve de quién viene y por dónde se descarga. El enlace no está escrito en el
+ * código, viene de `comunidad.json`, para poder cambiarlo por el de Google Play
+ * sin publicar una versión nueva.
+ */
+function FirmaAlCompartir() {
+  const [activa, setActiva] = useState(() => firmaActiva());
+  const firma = leerFirma();
+
+  return (
+    <div className="border-t border-borde pt-3">
+      <Interruptor
+        titulo="Firmar lo que comparto"
+        detalle="Para que quien lo reciba sepa de dónde viene y pueda instalarla"
+        valor={activa}
+        onCambiar={(v) => {
+          activarFirma(v);
+          setActiva(v);
+        }}
+      />
+      {activa ? (
+        <pre className="mt-2 rounded-xl bg-superficie-alta px-3 py-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-tenue">
+          {`…\n\n${firma.usuario}\n📲 ${firma.enlaceApp}`}
+        </pre>
+      ) : null}
+    </div>
   );
 }
 

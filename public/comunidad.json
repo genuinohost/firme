@@ -1,8 +1,11 @@
 {
   "_lee_esto": "Este archivo manda sobre la pantalla Comunidad de la app. Se edita aquí, se publica con 'npm run desplegar', y a todos les cambia en unas horas sin actualizar la app. Los campos que empiezan por guion bajo son notas y la app los ignora.",
-
+  "_sobre_firma": "Va al pie de cada frase que se comparte. Cuando la app este en Google Play, cambiar enlaceApp por la ficha de Play y a todos les cambia sin actualizar nada.",
+  "firma": {
+    "usuario": "@GenuinoLove",
+    "enlaceApp": "https://genuino-pro.web.app"
+  },
   "bienvenida": "Nadie persevera solo. Únete, anímate, y anima a otro.",
-
   "_sobre_enlaces": "tipo puede ser whatsapp, telegram, instagram, youtube o web. Cuando un grupo de WhatsApp se llene (1024 personas), abre otro y cambia la url aquí.",
   "enlaces": [
     {
@@ -27,7 +30,6 @@
       "url": "https://instagram.com/PON_AQUI_TU_CUENTA"
     }
   ],
-
   "_sobre_reuniones": "dias: 0 es domingo y 6 es sábado; una lista vacía significa todos los días. zona es la del anfitrión, para que la hora salga bien en cualquier país: America/Caracas, America/Bogota, Europe/Madrid, America/Mexico_City...",
   "reuniones": [
     {
@@ -44,7 +46,9 @@
       "id": "ensenanza-semanal",
       "nombre": "Enseñanza semanal",
       "descripcion": "Estudio de la Palabra",
-      "dias": [3],
+      "dias": [
+        3
+      ],
       "hora": "20:00",
       "duracionMin": 90,
       "zona": "America/Caracas",
