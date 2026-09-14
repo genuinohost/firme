@@ -13,15 +13,17 @@ import { PantallaHoy } from "@/componentes/PantallaHoy";
 import { PantallaPorque } from "@/componentes/PantallaPorque";
 import { PantallaRutina } from "@/componentes/PantallaRutina";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
+import { PantallaMensaje } from "@/componentes/PantallaMensaje";
 import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
-type Pestaña = "hoy" | "porque" | "rutina" | "progreso" | "ajustes";
+type Pestaña = "hoy" | "mensaje" | "porque" | "rutina" | "progreso" | "ajustes";
 
 const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
   { id: "hoy", nombre: "Hoy", icono: "◎" },
+  { id: "mensaje", nombre: "Mensaje", icono: "✉" },
   { id: "porque", nombre: "Porqué", icono: "✦" },
   { id: "rutina", nombre: "Rutina", icono: "≡" },
   { id: "progreso", nombre: "Progreso", icono: "▟" },
@@ -189,6 +191,8 @@ export default function App() {
             onVerPorque={() => setPestaña("porque")}
           />
         ) : null}
+
+        {pestaña === "mensaje" ? <PantallaMensaje /> : null}
 
         {pestaña === "porque" ? (
           <PantallaPorque motivos={datos.motivos} onCambiar={cambiarMotivos} />

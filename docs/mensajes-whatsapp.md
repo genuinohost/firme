@@ -36,10 +36,8 @@ cada desafío del día.
 porque Jehová tu Dios estará contigo en dondequiera que vayas." Josué 1:9
 ```
 
-> 📌 **Sin resolver:** en el encargo original, el mensaje de las 02:58 se pedía en
-> primera persona del plural («nosotros», animando a un equipo), pero el ejemplo
-> que dio está en segunda persona. Se sigue el ejemplo, que es lo concreto.
-> **Pendiente de que Alex confirme cuál de los dos quiere.**
+> ✅ **Confirmado por Alex el 14 de septiembre de 2026:** en segunda persona, como
+> el ejemplo. El encargo original mencionaba «nosotros»; queda descartado.
 
 ---
 

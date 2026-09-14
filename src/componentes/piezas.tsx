@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { compartirFrase, type ResultadoCompartir } from "@/logica/compartir";
+import { alternar, estaGuardada } from "@/logica/favoritas";
 import { CATEGORIAS, type Categoria } from "@/datos/tipos";
 
 export function colorDe(categoria: Categoria): string {
@@ -132,6 +133,7 @@ export function Cita({
   compartible?: boolean;
 }) {
   const [estado, setEstado] = useState<ResultadoCompartir | null>(null);
+  const [guardada, setGuardada] = useState(() => estaGuardada(texto));
 
   // El aviso de «copiado» se retira solo.
   useEffect(() => {
@@ -139,6 +141,9 @@ export function Cita({
     const id = window.setTimeout(() => setEstado(null), 2200);
     return () => clearTimeout(id);
   }, [estado]);
+
+  // Al cambiar de frase hay que volver a mirar si esta está guardada.
+  useEffect(() => setGuardada(estaGuardada(texto)), [texto]);
 
   return (
     <figure className="m-0">
@@ -150,17 +155,29 @@ export function Cita({
           {fuente ? `— ${fuente}` : ""}
         </figcaption>
         {compartible ? (
-          <button
-            onClick={async () => setEstado(await compartirFrase({ texto, fuente }))}
-            className="-mr-1 shrink-0 rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-acento"
-            aria-label="Compartir esta frase"
-          >
-            {estado === "copiado"
-              ? "copiada ✓"
-              : estado === "fallo"
-                ? "no se pudo"
-                : "compartir"}
-          </button>
+          <div className="-mr-1 flex shrink-0 items-center gap-1">
+            <button
+              onClick={() => setGuardada(alternar(texto, fuente))}
+              className={`rounded-lg px-2 py-1 text-sm transition ${
+                guardada ? "text-acento" : "text-tenue hover:text-acento"
+              }`}
+              aria-label={guardada ? "Quitar de guardadas" : "Guardar esta frase"}
+              aria-pressed={guardada}
+            >
+              {guardada ? "♥" : "♡"}
+            </button>
+            <button
+              onClick={async () => setEstado(await compartirFrase({ texto, fuente }))}
+              className="rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-acento"
+              aria-label="Compartir esta frase"
+            >
+              {estado === "copiado"
+                ? "copiada ✓"
+                : estado === "fallo"
+                  ? "no se pudo"
+                  : "compartir"}
+            </button>
+          </div>
         ) : null}
       </div>
     </figure>

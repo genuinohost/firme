@@ -10,6 +10,13 @@ import {
   probarDespertador,
   type EstadoDespertador,
 } from "@/logica/despertador";
+import {
+  guardarClave,
+  guardarModelo,
+  leerClave,
+  leerModelo,
+  MODELO_POR_DEFECTO,
+} from "@/logica/generador";
 import { parar, sonar } from "@/logica/sonido";
 import { AreaTexto, Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta } from "./piezas";
 
@@ -195,6 +202,8 @@ export function PantallaAjustes({
           </div>
         </div>
       </Tarjeta>
+
+      <ClaveOpenRouter />
 
       <Tarjeta>
         <Etiqueta>tus datos</Etiqueta>
@@ -460,6 +469,81 @@ function Linea({ bien, titulo, detalle }: { bien: boolean; titulo: string; detal
         <span className="block text-xs text-tenue">{detalle}</span>
       </span>
     </div>
+  );
+}
+
+/**
+ * La clave para generar mensajes por internet.
+ *
+ * Se guarda solo en el móvil, como el resto. Conviene que sea una clave aparte
+ * con su propio límite de crédito: si comparte tope con otra cosa, un descuido
+ * aquí puede dejar sin saldo aquello.
+ */
+function ClaveOpenRouter() {
+  const [clave, setClave] = useState(() => leerClave());
+  const [modelo, setModelo] = useState(() => leerModelo());
+  const [guardado, setGuardado] = useState(false);
+  const [verla, setVerla] = useState(false);
+
+  const guardar = () => {
+    guardarClave(clave);
+    guardarModelo(modelo);
+    setGuardado(true);
+    window.setTimeout(() => setGuardado(false), 2200);
+  };
+
+  return (
+    <Tarjeta>
+      <Etiqueta>generar mensajes por internet</Etiqueta>
+      <p className="mt-2 text-xs leading-relaxed text-tenue">
+        Opcional. Sin clave, el banco de mensajes funciona entero y sin conexión; la
+        clave solo hace falta para escribir uno nuevo sobre un tema que no esté.
+      </p>
+
+      <div className="mt-3 flex flex-col gap-3">
+        <Campo etiqueta="Clave de OpenRouter">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Entrada
+                type={verla ? "text" : "password"}
+                value={clave}
+                onChange={(e) => setClave(e.target.value)}
+                placeholder="sk-or-v1-…"
+                autoComplete="off"
+                className="w-full"
+              />
+            </div>
+            <button
+              onClick={() => setVerla((v) => !v)}
+              className="shrink-0 rounded-xl border border-borde px-3 text-xs text-tenue transition hover:text-texto"
+            >
+              {verla ? "ocultar" : "ver"}
+            </button>
+          </div>
+        </Campo>
+
+        <Campo etiqueta="Modelo">
+          <Entrada
+            value={modelo}
+            onChange={(e) => setModelo(e.target.value)}
+            placeholder={MODELO_POR_DEFECTO}
+          />
+        </Campo>
+        <p className="-mt-1 text-xs leading-relaxed text-tenue">
+          El de por defecto cuesta unos nueve céntimos por cada mil mensajes.
+        </p>
+
+        <Boton variante="fuerte" ancho onClick={guardar}>
+          {guardado ? "Guardada ✓" : "Guardar"}
+        </Boton>
+
+        <p className="rounded-xl border border-acento/25 bg-acento/[0.05] px-3 py-2 text-xs leading-relaxed">
+          ⚠️ Usa una clave <b>aparte</b>, con su propio límite de crédito en OpenRouter.
+          Si compartes la del agente de WhatsApp, un descuido aquí puede dejarlo sin
+          saldo y mudo.
+        </p>
+      </div>
+    </Tarjeta>
   );
 }
 
