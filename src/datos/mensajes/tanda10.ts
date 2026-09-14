@@ -121,8 +121,8 @@ export const TANDA_10: MensajeDiario[] = [
     cuerpo:
       "Esperar el momento perfecto es una forma elegante de no hacer nada. Entrega hoy lo que tengas, aunque no esté redondo. Se mejora en marcha, no en la cabeza.",
     versiculo:
-      "El que al viento mira, no sembrará; y el que mira á las nubes, no segará.",
-    cita: "Eclesiastés 11:4",
+      "Por la mañana siembra tu simiente, y á la tarde no dejes reposar tu mano.",
+    cita: "Eclesiastés 11:6",
   },
   {
     tema: "la distracción",

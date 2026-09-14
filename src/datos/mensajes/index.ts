@@ -13,6 +13,8 @@ import { TANDA_10 } from "./tanda10";
 import { TANDA_11 } from "./tanda11";
 import { TANDA_12 } from "./tanda12";
 import { TANDA_13 } from "./tanda13";
+import { TANDA_14 } from "./tanda14";
+import { TANDA_15 } from "./tanda15";
 export type { MensajeDiario } from "./tipos";
 export { componer } from "./tipos";
 
@@ -36,6 +38,8 @@ export const MENSAJES: MensajeDiario[] = [
   ...TANDA_11,
   ...TANDA_12,
   ...TANDA_13,
+  ...TANDA_14,
+  ...TANDA_15,
 ];
 
 /** Quita tildes y mayúsculas: así «oración» encuentra «ORACION». */

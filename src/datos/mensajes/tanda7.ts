@@ -131,7 +131,7 @@ export const TANDA_7: MensajeDiario[] = [
     titulo: "SIN EXCUSAS",
     emoji: "🚧",
     cuerpo:
-      "Siempre habrá una razón para no hacerlo hoy. El que espera condiciones perfectas no empieza nunca. Hazlo con lo que tienes y como puedas.",
+      "Siempre habrá una razón buena para no hacerlo hoy. El que espera las condiciones perfectas no empieza nunca nada. Hazlo con lo que tienes y como puedas, pero hazlo hoy.",
     versiculo:
       "El que al viento mira, no sembrará; y el que mira á las nubes, no segará.",
     cita: "Eclesiastés 11:4",

@@ -180,7 +180,7 @@ export const TANDA_8: MensajeDiario[] = [
     titulo: "MANTENTE EN PIE",
     emoji: "🗿",
     cuerpo:
-      "A veces no hay que avanzar ni retroceder: hay que quedarse. Cuando todo empuje para que cedas, quédate donde estás. Eso también es ganar.",
+      "A veces no toca avanzar ni retroceder: toca quedarse. Cuando todo empuje para que cedas y cueste sostenerse, quédate donde estás y no te muevas. Eso también es ganar la batalla.",
     versiculo:
       "Por tanto, tomad toda la armadura de Dios, para que podáis resistir en el día malo, y estar firmes.",
     cita: "Efesios 6:13",
@@ -200,7 +200,7 @@ export const TANDA_8: MensajeDiario[] = [
     titulo: "TU FE VENCE",
     emoji: "🏅",
     cuerpo:
-      "Lo que tienes delante ya fue vencido. No pelees para conseguir la victoria: pelea desde ella. Levanta la cabeza y avanza con esa certeza.",
+      "Lo que tienes delante ya fue vencido antes de que tú llegaras. No pelees para conseguir la victoria: pelea desde ella, que es muy distinto. Levanta la cabeza y avanza el día con esa certeza.",
     versiculo:
       "Y esta es la victoria que vence al mundo, nuestra fe.",
     cita: "1 Juan 5:4",

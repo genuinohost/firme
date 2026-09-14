@@ -55,10 +55,10 @@ export const TANDA_9: MensajeDiario[] = [
   },
   {
     tema: "su cercanía",
-    titulo: "ÉL ESTÁ CERCA",
+    titulo: "A UNA PALABRA DE DISTANCIA",
     emoji: "🫱",
     cuerpo:
-      "No hace falta gritar ni buscarlo lejos. Está a la distancia de una palabra sincera. Llámalo hoy sin protocolo, como se le habla a quien está al lado.",
+      "No hace falta gritar ni buscarlo lejos ni encontrar las palabras exactas. Está a la distancia de una frase sincera. Llámalo hoy sin protocolo, como se le habla a quien está sentado al lado.",
     versiculo:
       "Cercano está Jehová á todos los que le invocan, á todos los que le invocan de veras.",
     cita: "Salmos 145:18",
@@ -98,7 +98,7 @@ export const TANDA_9: MensajeDiario[] = [
     titulo: "ÉL VA DELANTE",
     emoji: "🗺️",
     cuerpo:
-      "Adonde vas hoy, Él ya estuvo. No caminas explorando a ciegas: caminas detrás de quien conoce el terreno. Da el paso con esa seguridad.",
+      "Adonde vas hoy, Él ya estuvo antes. No caminas explorando a ciegas: caminas detrás de quien se conoce el terreno de memoria. Da el paso de hoy con esa seguridad puesta.",
     versiculo:
       "Y Jehová va delante de ti; él será contigo, no te dejará, ni te desamparará.",
     cita: "Deuteronomio 31:8",

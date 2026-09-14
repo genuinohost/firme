@@ -101,7 +101,7 @@ export const TANDA_13: MensajeDiario[] = [
     titulo: "LA MANO QUE TRABAJA",
     emoji: "✋",
     cuerpo:
-      "El que se mueve encuentra; el que espera se queda mirando. No necesitas la oportunidad perfecta: necesitas empezar con lo que hay hoy delante.",
+      "El que se mueve encuentra; el que espera se queda mirando cómo pasan los demás. No necesitas la oportunidad perfecta ni el momento ideal: necesitas empezar con lo poco que tengas hoy delante.",
     versiculo:
       "La mano de los diligentes se enseñoreará: mas la negligencia será tributaria.",
     cita: "Proverbios 12:24",
@@ -173,8 +173,8 @@ export const TANDA_13: MensajeDiario[] = [
     cuerpo:
       "Eso que llevas días esquivando te está gastando más por no hacerlo que lo que costaría hacerlo. Empieza por ahí hoy, y el resto del día irá cuesta abajo.",
     versiculo:
-      "Todo lo que te viniere á la mano para hacer, hazlo según tus fuerzas.",
-    cita: "Eclesiastés 9:10",
+      "Echa á Jehová tus obras, y tus pensamientos serán afirmados.",
+    cita: "Proverbios 16:3",
   },
   {
     tema: "guardar silencio",

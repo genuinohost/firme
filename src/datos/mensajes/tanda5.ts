@@ -247,7 +247,7 @@ export const TANDA_5: MensajeDiario[] = [
     titulo: "PERMANECE EN ÉL",
     emoji: "🍃",
     cuerpo:
-      "El fruto no se fabrica a fuerza de voluntad: sale de estar unido. No te esfuerces más, permanece más. Lo demás viene por añadidura.",
+      "El fruto no se fabrica a fuerza de voluntad ni de apretar los dientes: sale de estar unido. No te esfuerces más, permanece más. Lo demás termina viniendo por añadidura.",
     versiculo:
       "Estad en mí, y yo en vosotros. Como el pámpano no puede llevar fruto de sí mismo, si no estuviere en la vid.",
     cita: "Juan 15:4",

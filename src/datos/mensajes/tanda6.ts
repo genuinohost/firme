@@ -41,7 +41,7 @@ export const TANDA_6: MensajeDiario[] = [
     titulo: "AUNQUE ANDE EN EL VALLE",
     emoji: "🏞️",
     cuerpo:
-      "Estás pasando por el valle, no viviendo en él. Y no lo cruzas solo. Sigue caminando: los valles se atraviesan, no se habitan.",
+      "Estás pasando por el valle, no viviendo en él, y además no lo estás cruzando solo. Sigue caminando aunque sea despacio: los valles se atraviesan, no se habitan para siempre.",
     versiculo:
       "Aunque ande en valle de sombra de muerte, no temeré mal alguno; porque tú estarás conmigo.",
     cita: "Salmos 23:4",
@@ -160,7 +160,7 @@ export const TANDA_6: MensajeDiario[] = [
     titulo: "ÉL RESTAURA",
     emoji: "🔧",
     cuerpo:
-      "Lo que se rompió no está condenado a quedarse roto. Él repara y devuelve lo que parecía perdido para siempre. Entrégale hoy los pedazos.",
+      "Lo que se rompió no está condenado a quedarse roto para siempre. Él repara, y devuelve incluso lo que ya dabas por perdido hace años. Entrégale hoy los pedazos, tal como están.",
     versiculo:
       "Y os restituiré los años que comió la oruga, la langosta, el pulgón y el revoltón.",
     cita: "Joel 2:25",
@@ -180,7 +180,7 @@ export const TANDA_6: MensajeDiario[] = [
     titulo: "ESA ESPERANZA NO FALLA",
     emoji: "⚓",
     cuerpo:
-      "Hay esperanzas que decepcionan porque están puestas en lo que se mueve. Esta no. Amárrate a lo que no falla y aguanta el temporal.",
+      "Hay esperanzas que terminan decepcionando porque están puestas en cosas que se mueven. Esta no. Amárrate a lo único que no falla y aguanta ahí el temporal que estés cruzando.",
     versiculo:
       "Y la esperanza no avergüenza; porque el amor de Dios está derramado en nuestros corazones.",
     cita: "Romanos 5:5",
@@ -250,7 +250,7 @@ export const TANDA_6: MensajeDiario[] = [
     titulo: "ÉL NO SE DUERME",
     emoji: "👁️",
     cuerpo:
-      "Mientras tú duermes, Él sigue despierto cuidando lo tuyo. No tienes que vigilarlo todo. Suelta el turno de guardia y descansa de verdad.",
+      "Mientras tú duermes, Él sigue despierto cuidando lo tuyo y lo de los tuyos. No tienes que vigilarlo todo tú. Suelta el turno de guardia de una vez y descansa de verdad.",
     versiculo:
       "He aquí, no se adormecerá ni dormirá el que guarda á Israel.",
     cita: "Salmos 121:4",

@@ -197,7 +197,7 @@ export const TANDA_11: MensajeDiario[] = [
     cita: "Números 23:19",
   },
   {
-    tema: "la herencia",
+    tema: "lo que no se estropea",
     titulo: "TIENES UNA HERENCIA",
     emoji: "🏛️",
     cuerpo:
