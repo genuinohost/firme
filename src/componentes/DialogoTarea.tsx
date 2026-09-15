@@ -18,6 +18,15 @@ function desdeAhora(minutos: number): string {
   return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
 }
 
+/** Una fecha "AAAA-MM-DD" desplazada unos días, sin tocar husos horarios. */
+function dentroDeDias(fecha: string, dias: number): string {
+  const [a, m, d] = fecha.split("-").map(Number);
+  const f = new Date(a, m - 1, d + dias);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(
+    f.getDate(),
+  ).padStart(2, "0")}`;
+}
+
 export function DialogoTarea({
   fecha,
   tarea,
@@ -38,6 +47,15 @@ export function DialogoTarea({
   const [hora, setHora] = useState(tarea?.hora ?? (() => desdeAhora(30)));
   const [duracionMin, setDuracion] = useState(tarea?.duracionMin ?? 30);
   const [categoria, setCategoria] = useState<Categoria>(tarea?.categoria ?? "trabajo");
+  const [repeticion, setRepeticion] = useState<"uno" | "varios" | "siempre">(
+    !tarea?.repiteHasta ? "uno" : tarea.repiteHasta === "siempre" ? "siempre" : "varios",
+  );
+  // Por defecto, una semana: es el plazo con el que la gente piensa.
+  const [hasta, setHasta] = useState(
+    tarea?.repiteHasta && tarea.repiteHasta !== "siempre"
+      ? tarea.repiteHasta
+      : dentroDeDias(tarea?.fecha ?? fecha, 7),
+  );
   const [timbre, setTimbre] = useState<Timbre>(
     tarea?.timbre && tarea.timbre !== "ninguno" ? tarea.timbre : "pulso",
   );
@@ -139,6 +157,58 @@ export function DialogoTarea({
               </Selector>
             </Campo>
           ) : null}
+
+          {/*
+            Cuánto dura la tarea en el calendario, no en el reloj.
+
+            Se guarda una sola tarea y se proyecta sobre los días que le tocan.
+            Por eso cambiar la hora la cambia en todos: es la misma tarea, no
+            copias. Y el historial de cada día sigue siendo suyo.
+          */}
+          <div>
+            <Etiqueta>¿cuántos días?</Etiqueta>
+            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+              {(
+                [
+                  { id: "uno", nombre: "Un día" },
+                  { id: "varios", nombre: "Varios días" },
+                  { id: "siempre", nombre: "Cada día" },
+                ] as const
+              ).map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setRepeticion(r.id)}
+                  className={`rounded-xl border px-2 py-2.5 text-xs transition ${
+                    repeticion === r.id ? "border-acento bg-acento/[0.08]" : "border-borde"
+                  }`}
+                  aria-pressed={repeticion === r.id}
+                >
+                  {r.nombre}
+                </button>
+              ))}
+            </div>
+
+            {repeticion === "varios" ? (
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="text-sm text-tenue">Hasta el</span>
+                <input
+                  type="date"
+                  value={hasta}
+                  min={tarea?.fecha ?? fecha}
+                  onChange={(e) => setHasta(e.target.value)}
+                  className="rounded-lg border border-borde bg-superficie-alta px-2 py-1 text-sm outline-none focus:border-acento"
+                />
+              </div>
+            ) : null}
+
+            <p className="mt-1.5 text-xs leading-relaxed text-tenue">
+              {repeticion === "uno"
+                ? "Solo aparece este día."
+                : repeticion === "siempre"
+                  ? "Aparecerá cada día, con su alarma, hasta que la borres."
+                  : `Aparecerá cada día desde hoy hasta el ${hasta}, con su alarma.`}
+            </p>
+          </div>
         </div>
 
         <div className="mt-5 flex gap-2">
@@ -156,6 +226,9 @@ export function DialogoTarea({
                   duracionMin,
                   categoria,
                   timbre: conHora ? timbre : "ninguno",
+                  ...(repeticion === "uno"
+                    ? {}
+                    : { repiteHasta: repeticion === "siempre" ? "siempre" : hasta }),
                 })
               }
             >

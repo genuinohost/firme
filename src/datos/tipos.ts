@@ -46,11 +46,26 @@ export type BloqueRutina = {
   activo: boolean;
 };
 
-/** Una tarea suelta, de un día concreto. */
+/**
+ * Una tarea suelta.
+ *
+ * Nace en un día concreto y, si se quiere, se repite: hasta una fecha o sin
+ * fin. Se guarda **una sola tarea** y se proyecta sobre los días que le tocan,
+ * en vez de copiarla día a día: así cambiar la hora la cambia en todos, y el
+ * historial de cada día sigue siendo suyo porque los registros van por
+ * `fecha|id`.
+ */
 export type Tarea = {
   id: string;
-  /** "AAAA-MM-DD" */
+  /** Desde qué día. "AAAA-MM-DD" */
   fecha: string;
+  /**
+   * Hasta cuándo se repite:
+   * - ausente → solo el día de `fecha`
+   * - "AAAA-MM-DD" → todos los días hasta ese, incluido
+   * - "siempre" → cada día, sin fin
+   */
+  repiteHasta?: string;
   nombre: string;
   /** "HH:MM" o null si es una tarea sin hora fija. */
   hora: string | null;
@@ -103,7 +118,32 @@ export type Datos = {
   tareas: Tarea[];
   registros: Record<string, Registro>;
   motivos: Motivo[];
+  /** El diario. Opcional para no romper las copias de seguridad viejas. */
+  notas?: Nota[];
   ajustes: Ajustes;
+};
+
+/**
+ * Una nota del diario.
+ *
+ * Espacio libre y privado: aprendizajes, batallas, oraciones. Nunca sale del
+ * teléfono.
+ *
+ * Las que nacen del repaso de la noche guardan de qué plan vienen y cómo acabó
+ * ese día. Eso es lo que convierte el diario en algo más que un cuaderno: al
+ * releer, no solo está lo que uno escribió, sino si aquel día venció o cayó.
+ */
+export type Nota = {
+  id: string;
+  /** "AAAA-MM-DD" */
+  fecha: string;
+  texto: string;
+  /** Cuándo se escribió. */
+  momento: number;
+  /** Id del plan, si nació de su repaso. */
+  plan?: string;
+  /** Cómo quedó ese día en ese plan. */
+  estado?: "ganado" | "restaurado" | "fallado";
 };
 
 /** Lo que se pinta en la línea del día: bloque de rutina o tarea, ya resuelto. */

@@ -82,8 +82,14 @@ export function Campo({
   );
 }
 
+/**
+ * El `w-full` no es adorno: sin él, una entrada fuera de `Campo` se queda con
+ * el ancho por defecto del navegador y se descoloca. Dentro de `Campo` no se
+ * notaba porque ese contenedor la estiraba, así que el fallo solo aparecía al
+ * usarlas sueltas.
+ */
 const claseEntrada =
-  "rounded-xl border border-borde bg-superficie-alta px-3 py-2.5 outline-none transition focus:border-acento";
+  "w-full rounded-xl border border-borde bg-superficie-alta px-3 py-2.5 outline-none transition focus:border-acento";
 
 export function Entrada(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${claseEntrada} ${props.className ?? ""}`} />;

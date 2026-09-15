@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
-import { Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
+import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
  * El repaso de la noche.
@@ -21,13 +21,18 @@ export function ExamenDelPlan({
 }: {
   plan: Plan;
   registro: RegistroPlan | null;
-  onGuardar: (puntos: Record<string, boolean>) => void;
+  onGuardar: (
+    puntos: Record<string, boolean>,
+    /** Lo que quiso escribir sobre el día. Va al diario. */
+    nota?: string,
+  ) => void;
   onCerrar: () => void;
 }) {
   const [respuestas, setRespuestas] = useState<Record<string, boolean | undefined>>(
     () => registro?.puntos ?? {},
   );
   const [verVersiculo, setVerVersiculo] = useState<string | null>(null);
+  const [nota, setNota] = useState("");
 
   const contestados = plan.puntos.filter((p) => respuestas[p.id] !== undefined).length;
   const todos = contestados === plan.puntos.length;
@@ -148,12 +153,32 @@ export function ExamenDelPlan({
           </Tarjeta>
         ) : null}
 
+        {/*
+          Escribir sobre el día es opcional, y sale solo cuando ya se ha
+          contestado todo: antes distrae de lo que se ha venido a hacer.
+          Va al diario junto con el plan y con cómo acabó la jornada.
+        */}
+        {todos ? (
+          <div className="mt-4">
+            <Etiqueta>si quieres, escríbelo</Etiqueta>
+            <AreaTexto
+              rows={3}
+              value={nota}
+              onChange={(e) => setNota(e.target.value)}
+              placeholder="Cómo me fue hoy con esto..."
+            />
+            <p className="mt-1.5 text-xs text-tenue">
+              Se guarda en tu diario. No lo ve nadie más.
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-3 flex flex-col gap-2">
           <Boton
             variante="fuerte"
             ancho
             deshabilitado={!todos}
-            onClick={() => onGuardar(respuestas as Record<string, boolean>)}
+            onClick={() => onGuardar(respuestas as Record<string, boolean>, nota)}
           >
             {todos
               ? "Cerrar el día"

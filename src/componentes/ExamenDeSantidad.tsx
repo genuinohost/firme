@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
-import { Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
+import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
  * El repaso de la noche para los planes de santidad.
@@ -18,7 +18,7 @@ import { Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
  * no para acusar, sino para que vea el patrón y se guarde mejor.
  */
 
-type Paso = "pregunta" | "donde" | "arrepentimiento" | "cierre";
+type Paso = "pregunta" | "donde" | "arrepentimiento" | "cierre" | "limpio";
 
 export function ExamenDeSantidad({
   plan,
@@ -31,17 +31,22 @@ export function ExamenDeSantidad({
   registro: RegistroPlan | null;
   /** Cuántos días se salvaron por arrepentimiento en los últimos 30. */
   restauradosEsteMes: number;
-  onGuardar: (r: {
-    puntos: Record<string, boolean>;
-    restaurado: boolean;
-    caidas: string[];
-    vencioSuDebilidad?: boolean;
-  }) => void;
+  onGuardar: (
+    r: {
+      puntos: Record<string, boolean>;
+      restaurado: boolean;
+      caidas: string[];
+      vencioSuDebilidad?: boolean;
+    },
+    /** Lo que quiso escribir sobre el día. Va al diario. */
+    nota?: string,
+  ) => void;
   onCerrar: () => void;
 }) {
   const [paso, setPaso] = useState<Paso>("pregunta");
   const [caidas, setCaidas] = useState<string[]>(registro?.caidas ?? []);
   const [arrepentido, setArrepentido] = useState<boolean | null>(null);
+  const [nota, setNota] = useState("");
 
   const debilidades = plan.debilidades ?? [];
   const cayoEnSuDebilidad = caidas.some((id) => debilidades.includes(id));
@@ -50,12 +55,15 @@ export function ExamenDeSantidad({
   const guardar = (limpio: boolean) => {
     const puntos: Record<string, boolean> = {};
     for (const p of plan.puntos) puntos[p.id] = limpio ? true : !caidas.includes(p.id);
-    onGuardar({
-      puntos,
-      restaurado: !limpio && arrepentido === true,
-      caidas: limpio ? [] : caidas,
-      vencioSuDebilidad,
-    });
+    onGuardar(
+      {
+        puntos,
+        restaurado: !limpio && arrepentido === true,
+        caidas: limpio ? [] : caidas,
+        vencioSuDebilidad,
+      },
+      nota,
+    );
   };
 
   return (
@@ -87,7 +95,14 @@ export function ExamenDeSantidad({
             </p>
 
             <div className="mt-5 flex flex-col gap-2">
-              <Boton variante="logro" ancho onClick={() => guardar(true)}>
+              <Boton
+                variante="logro"
+                ancho
+                onClick={() => {
+                  setArrepentido(null);
+                  setPaso("limpio");
+                }}
+              >
                 Sí, la guardé
               </Boton>
               <Boton variante="fallo" ancho onClick={() => setPaso("donde")}>
@@ -189,6 +204,49 @@ export function ExamenDeSantidad({
           </div>
         ) : null}
 
+{/*
+          El día limpio. Antes se guardaba de un toque y se acababa ahí.
+
+          Pero una victoria también merece contarse: es justo el día que conviene
+          recordar dentro de seis meses, cuando cueste. Por eso ahora pasa por
+          aquí antes de cerrarse.
+        */}
+        {paso === "limpio" ? (
+          <div className="entrar mt-4">
+            <Tarjeta className="border-logro/40">
+              <Etiqueta>día guardado</Etiqueta>
+              <p className="mt-1 text-[15px] leading-relaxed">
+                Bien. Nadie lo vio, y no hace falta: lo viste tú y lo vio Él.
+              </p>
+              <div className="mt-3">
+                <Cita
+                  texto="Bienaventurado el varón que soporta la tentación; porque cuando fuere probado, recibirá la corona de vida."
+                  fuente="Santiago 1:12"
+                />
+              </div>
+            </Tarjeta>
+
+            <div className="mt-4">
+              <Etiqueta>si quieres, escríbelo</Etiqueta>
+              <AreaTexto
+                rows={3}
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                placeholder="Qué me ayudó hoy a mantenerme en pie..."
+              />
+              <p className="mt-1.5 text-xs text-tenue">
+                Se guarda en tu diario. No lo ve nadie más.
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <Boton variante="logro" ancho onClick={() => guardar(true)}>
+                Cerrar el día
+              </Boton>
+            </div>
+          </div>
+        ) : null}
+
         {/* El cierre. Aquí es donde el tono importa más que en toda la app. */}
         {paso === "cierre" ? (
           <div className="entrar mt-4">
@@ -256,6 +314,31 @@ export function ExamenDeSantidad({
                 </div>
               </>
             )}
+
+            {/*
+              Escribir aquí es lo que convierte el repaso en memoria.
+
+              Va al diario con el plan y con cómo acabó el día, así que dentro
+              de un año no se lee «me costó» a secas: se lee junto a si aquel
+              día venció o cayó. Es opcional a propósito — hay noches en las que
+              uno no quiere escribir nada, y está bien.
+            */}
+            <div className="mt-4">
+              <Etiqueta>si quieres, escríbelo</Etiqueta>
+              <AreaTexto
+                rows={3}
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                placeholder={
+                  arrepentido
+                    ? "Qué me llevó ahí, y qué le dije a Dios..."
+                    : "Cómo me sentí al vencer hoy..."
+                }
+              />
+              <p className="mt-1.5 text-xs text-tenue">
+                Se guarda en tu diario. No lo ve nadie más.
+              </p>
+            </div>
 
             <div className="mt-4">
               <Boton variante={arrepentido ? "fuerte" : "normal"} ancho onClick={() => guardar(false)}>

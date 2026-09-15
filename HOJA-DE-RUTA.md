@@ -25,7 +25,8 @@ Hoja de ruta
 | ✅ | Frases de ánimo por área y momento | `datos/frases.ts` |
 | ✅ | «Mi porqué»: los motivos, con uno de ancla | `PantallaPorque` |
 | ✅ | Rachas, calendario de 35 días, registro de excusas | `PantallaProgreso` |
-| ✅ | Editar y borrar tareas | `DialogoTarea` |
+| ✅ | Editar y borrar tareas, **un día, varios o cada día** | `DialogoTarea` |
+| ✅ | **Diario personal**, y notas al cerrar el día de un plan | `PantallaDiario` |
 | ✅ | Cuenta atrás hasta la próxima alarma | `PantallaHoy` |
 | ✅ | Compartir frases a WhatsApp | `logica/compartir.ts` |
 | ✅ | ♥ Guardar frases y mensajes, con buscador | `logica/favoritas.ts` |
@@ -144,9 +145,17 @@ Esto es lo que hace que la app sirva. Antes de Play Store, antes de cuentas.
 - [x] ✅ Editar horas, pausar y eliminar un plan, desde su ficha.
 - [x] ✅ Ficha de cada plan: racha, récord, días limpios y días restaurados.
 
-### 1.3 Diario personal · **pedido el 14-09**
-Espacio libre y **privado**: aprendizajes, batallas, oraciones. Sin formato
-impuesto. Que se pueda buscar y se exporte con la copia de seguridad.
+### 1.3 ✅ Diario personal — hecho el 15-09
+
+Espacio libre y privado, sin formato impuesto, con buscador. `PantallaDiario`.
+
+**Y atado al repaso de la noche**, que es lo que lo hace distinto de un
+cuaderno: al cerrar el día de un plan se puede escribir cómo se sintió vencer o
+caer, y esa nota llega al diario **con el plan y con cómo acabó el día**. Al
+releerla dentro de un año no se lee «me costó» a secas: se lee junto a si aquel
+día venció o cayó.
+
+- [ ] Falta que se exporte con la copia de seguridad.
 
 ### 1.4 Estadísticas de verdad · **pedido el 14-09**
 Alex: «todo tipo de seguimiento y análisis estadístico es VITAL».
@@ -155,6 +164,17 @@ Alex: «todo tipo de seguimiento y análisis estadístico es VITAL».
 - Comparar planes entre sí.
 - Mejor hora del día, mejor día de la semana.
 - Racha máxima histórica por plan.
+
+### 1.4b Las frases por tema, sin pedirle una clave a nadie · **pedido el 15-09**
+
+Alex: «el banco se queda corto cuando quiero generar frases según una frase. Lo
+mejor es que salga desde internet».
+
+Tiene razón, y hoy el generador **pide una clave de OpenRouter**, que es un muro
+infranqueable para cualquiera que no sea él. **Esto es exactamente la Fase 2.1**:
+el servidor propio. Sin él, esta función no sirve para nadie más.
+
+> Es la razón más fuerte para hacer el servidor antes que las cuentas.
 
 ### 1.5 Recibimiento del primer uso
 Hoy la app abre con la rutina de Alex. Quien la instale debe poder, en dos

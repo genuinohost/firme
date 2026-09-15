@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cargar, guardar } from "@/datos/almacen";
+import { cargar, guardar, idNuevo } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
@@ -22,9 +22,10 @@ import { ExamenDelPlan } from "@/componentes/ExamenDelPlan";
 import { ExamenDeSantidad } from "@/componentes/ExamenDeSantidad";
 import { DetallePlan } from "@/componentes/DetallePlan";
 import { AvisoAlarmaPerdida } from "@/componentes/AvisoAlarmaPerdida";
-import { claveRegistro, diasRestaurados, registroDe } from "@/logica/planes";
+import { claveRegistro, diasRestaurados, estadoDelDia, registroDe } from "@/logica/planes";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
+import { PantallaDiario } from "@/componentes/PantallaDiario";
 import { PantallaMensaje } from "@/componentes/PantallaMensaje";
 import { PantallaComunidad } from "@/componentes/PantallaComunidad";
 import { AvisoActualizacion } from "@/componentes/AvisoActualizacion";
@@ -43,6 +44,7 @@ type Pestaña =
   | "mas"
   | "porque"
   | "progreso"
+  | "diario"
   | "ajustes";
 
 /** Las que se usan a diario van en la barra; el resto, dentro de «Más». */
@@ -254,6 +256,13 @@ export default function App() {
                 onIr: () => setPestaña("porque"),
               },
               {
+                id: "diario",
+                icono: "✎",
+                titulo: "Mi diario",
+                detalle: "Tu espacio privado: lo que aprendes y lo que peleas",
+                onIr: () => setPestaña("diario"),
+              },
+              {
                 id: "progreso",
                 icono: "▟",
                 titulo: "Progreso",
@@ -323,6 +332,16 @@ export default function App() {
           />
         ) : null}
 
+        {pestaña === "diario" ? (
+          <ConVuelta titulo="Mi diario" onVolver={() => setPestaña("mas")}>
+            <PantallaDiario
+              datos={datos}
+              ahora={ahora}
+              onCambiar={(notas) => setDatos((d) => ({ ...d, notas }))}
+            />
+          </ConVuelta>
+        ) : null}
+
         {pestaña === "progreso" ? (
           <ConVuelta titulo="Progreso" onVolver={() => setPestaña("mas")}>
             <PantallaProgreso datos={datos} hoy={diaEstable} />
@@ -342,9 +361,22 @@ export default function App() {
         ) : null}
       </main>
 
-      {/* Aviso flotante con la frase de ánimo tras marcar un bloque. */}
+      {/*
+        Aviso flotante con la frase de ánimo tras marcar un bloque.
+
+        Se coloca por encima de la barra contando su zona segura, y en una capa
+        superior a ella. Antes iba a 76 píxeles fijos y en la misma capa que la
+        barra, que se pinta después en el HTML y por tanto ganaba. En un móvil
+        con botones de navegación —o con gesto—, `env(safe-area-inset-bottom)`
+        engorda la barra por encima de esos 76 píxeles y el aviso quedaba
+        escondido detrás: en el navegador se veía bien y en el teléfono no
+        salía nunca.
+      */}
       {brindis ? (
-        <div className="entrar pointer-events-none fixed inset-x-0 bottom-[76px] z-30 flex justify-center px-4">
+        <div
+          className="entrar pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4"
+          style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
+        >
           {/* Fondo opaco a propósito: translúcido sobre la lista no se leía. */}
           <div className="pointer-events-auto max-w-md rounded-2xl border border-acento/40 bg-superficie-alta px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
             <Cita texto={brindis.texto} fuente={brindis.fuente} compartible={false} />
@@ -407,13 +439,39 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
       {examen ? (() => {
         const plan = (datos.planes ?? []).find((p) => p.id === examen);
         if (!plan) return null;
-        const anotar = (registro: RegistroPlan) => {
+        /**
+         * Guarda el repaso y, si escribió algo, lo manda al diario.
+         *
+         * La nota va con el plan y con cómo acabó el día. Eso es lo que hace
+         * que releerla dentro de un año valga: no solo está lo que sintió,
+         * está si aquel día venció o cayó.
+         */
+        const anotar = (registro: RegistroPlan, nota?: string) => {
+          const texto = nota?.trim();
           setDatos((d) => ({
             ...d,
             planesRegistros: {
               ...d.planesRegistros,
               [claveRegistro(fechaHoy, plan.id)]: registro,
             },
+            ...(texto
+              ? {
+                  notas: [
+                    {
+                      id: idNuevo(),
+                      fecha: fechaHoy,
+                      texto,
+                      momento: Date.now(),
+                      plan: plan.id,
+                      estado: estadoDelDia(plan, fechaHoy, { ...d, planesRegistros: {
+                        ...d.planesRegistros,
+                        [claveRegistro(fechaHoy, plan.id)]: registro,
+                      } }, true) as "ganado" | "restaurado" | "fallado",
+                    },
+                    ...(d.notas ?? []),
+                  ],
+                }
+              : {}),
           }));
           setExamen(null);
         };
@@ -426,7 +484,7 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
               plan={plan}
               registro={registroDe(datos, fechaHoy, plan.id)}
               restauradosEsteMes={diasRestaurados(plan, datos, 30, ahora)}
-              onGuardar={(r) => anotar({ ...r, repasado: Date.now() })}
+              onGuardar={(r, nota) => anotar({ ...r, repasado: Date.now() }, nota)}
               onCerrar={() => setExamen(null)}
             />
           );
@@ -436,7 +494,7 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
           <ExamenDelPlan
             plan={plan}
             registro={registroDe(datos, fechaHoy, plan.id)}
-            onGuardar={(puntos) => anotar({ puntos, repasado: Date.now() })}
+            onGuardar={(puntos, nota) => anotar({ puntos, repasado: Date.now() }, nota)}
             onCerrar={() => setExamen(null)}
           />
         );

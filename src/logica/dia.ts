@@ -1,4 +1,4 @@
-import type { Datos, Suceso } from "@/datos/tipos";
+import type { Datos, Suceso, Tarea } from "@/datos/tipos";
 
 export const DIAS_CORTOS = ["D", "L", "M", "X", "J", "V", "S"];
 export const DIAS_LARGOS = [
@@ -44,6 +44,19 @@ export function minutoActual(ahora = new Date()): number {
  * La línea del día: bloques de la rutina que tocan hoy más las tareas de la
  * fecha, ordenados por hora. Las tareas sin hora van al final.
  */
+/**
+ * Si una tarea le toca a este día.
+ *
+ * Las fechas van en "AAAA-MM-DD", que se ordena bien comparando cadenas: no
+ * hace falta convertirlas a Date ni preocuparse por husos horarios.
+ */
+function tocaHoy(tarea: Tarea, fecha: string): boolean {
+  if (tarea.fecha === fecha) return true;
+  if (!tarea.repiteHasta) return false;
+  if (fecha < tarea.fecha) return false;
+  return tarea.repiteHasta === "siempre" || fecha <= tarea.repiteHasta;
+}
+
 export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
   const diaSemana = desdeClave(fecha).getDay();
 
@@ -91,7 +104,7 @@ export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
     }));
 
   const deTareas: Suceso[] = datos.tareas
-    .filter((t) => t.fecha === fecha)
+    .filter((t) => tocaHoy(t, fecha))
     .map((t) => ({
       id: t.id,
       origen: "tarea" as const,
