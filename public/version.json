@@ -1,10 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 20,
-  "nombre": "3.8",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-3.8.apk",
+  "codigo": 21,
+  "nombre": "3.9",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-3.9.apk",
   "novedades": [
-    "El panel ya no marca en rojo cosas que estan bien"
+    "Avisa cuando el ahorro de bateria puede tumbar las alarmas"
   ],
   "importante": false
 }
