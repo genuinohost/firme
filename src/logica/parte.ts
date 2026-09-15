@@ -43,6 +43,7 @@ export function redactarParte(e: EstadoDespertador): string {
   l.push(`  Acceso a No molestar: ${si(e.accesoNoMolestar)}`);
   l.push(`  Cajón de reposo: ${e.cajon}${e.cajon === "RESTRINGIDA" ? " ←" : ""}`);
   l.push(`  Restringida en segundo plano: ${e.restringidaEnSegundoPlano ? "SÍ ←" : "no"}`);
+  l.push(`  Ahorro de energía activo: ${e.ahorroDeEnergia ? "SÍ ←" : "no"}`);
   l.push(
     `  Volumen de alarma: ${e.volumenAlarma}/${e.volumenAlarmaMaximo}` +
       (e.volumenAlarma === 0 ? " ←" : ""),

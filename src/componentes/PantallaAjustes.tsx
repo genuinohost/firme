@@ -423,6 +423,29 @@ function ComprobacionSistema() {
         despertador. No molestar no lo silencia.
       </p>
 
+      {/*
+        Esto va arriba del todo y en rojo porque es lo único de esta pantalla
+        que ninguna app puede arreglar por su cuenta. El modo ultra está hecho
+        para cerrar aplicaciones; con él puesto, el sistema retira las alarmas y
+        no hay nada que programar que lo evite.
+      */}
+      {estado.ahorroDeEnergia ? (
+        <div className="mt-3 rounded-xl border border-fallo/40 bg-fallo/[0.08] px-3 py-3">
+          <p className="text-sm font-semibold text-fallo">
+            El ahorro de batería está activo
+          </p>
+          <p className="mt-1 text-xs leading-relaxed">
+            Con el <b>modo ultra</b>, el teléfono cierra las aplicaciones y les retira
+            las alarmas. Ninguna app puede evitarlo: está hecho justo para eso, y sólo
+            sobrevive el reloj del propio sistema.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            Si duermes con ese modo puesto, añade Genuino a sus aplicaciones permitidas
+            — o apágalo por la noche.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-3 flex flex-col gap-2.5">
         <Linea
           bien={estado.puedeExactas}

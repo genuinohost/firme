@@ -57,6 +57,14 @@ export type EstadoDespertador = {
   cajon: string;
   /** «Restringir actividad en segundo plano»: mata alarmas y nadie lo mira. */
   restringidaEnSegundoPlano: boolean;
+  /**
+   * El ahorro de energía del sistema.
+   *
+   * El modo **ultra** de algunos fabricantes cierra las apps de terceros y les
+   * retira las alarmas. No hay forma de evitarlo desde dentro: está hecho para
+   * eso. Sólo se puede avisar.
+   */
+  ahorroDeEnergia: boolean;
 };
 
 type PluginAlarmaExacta = {

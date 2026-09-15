@@ -406,7 +406,29 @@ public class AlarmaExacta extends Plugin {
         respuesta.put("sdk", Build.VERSION.SDK_INT);
         respuesta.put("cajon", cajonDeReposo(contexto));
         respuesta.put("restringidaEnSegundoPlano", restringidaEnSegundoPlano(contexto));
+        respuesta.put("ahorroDeEnergia", ahorroDeEnergia(contexto));
         llamada.resolve(respuesta);
+    }
+
+    /**
+     * Si el ahorro de energia esta puesto.
+     *
+     * El modo ultra de algunos fabricantes —Xiaomi entre ellos— **cierra las
+     * aplicaciones de terceros y el sistema les retira las alarmas**. Ninguna
+     * app puede evitarlo desde dentro: esta hecho justo para eso, y el unico
+     * despertador que sobrevive es el del propio telefono, porque es del
+     * sistema.
+     *
+     * Lo unico honrado que se puede hacer es **decirlo en voz alta** en vez de
+     * quedarse callado y fallar de madrugada.
+     */
+    private static boolean ahorroDeEnergia(Context contexto) {
+        try {
+            PowerManager energia = contexto.getSystemService(PowerManager.class);
+            return energia != null && energia.isPowerSaveMode();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
