@@ -23,6 +23,7 @@ import {
 } from "@/logica/generador";
 import { activarFirma, firmaActiva, leerFirma } from "@/logica/compartir";
 import { Clipboard } from "@capacitor/clipboard";
+import { esNativo } from "@/logica/alarmasNativas";
 import { consejoDelFabricante, redactarParte } from "@/logica/parte";
 import {
   hayVersionNueva,
@@ -88,6 +89,9 @@ export function PantallaAjustes({
       <Tarjeta>
         <Etiqueta>avisos y alarma</Etiqueta>
         <div className="mt-3 flex flex-col gap-3">
+          {/* Fuera del APK: dentro, el permiso que manda es el de Android y lo
+              informa «ComprobacionSistema». Aquí saldría siempre en rojo. */}
+          {esNativo() ? null : (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm">Notificaciones del sistema</p>
@@ -110,8 +114,9 @@ export function PantallaAjustes({
               </Boton>
             ) : null}
           </div>
+          )}
 
-          {!yaInstalada ? (
+          {!esNativo() && !yaInstalada ? (
             <div className="flex items-center justify-between gap-3 border-t border-borde pt-3">
               <div className="min-w-0">
                 <p className="text-sm">Instalar en el móvil</p>
@@ -305,8 +310,22 @@ function Comprobacion({
   proximo: { nombre: string; hora: string; falta: string } | null;
   onProbar: () => void;
 }) {
+  /**
+   * Dentro del APK, dos de estas comprobaciones son mentira y asustan.
+   *
+   * «Permiso de notificaciones» mira `Notification.permission`, el permiso de
+   * la web, que en una vista incrustada no se concede nunca — mientras el de
+   * Android, que es el que manda, está dado. Y «App instalada» pregunta si la
+   * web corre en modo aplicación, que dentro del APK es falso por definición.
+   *
+   * Las dos salían en rojo en un móvil perfectamente configurado. Un panel que
+   * da falsas alarmas es peor que no tener panel: enseña a no creerle.
+   * En la app nativa manda `ComprobacionSistema`, que le pregunta al sistema.
+   */
+  const enLaApp = esNativo();
+
   const filas: { bien: boolean; titulo: string; detalle: string }[] = [
-    {
+    ...(enLaApp ? [] : [{
       bien: permiso === "granted",
       titulo: "Permiso de notificaciones",
       detalle:
@@ -322,7 +341,7 @@ function Comprobacion({
       detalle: yaInstalada
         ? "Abierta desde el icono."
         : "Estás en el navegador. Instálala: las alarmas aguantan mucho mejor.",
-    },
+    }]),
     {
       bien: proximo !== null,
       titulo: "Hay un aviso programado",
