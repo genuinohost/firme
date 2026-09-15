@@ -47,6 +47,11 @@ public class ReceptorAlarma extends BroadcastReceiver {
 
         anotarQueSono(contexto, id, prevista);
 
+        // Rearmar las siguientes, aqui y ahora. Es lo que hace que la cadena se
+        // sostenga sola: si el sistema hubiera tirado alguna, esto la repone sin
+        // que nadie abra la app, y la cola nunca se agota aunque pasen semanas.
+        AlarmaExacta.armarLasProximas(contexto);
+
         if (arrancarElServicio(contexto, id, titulo, cuerpo, idSuceso)) return;
 
         // Red de seguridad: la notificacion sonora de siempre.

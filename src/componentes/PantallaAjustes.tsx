@@ -22,6 +22,8 @@ import {
   MODELO_POR_DEFECTO,
 } from "@/logica/generador";
 import { activarFirma, firmaActiva, leerFirma } from "@/logica/compartir";
+import { Clipboard } from "@capacitor/clipboard";
+import { consejoDelFabricante, redactarParte } from "@/logica/parte";
 import {
   hayVersionNueva,
   nombreInstalado,
@@ -80,6 +82,8 @@ export function PantallaAjustes({
       <ComprobacionSistema />
 
       <Version />
+
+      <ParteDelDespertador />
 
       <Tarjeta>
         <Etiqueta>avisos y alarma</Etiqueta>
@@ -742,6 +746,79 @@ function Version() {
           </p>
         </div>
       ) : null}
+    </Tarjeta>
+  );
+}
+
+/**
+ * El parte del despertador.
+ *
+ * Cuando una alarma de madrugada no suena, preguntar «¿tienes los permisos
+ * bien?» no lleva a ninguna parte: lo que mata las alarmas casi nunca es un
+ * permiso, sino el cajón de reposo del sistema, la restricción de segundo plano
+ * o un ajuste del fabricante que Android ni siquiera expone.
+ *
+ * Esto vuelca todo lo que el móvil sabe de sus propias alarmas —incluido qué
+ * llegó a sonar de verdad y cuándo— en un texto que se copia de un toque. Un
+ * «no sonó» se convierte en datos.
+ */
+function ParteDelDespertador() {
+  const [texto, setTexto] = useState("");
+  const [consejo, setConsejo] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  const levantar = async () => {
+    const e = await estadoDespertador();
+    if (!e) return;
+    setTexto(redactarParte(e));
+    setConsejo(consejoDelFabricante(e.fabricante));
+  };
+
+  useEffect(() => {
+    void levantar();
+  }, []);
+
+  if (!hayDespertador()) return null;
+
+  return (
+    <Tarjeta>
+      <Etiqueta>parte del despertador</Etiqueta>
+      <p className="mt-2 text-sm leading-relaxed text-tenue">
+        Si una alarma no suena, esto dice por qué. Cópialo y mándalo: lleva lo que
+        el móvil sabe de sus propias alarmas, incluido qué llegó a sonar de verdad.
+      </p>
+
+      {consejo ? (
+        <div className="mt-3 rounded-xl border border-acento/25 bg-acento/[0.06] px-3 py-2.5">
+          <Etiqueta>tu móvil en concreto</Etiqueta>
+          <p className="mt-1 text-xs leading-relaxed">{consejo}</p>
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            Esto no lo puede hacer ninguna aplicación por ti: es un ajuste del
+            fabricante, fuera de lo que Android deja tocar.
+          </p>
+        </div>
+      ) : null}
+
+      <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-superficie-alta px-3 py-2.5 text-[11px] leading-relaxed whitespace-pre">
+        {texto || "Leyendo…"}
+      </pre>
+
+      <div className="mt-3 flex flex-col gap-2">
+        <Boton
+          variante="fuerte"
+          ancho
+          onClick={async () => {
+            await Clipboard.write({ string: texto });
+            setCopiado(true);
+            window.setTimeout(() => setCopiado(false), 2500);
+          }}
+        >
+          {copiado ? "Copiado ✓" : "Copiar el parte"}
+        </Boton>
+        <Boton ancho onClick={() => void levantar()}>
+          Volver a leer
+        </Boton>
+      </div>
     </Tarjeta>
   );
 }

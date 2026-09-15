@@ -3,10 +3,6 @@ package app.genuino.firme;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 /**
  * Al reiniciar el movil, Android se olvida de todas las alarmas programadas.
@@ -29,29 +25,8 @@ public class ReceptorArranque extends BroadcastReceiver {
 
         AlarmaExacta.crearCanal(contexto);
 
-        SharedPreferences prefs = contexto.getSharedPreferences(
-                AlarmaExacta.PREFS, Context.MODE_PRIVATE);
-        String crudo = prefs.getString("cola", "[]");
-        long ahora = System.currentTimeMillis();
-
-        try {
-            JSONArray cola = new JSONArray(crudo);
-            for (int i = 0; i < cola.length(); i++) {
-                JSONObject alarma = cola.getJSONObject(i);
-                long cuando = alarma.optLong("cuando", 0);
-                if (cuando <= ahora) continue; // las que ya pasaron, se dejan ir
-
-                AlarmaExacta.programarUna(
-                        contexto,
-                        alarma.optInt("id", i + 1),
-                        cuando,
-                        alarma.optString("titulo", "Firme"),
-                        alarma.optString("cuerpo", "Es la hora."),
-                        alarma.optString("idSuceso", "")
-                );
-            }
-        } catch (Exception ignorada) {
-            // Si la cola esta ilegible, se rehara cuando se abra la app.
-        }
+        // La lista de dos semanas sobrevivio al reinicio en disco; de ahi se
+        // vuelven a armar las proximas sin que nadie tenga que abrir la app.
+        AlarmaExacta.armarLasProximas(contexto);
     }
 }

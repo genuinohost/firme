@@ -47,6 +47,16 @@ export type EstadoDespertador = {
   ultimoFallo: string;
   /** Apuntes de los disparos reales, en JSON. */
   diario: string;
+  /** La lista completa de alarmas guardada en disco, en JSON. */
+  cola: string;
+  fabricante: string;
+  modelo: string;
+  android: string;
+  sdk: number;
+  /** Cajón de reposo del sistema. «RESTRINGIDA» es la mala. */
+  cajon: string;
+  /** «Restringir actividad en segundo plano»: mata alarmas y nadie lo mira. */
+  restringidaEnSegundoPlano: boolean;
 };
 
 type PluginAlarmaExacta = {

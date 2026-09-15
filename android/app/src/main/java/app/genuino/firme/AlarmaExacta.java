@@ -54,6 +54,21 @@ public class AlarmaExacta extends Plugin {
     /** Margen para no reprogramar algo que acaba de sonar. */
     private static final long MARGEN_MS = 2000;
 
+    /**
+     * Cuantas alarmas se le entregan a Android de una vez.
+     *
+     * La cola entera son dos semanas —unas 140 con una rutina completa— y
+     * registrarlas todas de golpe es pedirle al sistema algo que ningun
+     * despertador de verdad le pide. `setAlarmClock` es la alarma mas cara que
+     * existe: sale en la barra de estado y el sistema la protege de Doze.
+     *
+     * Asi que se registran solo las proximas, y **cada vez que una suena se
+     * vuelven a armar las siguientes** desde la lista guardada. La cola de dos
+     * semanas sigue existiendo en disco: sirve para rearmar sin abrir la app y
+     * para rehacerla despues de reiniciar.
+     */
+    private static final int VENTANA = 24;
+
     @Override
     public void load() {
         crearCanal(getContext());
@@ -108,7 +123,6 @@ public class AlarmaExacta extends Plugin {
         Context contexto = getContext();
         cancelarTodas(contexto);
 
-        int puestas = 0;
         JSONArray guardadas = new JSONArray();
         long ahora = System.currentTimeMillis();
 
@@ -118,35 +132,64 @@ public class AlarmaExacta extends Plugin {
                 long cuando = alarma.getLong("cuando");
                 if (cuando <= ahora + MARGEN_MS) continue;
 
-                int id = i + 1;
-                programarUna(
-                        contexto,
-                        id,
-                        cuando,
-                        alarma.optString("titulo", "Firme"),
-                        alarma.optString("cuerpo", "Es la hora."),
-                        alarma.optString("idSuceso", "")
-                );
-
                 JSONObject copia = new JSONObject(alarma.toString());
-                copia.put("id", id);
+                copia.put("id", i + 1);
                 guardadas.put(copia);
-                puestas++;
             }
         } catch (Exception e) {
             llamada.reject("No se pudieron programar: " + e.getMessage());
             return;
         }
 
+        // Primero se guarda la cola entera, y despues se arman las proximas.
+        // En ese orden: si armar fallase a medias, la lista sigue en disco y el
+        // rearmado de la siguiente alarma lo recupera solo.
         SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         prefs.edit().putString(CLAVE_COLA, guardadas.toString()).apply();
 
-        // Se comprueba en el acto que el sistema las acepto de verdad. Decir
-        // «programadas: 136» cuando el sistema guardo cero seria mentir.
+        int puestas = armarLasProximas(contexto);
+
         JSObject respuesta = new JSObject();
         respuesta.put("programadas", puestas);
+        respuesta.put("enLista", guardadas.length());
         respuesta.put("confirmadas", cuantasTieneElSistema(contexto));
         llamada.resolve(respuesta);
+    }
+
+    /**
+     * Arma con Android las proximas {@link #VENTANA} alarmas de la lista.
+     *
+     * Se llama al programar, **cada vez que una alarma suena** y al arrancar el
+     * movil. Volver a armar una que ya estaba puesta no cuesta nada: el mismo
+     * PendingIntent sustituye a la anterior. Y si el sistema hubiera tirado
+     * alguna, esto la repone sin que nadie tenga que abrir la app.
+     */
+    static int armarLasProximas(Context contexto) {
+        SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        long ahora = System.currentTimeMillis();
+        int puestas = 0;
+
+        try {
+            JSONArray cola = new JSONArray(prefs.getString(CLAVE_COLA, "[]"));
+            for (int i = 0; i < cola.length() && puestas < VENTANA; i++) {
+                JSONObject alarma = cola.getJSONObject(i);
+                long cuando = alarma.optLong("cuando", 0);
+                if (cuando <= ahora + MARGEN_MS) continue;
+
+                programarUna(
+                        contexto,
+                        alarma.optInt("id", i + 1),
+                        cuando,
+                        alarma.optString("titulo", "Genuino"),
+                        alarma.optString("cuerpo", "Es la hora."),
+                        alarma.optString("idSuceso", "")
+                );
+                puestas++;
+            }
+        } catch (Exception ignorada) {
+            // Una cola ilegible se rehara cuando se abra la app.
+        }
+        return puestas;
     }
 
     static PendingIntent intencionDe(Context contexto, int id, boolean crear) {
@@ -352,7 +395,61 @@ public class AlarmaExacta extends Plugin {
         respuesta.put("sonandoAhora", ServicioAlarma.SONANDO);
         respuesta.put("ultimoFallo", prefs.getString(CLAVE_ULTIMO_FALLO, ""));
         respuesta.put("diario", prefs.getString(CLAVE_DIARIO, "[]"));
+        respuesta.put("cola", prefs.getString(CLAVE_COLA, "[]"));
+
+        // Quien es el movil. Los fabricantes chinos y Samsung matan apps por su
+        // cuenta, con ajustes propios que no salen en la lista de permisos de
+        // Android, y cada marca lo llama de una forma distinta.
+        respuesta.put("fabricante", Build.MANUFACTURER);
+        respuesta.put("modelo", Build.MODEL);
+        respuesta.put("android", Build.VERSION.RELEASE);
+        respuesta.put("sdk", Build.VERSION.SDK_INT);
+        respuesta.put("cajon", cajonDeReposo(contexto));
+        respuesta.put("restringidaEnSegundoPlano", restringidaEnSegundoPlano(contexto));
         llamada.resolve(respuesta);
+    }
+
+    /**
+     * En que cajon de reposo nos tiene el sistema.
+     *
+     * Android va degradando las apps que no se usan: activa, trabajadora, rara,
+     * y al final **restringida**, que es donde las alarmas empiezan a caerse. Es
+     * una de las pocas formas de saber, sin adivinar, que el sistema nos tiene
+     * apartados. No hace falta permiso para preguntar por uno mismo.
+     */
+    private static String cajonDeReposo(Context contexto) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return "no aplica";
+        try {
+            android.app.usage.UsageStatsManager uso =
+                    contexto.getSystemService(android.app.usage.UsageStatsManager.class);
+            if (uso == null) return "desconocido";
+            switch (uso.getAppStandbyBucket()) {
+                case 10: return "activa";
+                case 20: return "trabajadora";
+                case 30: return "frecuente";
+                case 40: return "rara";
+                case 45: return "RESTRINGIDA";
+                default: return "desconocido";
+            }
+        } catch (Exception e) {
+            return "desconocido";
+        }
+    }
+
+    /**
+     * Si el usuario o el fabricante marcaron «restringir actividad en segundo
+     * plano». Con eso puesto, el sistema puede tirar las alarmas aunque todos
+     * los permisos esten concedidos — y es justo lo que nadie mira.
+     */
+    private static boolean restringidaEnSegundoPlano(Context contexto) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false;
+        try {
+            android.app.ActivityManager am =
+                    contexto.getSystemService(android.app.ActivityManager.class);
+            return am != null && am.isBackgroundRestricted();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean exentaDeBateria(Context contexto) {
