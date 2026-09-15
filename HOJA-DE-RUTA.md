@@ -20,6 +20,7 @@ Hoja de ruta
 | ✅ | **Despertador nativo** con `setAlarmClock`, atraviesa No molestar | `AlarmaExacta.java` |
 | ✅ | **La alarma repica ella misma** por el flujo de alarma, hasta que la paran | `ServicioAlarma.java` |
 | ✅ | **Detecta la alarma que no sonó** y lo dice al abrir | `AvisoAlarmaPerdida` |
+| ✅ | **Parte del despertador**: diagnóstico copiable, con lo que sonó de verdad | `logica/parte.ts` |
 | ✅ | Alarma a pantalla completa, con el porqué y una frase | `PantallaAlarma` |
 | ✅ | Frases de ánimo por área y momento | `datos/frases.ts` |
 | ✅ | «Mi porqué»: los motivos, con uno de ancla | `PantallaPorque` |
@@ -50,7 +51,7 @@ La app es de la comunidad **Genuino Love**.
 
 ---
 
-## Por qué fallaban las alarmas de madrugada · **14-09, versión 3.4**
+## Las alarmas de madrugada · resuelto el 15-09 en la 3.7
 
 Alex: «hoy en las alarmas de la madrugada no sonó». Es el fallo más grave que
 puede tener esta app, porque de ella dependen sus compromisos con Dios.
@@ -85,8 +86,20 @@ preguntarle al sistema. Podía salir todo verde con la cola vacía.
 - Se pide de verdad la exención de batería y el acceso a No molestar. Los
   permisos estaban declarados desde el principio pero no se pedían nunca.
 
-> ⚠️ **Falta la prueba de fuego:** que Alex confirme que sonó a las 3:00 con el
-> móvil bloqueado. Hasta que eso pase, esto no está cerrado.
+**El 15-09 fallaron otra vez, y sus capturas cerraron el caso:** el móvil seguía
+con la **3.3**, la versión anterior a todo esto. El arreglo nunca llegó a
+instalarse, y en la barra de estado se veía la luna del No molestar — exactamente
+la condición que deja muda a la 3.3.
+
+Con la 3.7 instalada, **las dos pruebas sonaron**: «hacerla sonar ahora» y la de
+pantalla apagada, ambas con No molestar puesto.
+
+**Su móvil es un Xiaomi (MIUI).** El «Inicio automático» ya no existe en su
+versión de HyperOS: quedó fusionado con «Ahorro de batería → Sin restricciones»,
+que él ya tenía puesto. La app reconoce la marca y da las instrucciones de cada
+fabricante (`consejoDelFabricante`).
+
+> ⚠️ **Falta la prueba final:** que suene a las 3:00 de verdad, dormido.
 
 ---
 
@@ -180,7 +193,44 @@ Alex lo quiere, y es lo que permite amigos, grupos y no perder los datos.
 Con cuenta, que el historial no se pierda al cambiar de móvil. **Hoy se pierde**
 si se desinstala, y eso duele más cuanto más larga sea la racha.
 
-### 2.4 Amigos y grupos
+### 2.4 ⭐ Convocar a todos · **pedido el 15-09**
+
+Alex: «una opción estilo WhatsApp de poder llamar a todos los que tengan la app
+instalada».
+
+**Esto es, con diferencia, la idea más potente que ha tenido para esta app**, y
+encaja con lo único que Genuino sabe hacer y nadie más: hacer sonar un teléfono
+que está dormido. Un líder convoca, y **suena el móvil de toda la comunidad a la
+vez**, atravesando el No molestar, como una alarma. Al responder, se abre la sala
+de oración.
+
+**Cómo se hace, y por qué así:**
+
+| Pieza | Decisión |
+|---|---|
+| El repique | **La maquinaria de alarma que ya existe** (`ServicioAlarma`). Ya sabe sonar con el móvil bloqueado y en No molestar |
+| El aviso | **Firebase Cloud Messaging**, gratis y sin límite práctico. Mensaje de prioridad alta, que despierta el aparato |
+| La sala | **Meet, Zoom o Jitsi**, como ya hace `PantallaComunidad`. Gratis y sin mantener |
+
+> ⚠️ **No hacer una llamada de voz propia.** Lo caro de una llamada de grupo es
+> el audio: hacen falta servidores TURN que retransmiten el sonido de cada
+> participante, y eso se paga por gigabyte todos los días. La sala ya está
+> resuelta con Meet. **Lo que nadie más puede darle es que suene el teléfono de
+> todos**, y eso ya lo sabemos hacer.
+
+**Lo que no es negociable, y hay que construir desde el primer día:**
+
+- **Solo convocan los líderes que Alex designe.** Si puede cualquiera, la app se
+  convierte en un arma de spam y Google la retira de Play Store. Sin discusión.
+- **Cada uno acepta ser convocado, y en qué horario.** Un hermano en otro huso
+  no puede recibir un repique a las 3 de su madrugada sin haberlo consentido.
+- **Tope de convocatorias al día**, y quién convocó queda registrado.
+- En Play Store esto entra en «Seguridad de datos» y exige política de privacidad
+  seria: hay identidad, hay envío entre usuarios y hay moderación.
+
+Depende de 2.1 (servidor) y 2.2 (cuentas). Antes de eso no se puede empezar.
+
+### 2.5 Amigos y grupos
 - Añadir amigos, ver sus rachas, animarse.
 - **Grupos que comparten el mismo plan**: ir juntos a por los 40 días.
 - ⚠️ Con gente hay que moderar: denunciar, bloquear, y alguien que responda.

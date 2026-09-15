@@ -1,12 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 19,
-  "nombre": "3.7",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-3.7.apk",
+  "codigo": 20,
+  "nombre": "3.8",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-3.8.apk",
   "novedades": [
-    "Parte del despertador: copia y manda que esta pasando",
-    "Instrucciones para tu marca de movil en concreto",
-    "Las alarmas se rearman solas cada vez que suena una"
+    "El panel ya no marca en rojo cosas que estan bien"
   ],
   "importante": false
 }
