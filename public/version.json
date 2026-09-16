@@ -1,10 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 21,
-  "nombre": "3.9",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-3.9.apk",
+  "codigo": 22,
+  "nombre": "4.0",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.0.apk",
   "novedades": [
-    "Avisa cuando el ahorro de bateria puede tumbar las alarmas"
+    "Mi diario: tu espacio privado, en Mas",
+    "Al cerrar el dia de un plan puedes escribir como te fue",
+    "Tareas de un dia, varios dias o cada dia",
+    "Arreglada la frase que no salia al cumplir una tarea"
   ],
   "importante": false
 }

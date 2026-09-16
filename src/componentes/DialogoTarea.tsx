@@ -60,9 +60,21 @@ export function DialogoTarea({
     tarea?.timbre && tarea.timbre !== "ninguno" ? tarea.timbre : "pulso",
   );
 
+  /*
+   * El pegado abajo se hace con `mt-auto`, no con `items-end`.
+   *
+   * Parece lo mismo y no lo es: con `align-items: flex-end`, si la tarjeta es
+   * más alta que la pantalla, el borde de arriba se sale y no hay forma de
+   * llegar a él — ni con scroll. Un margen automático empuja igual hacia abajo
+   * pero deja el desbordamiento accesible.
+   *
+   * Importa desde que la tarjeta creció con lo de repetir la tarea: en una
+   * pantalla corta, el nombre y la hora quedaban fuera de alcance y editar se
+   * volvía imposible.
+   */
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-fondo/90 p-4 backdrop-blur-sm sm:items-center">
-      <Tarjeta className="entrar w-full max-w-md !bg-superficie-alta">
+    <div className="fixed inset-0 z-40 flex justify-center overflow-y-auto bg-fondo/90 p-4 backdrop-blur-sm">
+      <Tarjeta className="entrar mt-auto mb-0 h-fit w-full max-w-md !bg-superficie-alta sm:my-auto">
         <div className="flex items-center justify-between">
           <Etiqueta>{editando ? "editar tarea" : "tarea de hoy"}</Etiqueta>
           <button onClick={onCerrar} className="px-2 text-tenue transition hover:text-texto">
