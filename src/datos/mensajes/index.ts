@@ -17,6 +17,7 @@ import { TANDA_14 } from "./tanda14";
 import { TANDA_15 } from "./tanda15";
 export type { MensajeDiario } from "./tipos";
 export { componer } from "./tipos";
+export { AREAS, areaDe, type AreaDelBanco } from "./areas";
 
 /**
  * El banco entero.

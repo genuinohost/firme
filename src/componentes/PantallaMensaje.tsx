@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  AREAS,
   buscarMensajes,
   componer,
   mensajeDelDia,
-  temasDisponibles,
   MENSAJES,
+  type AreaDelBanco,
+  type MensajeDiario,
 } from "@/datos/mensajes";
 import { generarMensaje, hayClave } from "@/logica/generador";
 import { compartirFrase, conFirma, copiar, type ResultadoCompartir } from "@/logica/compartir";
@@ -100,7 +102,6 @@ export function PantallaMensaje() {
 
   const delDia = useMemo(() => mensajeDelDia(), []);
   const coincidencias = useMemo(() => buscarMensajes(tema), [tema]);
-  const temas = useMemo(() => temasDisponibles(), []);
 
   const refrescarGuardadas = () => setGuardadas(listar());
 
@@ -126,10 +127,75 @@ export function PantallaMensaje() {
       <header className="pt-2">
         <h1 className="text-xl font-semibold">Mensaje del día</h1>
         <p className="mt-1 text-sm leading-relaxed text-tenue">
-          Listo para copiar y pegar en WhatsApp. Escribe el tema de hoy y busca en el
-          banco; si no encuentras el que quieres, se genera uno nuevo.
+          Listo para copiar y pegar en tus grupos. Abajo tienes el banco entero por
+          áreas, y si no encuentras el que quieres, se genera uno nuevo.
         </p>
       </header>
+
+      {/*
+        El orden de esta pantalla es el orden en que se usa.
+
+        Casi todos los días Alex entra, coge el mensaje de hoy y lo pega en sus
+        grupos: eso son dos toques y tiene que estar arriba del todo. Buscar un
+        tema y generar uno nuevo es lo excepcional, y estaba ocupando el sitio
+        de lo corriente.
+      */}
+      {/* El mensaje elegido o generado, listo para llevárselo. */}
+      {texto ? (
+        <Tarjeta className="entrar border-acento/30">
+          <div className="flex items-center justify-between">
+            <Etiqueta>{origen === "internet" ? "generado ahora" : "del banco"}</Etiqueta>
+            {coste !== null ? (
+              <span className="cifras text-xs text-tenue">
+                costó ${coste.toFixed(6)}
+              </span>
+            ) : null}
+          </div>
+
+          <pre className="mt-3 font-sans text-[15px] leading-relaxed whitespace-pre-wrap">
+            {texto}
+          </pre>
+
+          <div className="mt-4 flex gap-2">
+            <div className="flex-1">
+              <Boton
+                variante="fuerte"
+                ancho
+                onClick={async () => setCopiado(await compartirFrase({ texto }))}
+              >
+                Compartir
+              </Boton>
+            </div>
+            <Boton onClick={async () => setCopiado(await copiar(conFirma(texto)))}>
+              {copiado === "copiado" ? "copiado ✓" : "Copiar"}
+            </Boton>
+            <Corazon texto={texto} tema={tema.trim() || undefined} onCambio={refrescarGuardadas} />
+          </div>
+        </Tarjeta>
+      ) : null}
+
+      {/* Lo que toca hoy, sin tener que buscar nada. */}
+      {!texto && delDia ? (
+        <Tarjeta>
+          <Etiqueta>sugerencia de hoy</Etiqueta>
+          <pre className="mt-2 font-sans text-[15px] leading-relaxed whitespace-pre-wrap">
+            {componer(delDia)}
+          </pre>
+          <div className="mt-3 flex gap-2">
+            <div className="flex-1">
+              <Boton
+                variante="fuerte"
+                ancho
+                onClick={async () => setCopiado(await compartirFrase({ texto: componer(delDia) }))}
+              >
+                Compartir
+              </Boton>
+            </div>
+            <Boton onClick={() => mostrar(componer(delDia), "banco")}>Fijar</Boton>
+            <Corazon texto={componer(delDia)} tema={delDia.tema} onCambio={refrescarGuardadas} />
+          </div>
+        </Tarjeta>
+      ) : null}
 
       <Tarjeta>
         <Etiqueta>el tema de hoy</Etiqueta>
@@ -195,63 +261,6 @@ export function PantallaMensaje() {
           </p>
         ) : null}
       </Tarjeta>
-
-      {/* El mensaje elegido o generado, listo para llevárselo. */}
-      {texto ? (
-        <Tarjeta className="entrar border-acento/30">
-          <div className="flex items-center justify-between">
-            <Etiqueta>{origen === "internet" ? "generado ahora" : "del banco"}</Etiqueta>
-            {coste !== null ? (
-              <span className="cifras text-xs text-tenue">
-                costó ${coste.toFixed(6)}
-              </span>
-            ) : null}
-          </div>
-
-          <pre className="mt-3 font-sans text-[15px] leading-relaxed whitespace-pre-wrap">
-            {texto}
-          </pre>
-
-          <div className="mt-4 flex gap-2">
-            <div className="flex-1">
-              <Boton
-                variante="fuerte"
-                ancho
-                onClick={async () => setCopiado(await compartirFrase({ texto }))}
-              >
-                Compartir
-              </Boton>
-            </div>
-            <Boton onClick={async () => setCopiado(await copiar(conFirma(texto)))}>
-              {copiado === "copiado" ? "copiado ✓" : "Copiar"}
-            </Boton>
-            <Corazon texto={texto} tema={tema.trim() || undefined} onCambio={refrescarGuardadas} />
-          </div>
-        </Tarjeta>
-      ) : null}
-
-      {/* Lo que toca hoy, sin tener que buscar nada. */}
-      {!texto && delDia ? (
-        <Tarjeta>
-          <Etiqueta>sugerencia de hoy</Etiqueta>
-          <pre className="mt-2 font-sans text-[15px] leading-relaxed whitespace-pre-wrap">
-            {componer(delDia)}
-          </pre>
-          <div className="mt-3 flex gap-2">
-            <div className="flex-1">
-              <Boton
-                variante="fuerte"
-                ancho
-                onClick={async () => setCopiado(await compartirFrase({ texto: componer(delDia) }))}
-              >
-                Compartir
-              </Boton>
-            </div>
-            <Boton onClick={() => mostrar(componer(delDia), "banco")}>Fijar</Boton>
-            <Corazon texto={componer(delDia)} tema={delDia.tema} onCambio={refrescarGuardadas} />
-          </div>
-        </Tarjeta>
-      ) : null}
 
       {/* Lo que guardó con el corazón, para volver a buscarlo. */}
       <Tarjeta>
@@ -320,20 +329,119 @@ export function PantallaMensaje() {
         ) : null}
       </Tarjeta>
 
+      <Banco
+        onElegir={(m) => {
+          mostrar(componer(m), "banco");
+          setTema(m.tema);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        onCambio={refrescarGuardadas}
+      />
+    </div>
+  );
+}
+
+/**
+ * El banco, para recorrerlo.
+ *
+ * Antes esto era un muro de **365 etiquetas** en minúscula al final de la
+ * pantalla, una por mensaje. Alex: «está bien que se vea, pero no debe verse
+ * como un error». Tenía razón: eso no es una lista, es un vertido — nadie
+ * encuentra nada en 365 fragmentos, y lo que se lee de un vistazo es que algo
+ * se rompió.
+ *
+ * Ahora son nueve áreas, y cada una se abre. La diferencia no es de adorno: con
+ * el muro había que saber ya qué palabra buscar; con las áreas se puede llegar
+ * sabiendo sólo cómo está uno hoy, que es como se llega de verdad.
+ */
+function Banco({
+  onElegir,
+  onCambio,
+}: {
+  onElegir: (mensaje: MensajeDiario) => void;
+  onCambio: () => void;
+}) {
+  const [abierta, setAbierta] = useState<AreaDelBanco | null>(null);
+
+  if (abierta) {
+    return (
       <Tarjeta>
-        <Etiqueta>el banco · {MENSAJES.length} mensajes</Etiqueta>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {temas.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTema(t)}
-              className="rounded-full border border-borde px-2.5 py-1 text-xs text-tenue transition hover:border-acento hover:text-acento"
-            >
-              {t}
-            </button>
-          ))}
+        <button
+          onClick={() => setAbierta(null)}
+          className="flex w-full items-center gap-2 text-left"
+        >
+          <span className="text-sm text-tenue">‹</span>
+          <span className="text-xl" aria-hidden>
+            {abierta.emoji}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-medium">{abierta.nombre}</span>
+            <span className="block truncate text-xs text-tenue">
+              {abierta.mensajes.length} mensajes
+            </span>
+          </span>
+        </button>
+
+        <p className="mt-2 text-xs leading-relaxed text-tenue">{abierta.descripcion}</p>
+
+        {/*
+          La lista se queda dentro de su propia caja con desplazamiento: sin
+          eso, abrir un área de cincuenta mensajes empuja media pantalla hacia
+          abajo y se pierde de vista dónde estaba uno.
+        */}
+        <div className="mt-3 max-h-96 overflow-y-auto pr-0.5">
+          <div className="flex flex-col gap-1.5">
+            {abierta.mensajes.map((m, i) => (
+              <div
+                key={`${m.tema}-${i}`}
+                className="flex items-center gap-1 rounded-xl border border-borde pr-1 transition hover:border-acento"
+              >
+                <button
+                  onClick={() => onElegir(m)}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left"
+                >
+                  <span className="shrink-0 text-base" aria-hidden>
+                    {m.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{m.titulo}</span>
+                    <span className="block truncate text-xs text-tenue">{m.tema}</span>
+                  </span>
+                  <span className="shrink-0 text-tenue">›</span>
+                </button>
+                <CorazonPequeno texto={componer(m)} tema={m.tema} onCambio={onCambio} />
+              </div>
+            ))}
+          </div>
         </div>
       </Tarjeta>
-    </div>
+    );
+  }
+
+  return (
+    <Tarjeta>
+      <Etiqueta>el banco · {MENSAJES.length} mensajes</Etiqueta>
+      <p className="mt-2 text-xs leading-relaxed text-tenue">
+        Escritos para pegar tal cual. Entra por donde estés hoy.
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {AREAS.map((a) => (
+          <button
+            key={a.id}
+            onClick={() => setAbierta(a)}
+            className="flex flex-col gap-1 rounded-xl border border-borde bg-superficie-alta p-3 text-left transition hover:border-acento"
+          >
+            <span className="text-xl leading-none" aria-hidden>
+              {a.emoji}
+            </span>
+            <span className="text-[13px] leading-tight font-medium">{a.nombre}</span>
+            {/* `mt-auto` y no `items-end`: lo segundo recorta cuando el nombre
+                ocupa dos líneas, y aquí hay dos que las ocupan. */}
+            <span className="cifras mt-auto text-[11px] text-tenue">{a.mensajes.length}</span>
+          </button>
+        ))}
+      </div>
+    </Tarjeta>
   );
 }

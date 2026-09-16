@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **16 de septiembre de 2026** (versión 4.3).
+Última revisión: **16 de septiembre de 2026** (versión 4.4).
 
 ---
 
@@ -221,9 +221,31 @@ que se escapa exactamente ese fallo, y los tres están tapados:
 - [x] El archivo sale agrupado por días, con la fecha escrita en letra y, en
       las notas que nacieron de un plan, **cómo acabó aquel día**.
 
-### F. La pantalla del mensaje
-- [ ] Los temas del banco **parecen un error**. Que se entienda de un vistazo
-      para qué sirven, y que sea hermoso y armonioso.
+### F. La pantalla del mensaje · ✅ **hecha en la 4.4**
+
+**Alex tenía razón, y la causa era literal.** Ese bloque volcaba **los 365
+temas del banco de golpe** —uno por mensaje, en minúscula, como un muro de
+etiquetas diminutas al final de la pantalla. Eso no es una lista, es un
+vertido: nadie encuentra nada en 365 fragmentos, y lo que se lee de un vistazo
+es que algo se rompió.
+
+- [x] **Nueve áreas en vez del muro.** Y no están adivinadas: cada tanda del
+      banco se escribió alrededor de un asunto, y eso ya estaba dicho en la
+      cabecera de su archivo. Aquí sólo se recoge y se agrupa lo que se
+      emparenta. La diferencia no es de adorno — con el muro había que saber ya
+      qué palabra buscar; con las áreas se llega sabiendo sólo cómo está uno
+      hoy, que es como se llega de verdad.
+- [x] Cada área se abre y enseña sus mensajes **por su título, con su emoji**,
+      dentro de su propia caja con desplazamiento: abrir un área de cincuenta
+      ya no empuja media pantalla hacia abajo.
+- [x] **La pantalla se reordenó por cómo se usa.** Casi todos los días Alex
+      entra, coge el mensaje de hoy y lo pega: eso son dos toques y ahora está
+      arriba del todo. Buscar y generar era lo excepcional, y ocupaba el sitio
+      de lo corriente.
+- [x] **Pruebas escritas** (`npm run revisar-areas`): que ningún mensaje se
+      quede sin área, que ninguno esté en dos, y que ninguna área quede vacía.
+      Sin esto, añadir una tanda 16 y olvidarse de meterla haría desaparecer
+      sus mensajes de la pantalla **sin que saltara nada**.
 
 ### G. «Juntos» · **el armazón, hecho en la 4.3**
 - [x] **TikTok** añadido como tipo de enlace, con Facebook de propina.

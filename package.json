@@ -11,7 +11,8 @@
     "revisar-banco": "node scripts/revisar-banco.mjs",
     "publicar": "node scripts/publicar-release.mjs",
     "aab": "node scripts/compilar-aab.mjs",
-    "revisar-rachas": "vite-node scripts/revisar-rachas.ts"
+    "revisar-rachas": "vite-node scripts/revisar-rachas.ts",
+    "revisar-areas": "vite-node scripts/revisar-banco-areas.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
