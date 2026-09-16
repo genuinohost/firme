@@ -165,38 +165,79 @@ aprieta**, no por lo que se redacta tranquilo al día siguiente.
       micrófono está bloqueado; lo que se comprobó ahí es que el fallo se
       cuenta bien y el botón vuelve a su sitio.
 
-### J. Cuenta, perfil y amigos · **fase aparte, no es una tarde**
-> Alex: «la opción de iniciar sesión, tener un perfil muy elegante, con
-> detalles de ciudad, país, etc., y la capacidad para agregar amigos. Todo
-> estilo la app Biblia YouVersion».
+### J. Cuenta, perfil y amigos · **en marcha, falta un clic de Alex**
+> Alex: «la opción de iniciar sesión, tener un perfil muy elegante, con detalles
+> de ciudad, país, etc., y la capacidad para agregar amigos. Todo estilo la app
+> Biblia YouVersion». Aprobado el 16-09: **Firebase**.
 
-**Esto cambia la naturaleza de la app y hay que decirlo claro.** Hasta hoy
-Genuino no tiene servidor ni cuenta: todo vive en el teléfono, y eso es lo que
-hace que funcione sin conexión, que no cueste nada al mes y que la política de
-privacidad quepa en una página. En cuanto haya cuentas y amigos hay **datos de
-personas en un servidor**, y con ellos vienen cuatro cosas que no son
-opcionales:
+**Hecho**
 
-1. **Coste mensual** que hoy es cero.
-2. **Política de privacidad y formulario de datos de Play Store rehechos.**
-   Google pregunta qué se recoge y dónde se guarda, y hay que responder la
-   verdad. Declararlo mal es motivo de retirada.
-3. **Borrado de cuenta obligatorio.** Play exige que quien crea una cuenta
-   pueda borrarla desde dentro de la app *y* desde una web.
-4. **El diario NO sube.** Es lo más íntimo que guarda la app; sube el perfil y
-   la amistad, no lo que se escribe. Esto se decide ahora y no se toca después.
+- [x] **Firebase montado sobre el proyecto que ya existe** (`genuino-host`).
+      Registradas la app web y la de Android, y las dos huellas del certificado
+      de firma (SHA-1 y SHA-256), que es lo que hace falta para que el acceso
+      con Google funcione en el móvil.
+- [x] **Reglas de Firestore escritas y desplegadas** (`firestore.rules`). Es lo
+      único que separa los datos de las personas de cualquiera con una conexión:
+      la app cliente se puede reescribir en una tarde, las reglas no. Todo lo
+      que no se prohíbe ahí, está permitido para todo el mundo.
+- [x] **Perfil**: nombre, nombre de usuario único, foto, **ciudad y país** (con
+      bandera, y Venezuela la primera), versículo de cabecera y desde cuándo.
+- [x] **Amigos**: buscar por nombre de usuario, pedir, aceptar, quitar. Cada
+      lado guarda su copia — parece redundante y es justo lo que impide que
+      nadie toque la lista de otro salvo para dejar ahí una solicitud suya.
+- [x] **El nombre de usuario es único de verdad.** Firestore no tiene índices
+      únicos: se consigue haciendo del nombre la clave de un documento y
+      prohibiendo sobrescribirlo, todo dentro de una transacción.
+- [x] **Borrar la cuenta desde dentro, y que se borre.** Play lo exige y además
+      es lo decente. Se avisa expresamente de que **el diario no se toca**,
+      porque lo que más asusta al borrar es no saber si te llevas eso también.
+- [x] **Política de privacidad rehecha.** Ya no puede decir «no recogemos ningún
+      dato»: ahora dice exactamente qué sube con cuenta, qué no sube nunca,
+      dónde se guarda y cómo borrarlo. También el micrófono del dictado.
+- [x] **Firebase se carga en diferido.** Pesa más que media app; cargarlo al
+      arrancar le costaría un par de segundos a cada usuario en cada apertura,
+      incluidos los que nunca vayan a crear cuenta — que van a ser la mayoría,
+      muchos con mala conexión y un teléfono barato. Sólo se carga al entrar en
+      la pantalla de la cuenta, o al arrancar si ya se había entrado en ese
+      móvil.
 
-- [ ] Decidir el cimiento: **Firebase Auth + Firestore** (ya hay proyecto
-      Firebase en pie y la app ya despliega ahí) frente a Supabase.
-- [ ] Entrar con Google y con correo. Nada de contraseñas nuestras.
-- [ ] Perfil: nombre, foto, **ciudad y país**, versículo de cabecera, desde
-      cuándo, racha y días en pie.
-- [ ] Amigos: buscar por nombre de usuario, invitar por enlace, aceptar.
-- [ ] Qué se ve de un amigo — y esto importa más que el diseño: **la constancia
-      anima, la comparación hunde.** Enseñar rachas ajenas en una app de
-      disciplina cristiana puede volverla un escaparate. Se enseña lo que sirve
-      para animar, no para medirse.
-- [ ] Rehacer privacidad + el formulario de datos de Play antes de publicar.
+**La decisión de fondo, tomada y escrita en tres sitios**
+
+**El diario, las notas y los repasos no suben nunca.** Ni cifrados, ni «solo
+para el dueño», ni «por si se pierde el móvil». Ahí se anota una caída y lo que
+se le dijo a Dios por ella. Está dicho en `nube.ts`, en `firestore.rules` y en
+la propia pantalla — porque la tentación de sincronizarlo «para que no se
+pierda» va a volver, y va a sonar razonable.
+
+Y la segunda, que no es técnica: **no hay tabla de rachas de los amigos**, ni
+«quién va ganando», ni insignias. La constancia anima; la comparación hunde, y
+convertir la fidelidad en un marcador volvería esto un escaparate. Las cifras
+del perfil salen del propio teléfono y **no las ve ningún amigo**.
+
+**⚠️ Bloqueado esperando a Alex — dos clics en la consola**
+
+`identitytoolkit` responde `CONFIGURATION_NOT_FOUND`: **Authentication no está
+activado** en el proyecto. Sin eso, entrar con Google no puede funcionar, y por
+eso **no se publica APK todavía**: no se entrega una pantalla que lleva a un
+callejón.
+
+1. Consola de Firebase → **Authentication** → *Comenzar*.
+2. Pestaña **Sign-in method** → activar **Google** → elegir el correo de soporte
+   → Guardar.
+
+Después: volver a bajar `google-services.json` (ahora viene sin los clientes de
+OAuth), compilar, probar el acceso de verdad en el móvil y publicar.
+
+**Lo que falta después**
+
+- [ ] Probar el acceso con Google en el móvil de Alex.
+- [ ] **Rehacer el formulario de datos de Play Store.** Google pregunta qué se
+      recoge y dónde; declararlo mal es motivo de retirada.
+- [ ] Decidir qué se ve de un amigo. Hoy: nombre, usuario, foto. Nada más, a
+      propósito, hasta decidirlo con cuidado.
+- [ ] Invitar por enlace, además de por nombre de usuario.
+- [ ] Vigilar el coste. Hoy el plan gratuito sobra de largo, pero deja de ser
+      cero en cuanto haya volumen.
 
 ---
 

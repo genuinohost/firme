@@ -1,0 +1,113 @@
+rules_version = '2';
+
+// ============================================================================
+// Las reglas de Genuino.
+//
+// Esto NO es una capa de adorno sobre la app: es lo único que separa los datos
+// de las personas de cualquiera con una conexión a internet. La app cliente se
+// puede desmontar y reescribir en una tarde; estas reglas no. Todo lo que aquí
+// no se prohíba, está permitido para todo el mundo.
+//
+// ── La línea que no se cruza ──────────────────────────────────────────────
+//
+// **El diario, las notas y los repasos NO suben nunca a Firestore.** Ni
+// cifrados, ni "solo para el dueño", ni "por si acaso se pierde el móvil". Ahí
+// se anota una caída y lo que se le dijo a Dios por ella, y eso se queda en el
+// teléfono de quien lo escribió. Aquí solo vive lo que hace falta para que dos
+// hermanos se reconozcan y se animen: el perfil y la amistad.
+//
+// Si algún día alguien añade una colección para sincronizar el diario, que
+// tenga que venir a borrar este párrafo a mano.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function haEntrado() {
+      return request.auth != null;
+    }
+
+    function esElMismo(uid) {
+      return haEntrado() && request.auth.uid == uid;
+    }
+
+    // Un perfil que no cabe en esto es un perfil que trae basura o un intento
+    // de usar la base como almacén ajeno.
+    function perfilRazonable(d) {
+      return d.nombre is string && d.nombre.size() >= 2 && d.nombre.size() <= 40
+        && d.usuario is string && d.usuario.size() >= 3 && d.usuario.size() <= 20
+        && d.usuario.matches('^[a-z0-9._]+$')
+        && (!('ciudad' in d) || (d.ciudad is string && d.ciudad.size() <= 60))
+        && (!('pais' in d) || (d.pais is string && d.pais.size() <= 60))
+        && (!('versiculo' in d) || (d.versiculo is string && d.versiculo.size() <= 300))
+        && (!('cita' in d) || (d.cita is string && d.cita.size() <= 60))
+        && (!('foto' in d) || (d.foto is string && d.foto.size() <= 500));
+    }
+
+    // ------------------------------------------------------------- perfiles
+    //
+    // Un perfil lo puede leer cualquiera que haya entrado: si no, no habría
+    // forma de buscar a un hermano por su nombre de usuario para agregarlo.
+    // Por eso **en el perfil no va nada que no se pueda enseñar**: ni correo,
+    // ni dirección, ni nada de lo que se escribe en la app.
+    match /usuarios/{uid} {
+      allow read: if haEntrado();
+      allow create, update: if esElMismo(uid) && perfilRazonable(request.resource.data);
+      allow delete: if esElMismo(uid);
+
+      // --------------------------------------------------------- amistades
+      //
+      // Cada lado guarda su propia copia. Parece redundante y no lo es: es lo
+      // que permite que las reglas sean simples y que nadie pueda escribir en
+      // la lista de otro salvo para una cosa muy concreta — dejar ahí una
+      // solicitud **a nombre de sí mismo**.
+      //
+      // Sin esa restricción, cualquiera podría meterse en la lista de amigos
+      // de cualquiera, o borrar las amistades de otro.
+      match /amigos/{otro} {
+        allow read: if esElMismo(uid);
+        allow write: if esElMismo(uid);
+
+        // Mandar una solicitud: escribir en la bandeja del otro, pero solo un
+        // documento que habla de uno mismo y en estado «recibida».
+        allow create: if esElMismo(otro)
+          && request.resource.data.estado == 'recibida'
+          && request.resource.data.keys().hasOnly(['estado', 'cuando', 'nombre', 'usuario', 'foto']);
+
+        // Aceptar: el otro marca como aceptada la copia que tiene el primero.
+        allow update: if esElMismo(otro)
+          && request.resource.data.estado == 'aceptada'
+          && resource.data.estado == 'enviada';
+
+        // Deshacer una solicitud propia, o borrarse de la lista de alguien a
+        // quien uno ya no quiere tener. Siempre sobre el documento de uno.
+        allow delete: if esElMismo(otro);
+      }
+    }
+
+    // ------------------------------------------------------ nombres de usuario
+    //
+    // Una colección aparte solo para que los nombres sean únicos. Firestore no
+    // tiene índices únicos: la unicidad se consigue haciendo del nombre la
+    // **clave del documento** y prohibiendo sobrescribir uno que ya existe.
+    match /handles/{usuario} {
+      allow read: if haEntrado();
+      // Solo se puede crear si no existe —eso lo garantiza `create`— y
+      // apuntando a uno mismo.
+      allow create: if haEntrado()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid'])
+        && usuario.matches('^[a-z0-9._]+$')
+        && usuario.size() >= 3 && usuario.size() <= 20;
+      // Cambiar de nombre es borrar el viejo y crear el nuevo. Nadie puede
+      // tocar el de otro.
+      allow delete: if haEntrado() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Todo lo que no esté nombrado arriba queda cerrado. No se toca.
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

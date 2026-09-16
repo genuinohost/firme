@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "514594462820",
+    "project_id": "genuino-host",
+    "storage_bucket": "genuino-host.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:514594462820:android:88811da14f926cfbca5371",
+        "android_client_info": {
+          "package_name": "app.genuino.firme"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdJyFFQDf0FOmjQSQOwoHW5kzbaDTYLa0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

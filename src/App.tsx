@@ -12,7 +12,7 @@ import {
   programarDespertador,
 } from "@/logica/despertador";
 import { proximaAlarma } from "@/logica/avisos";
-import { rachaActual } from "@/logica/racha";
+import { primerDiaRegistrado, rachaActual, totalCumplidos } from "@/logica/racha";
 import { despertar, tintineo } from "@/logica/sonido";
 import { elegirFrase } from "@/logica/elegirFrase";
 import { PantallaHoy } from "@/componentes/PantallaHoy";
@@ -34,6 +34,7 @@ import { PantallaMas, ConVuelta } from "@/componentes/PantallaMas";
 import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
+import { PantallaCuenta } from "@/componentes/PantallaCuenta";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
@@ -47,6 +48,7 @@ type Pestaña =
   | "porque"
   | "progreso"
   | "diario"
+  | "cuenta"
   | "ajustes";
 
 /**
@@ -180,6 +182,19 @@ export default function App() {
     [datos, fechaHoy, esHoy, sucesos],
   );
   const racha = useMemo(() => rachaActual(datos, diaEstable), [datos, diaEstable]);
+
+  /**
+   * Las cifras que se enseñan en el perfil. **Salen de este teléfono y no
+   * viajan**: se ven en la ficha de uno y no las ve ningún amigo.
+   */
+  const cumplidos = useMemo(() => totalCumplidos(datos), [datos]);
+  const diasEnPie = useMemo(() => {
+    const desde = primerDiaRegistrado(datos);
+    if (!desde) return 0;
+    const [a, m, d] = desde.split("-").map(Number);
+    const inicio = new Date(a, m - 1, d).getTime();
+    return Math.max(1, Math.round((diaEstable.getTime() - inicio) / 86_400_000) + 1);
+  }, [datos, diaEstable]);
 
   // Se recalcula al cambiar de minuto, no a cada segundo: el contador usa esta
   // fecha fija y le resta el reloj.
@@ -329,6 +344,13 @@ export default function App() {
             racha={racha}
             opciones={[
               {
+                id: "cuenta",
+                icono: "◍",
+                titulo: "Mi cuenta",
+                detalle: "Tu perfil y los hermanos que caminan contigo",
+                onIr: () => setPestaña("cuenta"),
+              },
+              {
                 id: "porque",
                 icono: "✦",
                 titulo: "Mi porqué",
@@ -420,6 +442,16 @@ export default function App() {
             abrir={bloqueAbierto}
             onAbierto={() => setBloqueAbierto(null)}
           />
+        ) : null}
+
+        {pestaña === "cuenta" ? (
+          <ConVuelta titulo="Mi cuenta" onVolver={() => setPestaña("mas")}>
+            <PantallaCuenta
+              racha={racha}
+              diasEnPie={diasEnPie}
+              totalCumplidos={cumplidos}
+            />
+          </ConVuelta>
         ) : null}
 
         {/* El diario ya es pestaña propia: no necesita el rodeo por «Más». */}
