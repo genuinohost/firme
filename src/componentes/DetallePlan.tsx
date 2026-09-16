@@ -12,7 +12,7 @@ import {
   rachaDelPlan,
   rachaMaximaDelPlan,
 } from "@/logica/planes";
-import { Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
+import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
  * La ficha de un plan: cómo va, dónde flaquea y qué batalla eligió pelear.
@@ -26,6 +26,7 @@ export function DetallePlan({
   ahora,
   onRepasar,
   onCambiar,
+  onAnotar,
   onEliminar,
   onVolver,
 }: {
@@ -34,10 +35,13 @@ export function DetallePlan({
   ahora: Date;
   onRepasar: () => void;
   onCambiar: (plan: Plan) => void;
+  /** Escribir una nota de este plan sin pasar por el repaso de la noche. */
+  onAnotar: (texto: string) => void;
   onEliminar: () => void;
   onVolver: () => void;
 }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [borrador, setBorrador] = useState("");
 
   const hoy = claveFecha(ahora);
   const estado = estadoDelDia(plan, hoy, datos, true);
@@ -53,6 +57,17 @@ export function DetallePlan({
   const balance = useMemo(
     () => balanceDeLaDebilidad(plan, datos, 30, ahora),
     [plan, datos, ahora],
+  );
+
+  // Las últimas de este plan. Cinco bastan: lo demás está en el diario entero,
+  // y una ficha que se vuelve un archivo deja de servir para lo que sirve.
+  const notasDelPlan = useMemo(
+    () =>
+      (datos.notas ?? [])
+        .filter((n) => n.plan === plan.id)
+        .sort((a, b) => b.momento - a.momento)
+        .slice(0, 5),
+    [datos.notas, plan.id],
   );
 
   const alternarDebilidad = (id: string) =>
@@ -102,6 +117,59 @@ export function DetallePlan({
               : "Revisar el repaso de hoy"}
         </Boton>
       ) : null}
+
+      {/*
+        Escribir sobre el plan cualquier día, sin esperar a la noche.
+
+        Alex: «aún no veo la opción de hacer comentarios cada día del plan
+        activo». El repaso cierra la jornada y pide un veredicto; esto es otra
+        cosa — apuntar algo a media tarde, cuando aprieta, sin tener que
+        declarar todavía si el día se ganó o se perdió.
+      */}
+      <Tarjeta>
+        <Etiqueta>escribe sobre este plan</Etiqueta>
+        <div className="mt-2">
+          <AreaTexto
+            rows={2}
+            value={borrador}
+            onChange={(e) => setBorrador(e.target.value)}
+            placeholder="Lo que quieras dejar anotado hoy..."
+          />
+        </div>
+        <div className="mt-2">
+          <Boton
+            ancho
+            deshabilitado={borrador.trim().length === 0}
+            onClick={() => {
+              onAnotar(borrador.trim());
+              setBorrador("");
+            }}
+          >
+            Guardar en mi diario
+          </Boton>
+        </div>
+
+        {notasDelPlan.length > 0 ? (
+          <div className="mt-4 flex flex-col gap-2.5 border-t border-borde pt-3">
+            <Etiqueta>lo que llevas escrito</Etiqueta>
+            {notasDelPlan.map((n) => (
+              <div key={n.id}>
+                <p className="cifras text-xs text-tenue">
+                  {n.fecha === hoy ? "hoy" : n.fecha}
+                  {n.estado === "ganado"
+                    ? " · día guardado"
+                    : n.estado === "restaurado"
+                      ? " · restaurado"
+                      : n.estado === "fallado"
+                        ? " · día caído"
+                        : ""}
+                </p>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed">{n.texto}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </Tarjeta>
 
       <div className="grid grid-cols-3 gap-2.5">
         <Cifra valor={racha} etiqueta="racha" acento />

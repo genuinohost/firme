@@ -2,6 +2,13 @@ import { useMemo, useState } from "react";
 import { idNuevo } from "@/datos/almacen";
 import type { Datos, Nota } from "@/datos/tipos";
 import { claveFecha } from "@/logica/dia";
+import {
+  comoFue,
+  compartirNota,
+  diarioComoTexto,
+  exportarTexto,
+  nombreDeArchivo,
+} from "@/logica/exportar";
 import { AreaTexto, Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -29,6 +36,13 @@ export function PantallaDiario({
   const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState<string | null>(null);
   const [borrador, setBorrador] = useState("");
+  const [aviso, setAviso] = useState("");
+
+  /** Un aviso corto: lo que pasó al sacar el texto del teléfono. */
+  const avisar = (texto: string) => {
+    setAviso(texto);
+    window.setTimeout(() => setAviso(""), 3500);
+  };
 
   const hoy = claveFecha(ahora);
 
@@ -101,6 +115,27 @@ export function PantallaDiario({
         />
       ) : null}
 
+      {/*
+        Sacar el diario del teléfono.
+
+        Alex: «la app debe tener opción para poder guardar, compartir o
+        descargar las notas». Detrás hay un miedo razonable — que años de
+        diario se queden atrapados en una app, a merced de un móvil perdido.
+        No se manda nada a ningún sitio: se escribe un archivo y el menú del
+        sistema decide dónde acaba. Nosotros no vemos una línea.
+      */}
+      {notas.length > 0 ? (
+        <Boton
+          ancho
+          onClick={async () => {
+            const texto = diarioComoTexto(datos);
+            avisar(comoFue(await exportarTexto(texto, nombreDeArchivo(ahora), "Mi diario")));
+          }}
+        >
+          ↓ Guardar o compartir todo el diario
+        </Boton>
+      ) : null}
+
       {notas.length === 0 ? (
         <Vacio>
           Todavía no has escrito nada. Empieza por hoy: qué te costó, qué te
@@ -158,21 +193,46 @@ export function PantallaDiario({
                     </div>
                   </>
                 ) : (
-                  <button
-                    onClick={() => {
-                      setEditando(n.id);
-                      setBorrador(n.texto);
-                    }}
-                    className="w-full text-left text-sm leading-relaxed whitespace-pre-wrap"
-                  >
-                    {n.texto}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditando(n.id);
+                        setBorrador(n.texto);
+                      }}
+                      className="w-full text-left text-sm leading-relaxed whitespace-pre-wrap"
+                    >
+                      {n.texto}
+                    </button>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        onClick={async () => avisar(comoFue(await compartirNota(n, datos)))}
+                        className="rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-acento"
+                        aria-label="Compartir esta nota"
+                      >
+                        compartir
+                      </button>
+                    </div>
+                  </>
                 )}
               </Tarjeta>
             ))}
           </div>
         </div>
       ))}
+
+      {/*
+        El aviso va por encima de la barra contando su zona segura. En un móvil
+        con gestos, `env(safe-area-inset-bottom)` engorda la barra por encima
+        de los 76 píxeles de siempre y el aviso se esconde detrás: en el
+        navegador se ve bien y en el teléfono no.
+      */}
+      {aviso ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-40 mx-auto flex max-w-lg justify-center px-4">
+          <p className="rounded-full border border-borde bg-superficie px-4 py-2 text-xs shadow-lg">
+            {aviso}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

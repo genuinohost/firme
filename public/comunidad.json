@@ -6,7 +6,7 @@
     "enlaceApp": "https://genuino-pro.web.app"
   },
   "bienvenida": "Nadie persevera solo. Únete, anímate, y anima a otro.",
-  "_sobre_enlaces": "tipo puede ser whatsapp, telegram, instagram, youtube o web. Cuando un grupo de WhatsApp se llene (1024 personas), abre otro y cambia la url aquí.",
+  "_sobre_enlaces": "tipo puede ser whatsapp, telegram, instagram, tiktok, youtube, facebook o web. La app SEPARA los grupos (whatsapp y telegram) de las redes, y ESCONDE cualquier enlace que siga con PON_AQUI: mas vale que no salga a que lleve a una pagina rota. Cuando un grupo de WhatsApp se llene (1024 personas), abre otro y cambia la url aqui.",
   "enlaces": [
     {
       "id": "whatsapp-principal",
@@ -26,8 +26,15 @@
       "id": "instagram",
       "tipo": "instagram",
       "nombre": "Instagram",
-      "descripcion": "Lo del día, en imágenes",
+      "descripcion": "Genuino Love, lo del día en imágenes",
       "url": "https://instagram.com/PON_AQUI_TU_CUENTA"
+    },
+    {
+      "id": "tiktok",
+      "tipo": "tiktok",
+      "nombre": "TikTok",
+      "descripcion": "Genuino Love en vídeo",
+      "url": "https://tiktok.com/@PON_AQUI_TU_CUENTA"
     }
   ],
   "_sobre_reuniones": "dias: 0 es domingo y 6 es sábado; una lista vacía significa todos los días. zona es la del anfitrión, para que la hora salga bien en cualquier país: America/Caracas, America/Bogota, Europe/Madrid, America/Mexico_City...",

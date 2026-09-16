@@ -154,24 +154,26 @@ export function ExamenDelPlan({
         ) : null}
 
         {/*
-          Escribir sobre el día es opcional, y sale solo cuando ya se ha
-          contestado todo: antes distrae de lo que se ha venido a hacer.
-          Va al diario junto con el plan y con cómo acabó la jornada.
+          Escribir sobre el día, siempre a la vista.
+
+          Antes esto solo aparecía cuando ya se habían contestado todos los
+          puntos, con la idea de no distraer. El efecto real fue otro: Alex
+          hizo repasos a medias y **nunca llegó a ver que existía**, y acabó
+          pidiendo como nueva una función que llevaba dentro desde la 4.0. Una
+          función que no se ve es una función que no está.
         */}
-        {todos ? (
-          <div className="mt-4">
-            <Etiqueta>si quieres, escríbelo</Etiqueta>
-            <AreaTexto
-              rows={3}
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              placeholder="Cómo me fue hoy con esto..."
-            />
-            <p className="mt-1.5 text-xs text-tenue">
-              Se guarda en tu diario. No lo ve nadie más.
-            </p>
-          </div>
-        ) : null}
+        <div className="mt-4">
+          <Etiqueta>cómo fue el día</Etiqueta>
+          <AreaTexto
+            rows={3}
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="Cómo me fue hoy con esto..."
+          />
+          <p className="mt-1.5 text-xs text-tenue">
+            Se guarda en tu diario, junto a si hoy venciste o caíste. No lo ve nadie más.
+          </p>
+        </div>
 
         <div className="mt-3 flex flex-col gap-2">
           <Boton

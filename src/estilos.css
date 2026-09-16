@@ -117,9 +117,22 @@ body {
   animation: entrar 0.28s ease-out;
 }
 
+/* El código equivocado: un no que se ve antes de leerlo. */
+@keyframes temblor {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.temblor {
+  animation: temblor 0.4s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .latido,
-  .entrar {
+  .entrar,
+  .temblor {
     animation: none;
   }
 }

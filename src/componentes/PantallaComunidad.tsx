@@ -21,9 +21,35 @@ const ICONOS: Record<string, string> = {
   whatsapp: "💬",
   telegram: "✈️",
   instagram: "📷",
+  tiktok: "🎵",
   youtube: "▶️",
+  facebook: "👥",
   web: "🌐",
 };
+
+/**
+ * Los grupos se separan de las redes.
+ *
+ * No es lo mismo entrar a un grupo —donde te esperan y te echan de menos si
+ * faltas— que seguir una cuenta. Alex: «hay que aprovechar muy bien ese
+ * apartado». Aprovecharlo empieza por no mezclar las dos cosas.
+ */
+const SON_GRUPOS = ["whatsapp", "telegram"];
+
+/**
+ * Un enlace sin rellenar no se enseña.
+ *
+ * El archivo de la comunidad viene con huecos de ejemplo. Enseñar uno lleva a
+ * una página rota, y un enlace roto en la pantalla de la comunidad hace más
+ * daño que no tener pantalla: la primera impresión es que nadie cuida esto.
+ */
+function estaPuesto(url: string): boolean {
+  return (
+    typeof url === "string" &&
+    url.startsWith("https://") &&
+    !/PON_AQUI/i.test(url)
+  );
+}
 
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
@@ -56,7 +82,12 @@ export function PantallaComunidad() {
     return ea.minutos - eb.minutos;
   });
 
-  const vacia = comunidad.enlaces.length === 0 && comunidad.reuniones.length === 0;
+  const enlaces = comunidad.enlaces.filter((e) => estaPuesto(e.url));
+  const grupos = enlaces.filter((e) => SON_GRUPOS.includes(e.tipo));
+  const redes = enlaces.filter((e) => !SON_GRUPOS.includes(e.tipo));
+  const reunionesPuestas = reuniones.filter((r) => estaPuesto(r.url));
+
+  const vacia = enlaces.length === 0 && reunionesPuestas.length === 0;
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
@@ -71,24 +102,33 @@ export function PantallaComunidad() {
         <Vacio>
           {cargando
             ? "Buscando…"
-            : "No se pudo cargar la comunidad. Comprueba tu conexión y vuelve a intentarlo."}
+            : "Todavía no hay grupos ni reuniones publicados. Vuelve a mirar en un rato."}
         </Vacio>
       ) : null}
 
       {/* Las reuniones en vivo mandan: si hay una ahora, se ve lo primero. */}
-      {reuniones.length > 0 ? (
+      {reunionesPuestas.length > 0 ? (
         <section className="flex flex-col gap-2">
           <Etiqueta>reuniones en vivo</Etiqueta>
-          {reuniones.map((r) => (
+          {reunionesPuestas.map((r) => (
             <FilaReunion key={r.id} reunion={r} ahora={ahora} onEntrar={() => abrir(r.url)} />
           ))}
         </section>
       ) : null}
 
-      {comunidad.enlaces.length > 0 ? (
+      {grupos.length > 0 ? (
         <section className="flex flex-col gap-2">
-          <Etiqueta>grupos</Etiqueta>
-          {comunidad.enlaces.map((e) => (
+          <Etiqueta>grupos donde te esperan</Etiqueta>
+          {grupos.map((e) => (
+            <FilaEnlace key={e.id} enlace={e} onAbrir={() => abrir(e.url)} />
+          ))}
+        </section>
+      ) : null}
+
+      {redes.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <Etiqueta>Genuino Love por ahí fuera</Etiqueta>
+          {redes.map((e) => (
             <FilaEnlace key={e.id} enlace={e} onAbrir={() => abrir(e.url)} />
           ))}
         </section>

@@ -31,6 +31,13 @@ import {
   type VersionPublicada,
 } from "@/logica/actualizacion";
 import { parar, sonar } from "@/logica/sonido";
+import {
+  acierta,
+  graciaDeLaCerradura,
+  hayCodigo,
+  ponerCodigo,
+  quitarCodigo,
+} from "@/logica/cerradura";
 import { AreaTexto, Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta } from "./piezas";
 
 export function PantallaAjustes({
@@ -227,6 +234,8 @@ export function PantallaAjustes({
       </Tarjeta>
 
       <ClaveOpenRouter />
+
+      <Cerradura />
 
       <Tarjeta>
         <Etiqueta>tus datos</Etiqueta>
@@ -861,6 +870,169 @@ function ParteDelDespertador() {
           Volver a leer
         </Boton>
       </div>
+    </Tarjeta>
+  );
+}
+
+/**
+ * El código que protege lo que se escribe.
+ *
+ * Alex: «para que nadie pueda leer las cosas privadas». El diario y el repaso
+ * de santidad son lo más íntimo que guarda esta app —ahí se anota una caída y
+ * lo que se le dijo a Dios por ella—, y hoy los lee cualquiera que coja el
+ * teléfono desbloqueado.
+ *
+ * Lo que aquí se promete se cumple exactamente, ni más ni menos: impide abrir
+ * la app y ponerse a leer. No cifra el almacenamiento. Prometer una caja fuerte
+ * donde hay un pestillo sería peor que no poner nada, porque entonces se
+ * escribiría confiando en algo que no es.
+ */
+function Cerradura() {
+  const [puesto, setPuesto] = useState(() => hayCodigo());
+  const [abierto, setAbierto] = useState(false);
+  const [actual, setActual] = useState("");
+  const [nuevo, setNuevo] = useState("");
+  const [repetido, setRepetido] = useState("");
+  const [gracia, setGracia] = useState(() => graciaDeLaCerradura());
+  const [aviso, setAviso] = useState("");
+
+  const limpiar = () => {
+    setActual("");
+    setNuevo("");
+    setRepetido("");
+  };
+
+  const soloNumeros = (v: string) => v.replace(/D/g, "").slice(0, 4);
+
+  const guardar = async () => {
+    if (puesto && !(await acierta(actual))) {
+      setAviso("El código de ahora no es ese.");
+      return;
+    }
+    if (nuevo.length !== 4) {
+      setAviso("El código son cuatro números.");
+      return;
+    }
+    if (nuevo !== repetido) {
+      setAviso("Los dos no coinciden.");
+      return;
+    }
+    await ponerCodigo(nuevo, gracia);
+    setPuesto(true);
+    setAbierto(false);
+    limpiar();
+    setAviso("Código guardado.");
+  };
+
+  const quitar = async () => {
+    if (!(await quitarCodigo(actual))) {
+      setAviso("Para quitarlo hay que saberlo.");
+      return;
+    }
+    setPuesto(false);
+    setAbierto(false);
+    limpiar();
+    setAviso("Ya no pide código.");
+  };
+
+  return (
+    <Tarjeta>
+      <Etiqueta>código de seguridad</Etiqueta>
+      <p className="mt-2 text-xs leading-relaxed text-tenue">
+        {puesto
+          ? `La app pide un código al abrirse, y otra vez si pasan más de ${gracia} min fuera.`
+          : "Pide cuatro números al abrir la app. Tu diario y tus repasos son lo más íntimo que hay aquí dentro."}
+      </p>
+
+      {!abierto ? (
+        <div className="mt-3">
+          <Boton
+            ancho
+            onClick={() => {
+              setAbierto(true);
+              setAviso("");
+              limpiar();
+            }}
+          >
+            {puesto ? "Cambiar o quitar el código" : "Poner un código"}
+          </Boton>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2.5">
+          {puesto ? (
+            <Campo etiqueta="el código de ahora">
+              <Entrada
+                inputMode="numeric"
+                type="password"
+                value={actual}
+                onChange={(e) => setActual(soloNumeros(e.target.value))}
+                placeholder="····"
+              />
+            </Campo>
+          ) : null}
+
+          <Campo etiqueta={puesto ? "el nuevo" : "cuatro números"}>
+            <Entrada
+              inputMode="numeric"
+              type="password"
+              value={nuevo}
+              onChange={(e) => setNuevo(soloNumeros(e.target.value))}
+              placeholder="····"
+            />
+          </Campo>
+
+          <Campo etiqueta="otra vez, para estar seguros">
+            <Entrada
+              inputMode="numeric"
+              type="password"
+              value={repetido}
+              onChange={(e) => setRepetido(soloNumeros(e.target.value))}
+              placeholder="····"
+            />
+          </Campo>
+
+          <Campo etiqueta="volver a pedirlo tras estar fuera">
+            <Selector value={String(gracia)} onChange={(e) => setGracia(Number(e.target.value))}>
+              <option value="0">siempre, al volver</option>
+              <option value="2">2 minutos</option>
+              <option value="5">5 minutos</option>
+              <option value="15">15 minutos</option>
+              <option value="60">1 hora</option>
+            </Selector>
+          </Campo>
+
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Boton variante="fuerte" ancho onClick={guardar}>
+                Guardar
+              </Boton>
+            </div>
+            <Boton
+              onClick={() => {
+                setAbierto(false);
+                limpiar();
+                setAviso("");
+              }}
+            >
+              Dejarlo
+            </Boton>
+          </div>
+
+          {puesto ? (
+            <Boton variante="fantasma" ancho onClick={quitar}>
+              Quitar el código
+            </Boton>
+          ) : null}
+        </div>
+      )}
+
+      {aviso ? <p className="mt-2 text-xs text-tenue">{aviso}</p> : null}
+
+      <p className="mt-3 text-xs leading-relaxed text-tenue">
+        Esto impide que alguien abra la app y se ponga a leer. No cifra lo
+        guardado, y <strong>no hay forma de recuperarlo si lo olvidas</strong>:
+        elige uno que no se te vaya.
+      </p>
     </Tarjeta>
   );
 }

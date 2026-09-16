@@ -4,6 +4,7 @@ import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/dato
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, limpiarAvisosViejos, pedirPermisosNativos } from "@/logica/alarmasNativas";
+import { apuntarQueSeSalio, darPorAbierta, tocaPedirlo } from "@/logica/cerradura";
 import type { AlarmaPerdida } from "@/logica/despertador";
 import {
   alarmasPerdidas,
@@ -32,6 +33,7 @@ import { AvisoActualizacion } from "@/componentes/AvisoActualizacion";
 import { PantallaMas, ConVuelta } from "@/componentes/PantallaMas";
 import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
+import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
@@ -47,14 +49,22 @@ type Pestaña =
   | "diario"
   | "ajustes";
 
-/** Las que se usan a diario van en la barra; el resto, dentro de «Más». */
-const EN_LA_BARRA: Pestaña[] = ["hoy", "mensaje", "comunidad", "planes", "mas"];
+/**
+ * Las que se usan a diario van en la barra; el resto, dentro de «Más».
+ *
+ * El diario subió a la barra el 16-09. Alex sobre él: «quedó EXCELENTE, me
+ * gusta mucho… un poco escondido». Estaba a dos toques dentro de «Más», y una
+ * cosa que se escribe todos los días no puede vivir en el cajón de lo que se
+ * abre de vez en cuando.
+ */
+const EN_LA_BARRA: Pestaña[] = ["hoy", "planes", "diario", "mensaje", "comunidad", "mas"];
 
 const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
   { id: "hoy", nombre: "Hoy", icono: "◎" },
+  { id: "planes", nombre: "Planes", icono: "≡" },
+  { id: "diario", nombre: "Diario", icono: "✎" },
   { id: "mensaje", nombre: "Mensaje", icono: "✉" },
   { id: "comunidad", nombre: "Juntos", icono: "◈" },
-  { id: "planes", nombre: "Planes", icono: "≡" },
   { id: "mas", nombre: "Más", icono: "⋯" },
 ];
 
@@ -69,6 +79,14 @@ export default function App() {
   /** Id del plan cuya ficha está abierta. */
   const [planAbierto, setPlanAbierto] = useState<string | null>(null);
   const [bloqueAbierto, setBloqueAbierto] = useState<string | null>(null);
+
+  /**
+   * La cerradura.
+   *
+   * Se decide **una sola vez al montar**, no en cada repintado: si dependiera
+   * del reloj, la app se bloquearía sola mientras Alex escribe.
+   */
+  const [bloqueada, setBloqueada] = useState(() => tocaPedirlo());
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
   /** Alarmas que tenían que haber sonado y no sonaron. Se dicen en voz alta. */
   const [perdidas, setPerdidas] = useState<AlarmaPerdida[]>([]);
@@ -106,6 +124,25 @@ export default function App() {
     document.addEventListener("visibilitychange", alVolver);
     return () => document.removeEventListener("visibilitychange", alVolver);
   }, [datos]);
+
+  /**
+   * Volver a echar la llave tras un rato fuera.
+   *
+   * Sólo si estuvo fuera más del margen. Pedirlo cada vez que se mira un
+   * mensaje y se vuelve acabaría con que Alex lo quita — y entonces no protege
+   * nada, que es peor que no tenerlo.
+   */
+  useEffect(() => {
+    const alCambiar = () => {
+      if (document.visibilityState === "hidden") {
+        apuntarQueSeSalio();
+      } else if (tocaPedirlo()) {
+        setBloqueada(true);
+      }
+    };
+    document.addEventListener("visibilitychange", alCambiar);
+    return () => document.removeEventListener("visibilitychange", alCambiar);
+  }, []);
 
   // El audio solo arranca tras un gesto del usuario; el primer toque lo habilita.
   useEffect(() => {
@@ -213,6 +250,29 @@ export default function App() {
   const cambiarRutina = (rutina: BloqueRutina[]) => setDatos((d) => ({ ...d, rutina }));
   const cambiarMotivos = (motivos: Motivo[]) => setDatos((d) => ({ ...d, motivos }));
 
+  /**
+   * La cerradura tapa la app entera —ni la racha, ni el nombre del plan, ni la
+   * primera línea del diario— **salvo cuando está sonando una alarma**.
+   *
+   * Eso no es una grieta, es lo contrario: a las tres de la madrugada, con la
+   * alarma repicando, obligar a teclear cuatro números antes de poder decir
+   * «cumplido» es lo que hace que alguien acabe quitando el código. Y en esa
+   * pantalla no hay nada privado que leer: el bloque, su hora y una frase de
+   * ánimo. Lo íntimo —el diario, los repasos— sigue detrás del código, porque
+   * atender la alarma no abre la app: al cerrarla se vuelve aquí.
+   */
+  if (bloqueada && !disparo) {
+    return (
+      <PantallaBloqueo
+        onAbrir={() => {
+          darPorAbierta();
+          setBloqueada(false);
+        }}
+        pie="Si lo olvidas, se borra desinstalando la app — y con ella todo lo que has escrito. Elige uno que no se te vaya."
+      />
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col">
       <main className="zona-segura-arriba flex-1 pb-24">
@@ -276,13 +336,6 @@ export default function App() {
                 onIr: () => setPestaña("porque"),
               },
               {
-                id: "diario",
-                icono: "✎",
-                titulo: "Mi diario",
-                detalle: "Tu espacio privado: lo que aprendes y lo que peleas",
-                onIr: () => setPestaña("diario"),
-              },
-              {
                 id: "progreso",
                 icono: "▟",
                 titulo: "Progreso",
@@ -315,6 +368,21 @@ export default function App() {
               datos={datos}
               ahora={ahora}
               onRepasar={() => setExamen(plan.id)}
+              onAnotar={(texto) =>
+                setDatos((d) => ({
+                  ...d,
+                  notas: [
+                    {
+                      id: idNuevo(),
+                      fecha: fechaHoy,
+                      texto,
+                      momento: Date.now(),
+                      plan: plan.id,
+                    },
+                    ...(d.notas ?? []),
+                  ],
+                }))
+              }
               onCambiar={(nuevo) =>
                 setDatos((d) => ({
                   ...d,
@@ -354,14 +422,13 @@ export default function App() {
           />
         ) : null}
 
+        {/* El diario ya es pestaña propia: no necesita el rodeo por «Más». */}
         {pestaña === "diario" ? (
-          <ConVuelta titulo="Mi diario" onVolver={() => setPestaña("mas")}>
-            <PantallaDiario
-              datos={datos}
-              ahora={ahora}
-              onCambiar={(notas) => setDatos((d) => ({ ...d, notas }))}
-            />
-          </ConVuelta>
+          <PantallaDiario
+            datos={datos}
+            ahora={ahora}
+            onCambiar={(notas) => setDatos((d) => ({ ...d, notas }))}
+          />
         ) : null}
 
         {pestaña === "progreso" ? (
@@ -416,7 +483,7 @@ export default function App() {
                 setPestaña(p.id);
                 if (p.id === "hoy") setDesplazamiento(0);
               }}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] transition ${
+              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-2.5 text-[10px] transition ${
 seleccionada === p.id ? "text-acento" : "text-tenue"
               }`}
             >

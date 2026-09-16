@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **16 de septiembre de 2026** (versión 4.2).
+Última revisión: **16 de septiembre de 2026** (versión 4.3).
 
 ---
 
@@ -197,29 +197,63 @@ que se escapa exactamente ese fallo, y los tres están tapados:
 - [x] De paso, un fallo escondido: tocar un compromiso de plan marcaba el plan
       **sin cambiar de pestaña**, así que no pasaba nada de nada.
 
-### D. Los planes, que se quedaron a medias
-- [ ] **Comentar cada día del plan activo**, no solo al cerrarlo.
-- [ ] Alex no encuentra las notas al finalizar el día del plan. Están en el
-      código desde la 4.0: **o no se ven, o no llegan a esa pantalla.**
-- [ ] **Más planes.** Sigue queriendo que crezca el catálogo.
+### D. Los planes · ✅ **hecho en la 4.3**
+- [x] **Comentar cada día del plan activo.** En la ficha de cada plan, arriba:
+      se escribe cuando aprieta, sin esperar a la noche y sin tener que
+      declarar todavía si el día se ganó o se perdió. Va al diario, ligado al
+      plan, y las últimas cinco se leen ahí mismo.
+- [x] **Encontrada la razón de que no viera las notas del repaso.** Estaban,
+      pero **sólo aparecían después de contestar todos los puntos**. Él hacía
+      repasos a medias y nunca llegó a verlas, y acabó pidiendo como nueva una
+      función que llevaba dentro desde la 4.0. Una función que no se ve es una
+      función que no está: ahora se ve siempre.
+- [ ] **Más planes.** Sigue queriendo que crezca el catálogo (van 15).
 
-### E. El diario · **«quedó EXCELENTE», pero…**
-- [ ] **Está escondido.** Sacarlo de dentro de «Más».
-- [ ] **Guardar, compartir y descargar las notas.** Alex: «para muchos es muy
-      importante poder escribir día a día» y no quiere que queden atrapadas.
+### E. El diario · ✅ **hecho en la 4.3**
+- [x] **Ya no está escondido.** Sube a la barra de abajo, como sexta pestaña,
+      al lado de Planes. Una cosa que se escribe todos los días no puede vivir
+      dentro del cajón de «Más».
+- [x] **Guardar, compartir y descargar.** El diario entero sale como archivo de
+      texto: en Android se escribe en Documentos y se abre el menú del sistema
+      —Drive, WhatsApp, donde quiera—; en el navegador se descarga. Y cada nota
+      suelta se puede compartir por separado, **sin firma de marca**: eso es
+      suyo, no propaganda.
+- [x] El archivo sale agrupado por días, con la fecha escrita en letra y, en
+      las notas que nacieron de un plan, **cómo acabó aquel día**.
 
 ### F. La pantalla del mensaje
 - [ ] Los temas del banco **parecen un error**. Que se entienda de un vistazo
       para qué sirven, y que sea hermoso y armonioso.
 
-### G. «Juntos», que está desaprovechado
-- [ ] Grupos de **WhatsApp y Telegram**.
-- [ ] Las redes de **Genuino Love: TikTok e Instagram**.
-- [ ] Alex: «hay que aprovechar muy bien ese apartado».
+### G. «Juntos» · **el armazón, hecho en la 4.3**
+- [x] **TikTok** añadido como tipo de enlace, con Facebook de propina.
+- [x] **Los grupos se separan de las redes**: no es lo mismo entrar a un grupo
+      —donde te esperan y te echan de menos si faltas— que seguir una cuenta.
+- [x] **Un enlace sin rellenar ya no se enseña.** Antes los huecos de ejemplo
+      llevaban a una página rota, y un enlace roto en la pantalla de la
+      comunidad hace más daño que no tener pantalla.
+- [ ] ⚠️ **Faltan las URL de verdad.** Están pendientes de Alex y no se
+      inventan: el enlace del grupo de WhatsApp, el canal de Telegram, y las
+      cuentas de Instagram y TikTok de Genuino Love. Se ponen en
+      `public/comunidad.json`, se despliega, y les cambia a todos sin
+      actualizar la app.
 
-### H. Privacidad de lo que se escribe
-- [ ] **Código o huella para abrir la app.** El diario y el repaso de santidad
-      son lo más íntimo que guarda, y hoy los ve cualquiera que coja el móvil.
+### H. Privacidad de lo que se escribe · ✅ **el código, hecho en la 4.3**
+- [x] **Código de cuatro números al abrir la app.** Se pone en Ajustes, con
+      teclado propio y margen configurable para no pedirlo cada vez que se sale
+      un momento a WhatsApp.
+- [x] El código **no se guarda**: se guarda su huella (SHA-256 con sal), que no
+      se puede deshacer.
+- [x] **La alarma pasa por encima del bloqueo.** A las tres de la madrugada,
+      con la alarma repicando, obligar a teclear cuatro números antes de poder
+      decir «cumplido» es lo que hace que alguien acabe quitando el código. En
+      esa pantalla no hay nada privado; lo íntimo sigue detrás.
+- [x] Se dice lo que es y lo que no: impide que alguien abra la app y se ponga
+      a leer, **no cifra el almacenamiento**. Prometer una caja fuerte donde
+      hay un pestillo sería peor que no poner nada.
+- [ ] **La huella.** Queda pendiente: necesita `androidx.biometric` en el
+      plugin nativo. El código es la base de todos modos — la huella siempre
+      tiene que poder caer en él cuando falla.
 
 ---
 
