@@ -407,6 +407,7 @@ public class AlarmaExacta extends Plugin {
         respuesta.put("cajon", cajonDeReposo(contexto));
         respuesta.put("restringidaEnSegundoPlano", restringidaEnSegundoPlano(contexto));
         respuesta.put("ahorroDeEnergia", ahorroDeEnergia(contexto));
+        respuesta.put("filtroNoMolestar", filtroNoMolestar(contexto));
         llamada.resolve(respuesta);
     }
 
@@ -471,6 +472,66 @@ public class AlarmaExacta extends Plugin {
             return am != null && am.isBackgroundRestricted();
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * Anade un dato al ultimo apunte del diario.
+     *
+     * El receptor escribe el apunte cuando llega la hora; el servicio vuelve
+     * despues a decir si de verdad hubo ruido. Sin esa segunda mitad, el diario
+     * solo sabe que Android nos desperto, que es justo lo que ya no bastaba:
+     * la alarma del 16 de septiembre dejo notificacion y no sono, y el diario
+     * la daba por buena.
+     */
+    static void anotarEnElUltimoDisparo(Context contexto, String clave, Object valor) {
+        try {
+            SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            JSONArray diario = new JSONArray(prefs.getString(CLAVE_DIARIO, "[]"));
+            if (diario.length() == 0) return;
+            JSONObject ultimo = diario.getJSONObject(diario.length() - 1);
+            ultimo.put(clave, valor);
+            prefs.edit().putString(CLAVE_DIARIO, diario.toString()).apply();
+        } catch (Exception ignorada) {
+            // Un diario que no se deja escribir no debe impedir que suene.
+        }
+    }
+
+    /**
+     * Como esta puesto No molestar, en palabras.
+     *
+     * Importa una cosa por encima de todo: en **silencio total** el sistema
+     * calla tambien el flujo de alarma, y entonces no hay app capaz de sonar.
+     * Es la unica causa de silencio que no tiene arreglo desde dentro, asi que
+     * lo minimo es saber nombrarla en vez de seguir buscando fantasmas.
+     */
+    static String filtroNoMolestar(Context contexto) {
+        try {
+            NotificationManager gestor = contexto.getSystemService(NotificationManager.class);
+            if (gestor == null) return "desconocido";
+            switch (gestor.getCurrentInterruptionFilter()) {
+                case NotificationManager.INTERRUPTION_FILTER_ALL: return "todo pasa";
+                case NotificationManager.INTERRUPTION_FILTER_PRIORITY: return "prioridad";
+                case NotificationManager.INTERRUPTION_FILTER_ALARMS: return "solo alarmas";
+                case NotificationManager.INTERRUPTION_FILTER_NONE: return "SILENCIO TOTAL";
+                default: return "desconocido";
+            }
+        } catch (Exception e) {
+            return "desconocido";
+        }
+    }
+
+    /** El volumen del flujo de alarma, en tanto por ciento. -1 si no se sabe. */
+    static int volumenDeAlarma(Context contexto) {
+        try {
+            android.media.AudioManager audio =
+                    (android.media.AudioManager) contexto.getSystemService(Context.AUDIO_SERVICE);
+            if (audio == null) return -1;
+            int maximo = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM);
+            if (maximo <= 0) return -1;
+            return (audio.getStreamVolume(android.media.AudioManager.STREAM_ALARM) * 100) / maximo;
+        } catch (Exception e) {
+            return -1;
         }
     }
 

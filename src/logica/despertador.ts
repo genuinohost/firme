@@ -65,6 +65,14 @@ export type EstadoDespertador = {
    * eso. Sólo se puede avisar.
    */
   ahorroDeEnergia: boolean;
+  /**
+   * Cómo está puesto No molestar.
+   *
+   * En **silencio total** Android calla también el flujo de alarma, y entonces
+   * no hay app capaz de sonar. Es la única causa de silencio sin arreglo desde
+   * dentro: lo mínimo es saber nombrarla.
+   */
+  filtroNoMolestar: string;
 };
 
 type PluginAlarmaExacta = {

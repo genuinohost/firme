@@ -84,6 +84,7 @@ export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
           timbre: c.timbre,
           avisoPrevioMin: c.avisoPrevioMin,
           registro: datos.registros[`${fecha}|${c.id}`] ?? null,
+          plan: plan.id,
         })),
     );
 

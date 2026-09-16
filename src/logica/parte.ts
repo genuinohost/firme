@@ -23,7 +23,21 @@ const hora = (ms: number) => {
   return `${dd}/${mm} ${hh}:${mi}`;
 };
 
-type Apunte = { id: number; prevista: number; real: number };
+type Apunte = {
+  id: number;
+  prevista: number;
+  real: number;
+  /** ¿Arrancó el servicio que repica? */
+  servicio?: boolean;
+  /** ¿Hubo ruido de verdad? Es la única pregunta que importa. */
+  sono?: boolean;
+  confirmado?: boolean;
+  ultimoRecurso?: boolean;
+  reintento?: boolean;
+  sinPrimerPlano?: string;
+  volumen?: number;
+  noMolestar?: string;
+};
 type EnCola = { id: number; cuando: number; titulo: string };
 
 export function redactarParte(e: EstadoDespertador): string {
@@ -41,6 +55,12 @@ export function redactarParte(e: EstadoDespertador): string {
   l.push(`  Fuera del ahorro de batería: ${si(e.exentaDeBateria)}`);
   l.push(`  Avisos permitidos: ${si(e.avisosActivos && e.canalActivo)}`);
   l.push(`  Acceso a No molestar: ${si(e.accesoNoMolestar)}`);
+  // En silencio total Android calla tambien el flujo de alarma: ninguna app
+  // del mundo suena con eso puesto, y hay que decirlo con todas las letras.
+  l.push(
+    `  No molestar: ${e.filtroNoMolestar}` +
+      (e.filtroNoMolestar === "SILENCIO TOTAL" ? " ← ninguna alarma puede sonar" : ""),
+  );
   l.push(`  Cajón de reposo: ${e.cajon}${e.cajon === "RESTRINGIDA" ? " ←" : ""}`);
   l.push(`  Restringida en segundo plano: ${e.restringidaEnSegundoPlano ? "SÍ ←" : "no"}`);
   l.push(`  Ahorro de energía activo: ${e.ahorroDeEnergia ? "SÍ ←" : "no"}`);
@@ -87,9 +107,25 @@ export function redactarParte(e: EstadoDespertador): string {
     } else {
       for (const d of diario) {
         const desfase = d.prevista ? Math.round((d.real - d.prevista) / 1000) : null;
+        // El veredicto va delante, porque es lo único que de verdad se pregunta.
+        const veredicto =
+          d.sono === undefined
+            ? "·"
+            : d.sono
+              ? "SONÓ"
+              : "MUDA ←";
+        const notas: string[] = [];
+        if (d.servicio === false) notas.push("el servicio no arrancó");
+        if (d.sinPrimerPlano) notas.push("sin primer plano");
+        if (d.reintento) notas.push("hubo que reintentar");
+        if (d.ultimoRecurso) notas.push("sonó por el último recurso");
+        if (d.confirmado === false) notas.push("se apagó solo");
+        if (typeof d.volumen === "number" && d.volumen >= 0) notas.push(`volumen ${d.volumen}%`);
+        if (d.noMolestar && d.noMolestar !== "todo pasa") notas.push(d.noMolestar);
         l.push(
-          `  ${hora(d.real)}` +
-            (desfase !== null ? `  (prevista ${hora(d.prevista)}, ${desfase}s)` : ""),
+          `  ${veredicto}  ${hora(d.real)}` +
+            (desfase !== null ? `  (prevista ${hora(d.prevista)}, ${desfase}s)` : "") +
+            (notas.length > 0 ? `  — ${notas.join(", ")}` : ""),
         );
       }
     }

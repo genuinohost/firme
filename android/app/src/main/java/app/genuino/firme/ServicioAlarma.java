@@ -110,11 +110,19 @@ public class ServicioAlarma extends Service {
 
         if (!sonando) {
             sonando = true;
-            SONANDO = true;
             sujetarElMovilDespierto();
             subirElVolumenDeAlarma();
-            empezarASonar();
+
+            // SONANDO se pone **despues** de comprobar que hay ruido, no antes.
+            // Es la bandera que mira el receptor para decidir si hace falta su
+            // ultimo recurso: ponerla por adelantado era prometerle silencio
+            // disfrazado de exito, que es como se perdio la alarma de las tres.
+            SONANDO = empezarASonar();
             empezarAVibrar();
+
+            // Y una segunda mirada un segundo despues: un MediaPlayer puede
+            // arrancar y morirse solo, sin lanzar nada.
+            mano.postDelayed(this::confirmarQueSuena, 1200);
 
             corte = this::parar;
             mano.postDelayed(corte, TOPE_MS);
@@ -175,9 +183,12 @@ public class ServicioAlarma extends Service {
                 startForeground(ID_AVISO, aviso);
             }
         } catch (Exception e) {
-            // Si el sistema no deja el primer plano, al menos que se vea.
+            // Si el sistema no deja el primer plano, al menos que se vea —y que
+            // quede escrito, porque es una de las formas en que una alarma se
+            // queda muda sin que nadie pueda explicar despues por que.
             NotificationManager gestor = getSystemService(NotificationManager.class);
             if (gestor != null) gestor.notify(ID_AVISO, aviso);
+            AlarmaExacta.anotarEnElUltimoDisparo(this, "sinPrimerPlano", e.getMessage());
         }
     }
 
@@ -231,8 +242,14 @@ public class ServicioAlarma extends Service {
         }
     }
 
-    /** Primera red: el tono de alarma del movil, en bucle. */
-    private void empezarASonar() {
+    /**
+     * Primera red: el tono de alarma del movil, en bucle.
+     *
+     * Devuelve si quedo sonando. Antes no devolvia nada y nadie comprobaba el
+     * resultado: la alarma se daba por buena por el mero hecho de haberlo
+     * intentado.
+     */
+    private boolean empezarASonar() {
         Uri tono = tonoDeAlarma();
         if (tono != null) {
             try {
@@ -246,12 +263,38 @@ public class ServicioAlarma extends Service {
                 reproductor.setVolume(1f, 1f);
                 reproductor.prepare();
                 reproductor.start();
-                return;
+                if (reproductor.isPlaying()) return true;
+                soltarReproductor();
             } catch (Exception e) {
                 soltarReproductor();
             }
         }
-        tonoDeEmergencia();
+        return tonoDeEmergencia();
+    }
+
+    /**
+     * La segunda mirada, un segundo despues de arrancar.
+     *
+     * Un MediaPlayer puede pararse solo —se le quita el foco, el sistema le
+     * corta el flujo— y no lanza nada al hacerlo. Si eso pasa, se baja al tono
+     * de emergencia, que lo genera el propio sistema y no depende de ficheros.
+     */
+    private void confirmarQueSuena() {
+        if (!sonando) return;
+        boolean suena = false;
+        try {
+            suena = reproductor != null && reproductor.isPlaying();
+        } catch (Exception ignorada) {
+            // Un reproductor en mal estado cuenta como que no suena.
+        }
+        if (!suena && generador == null) {
+            soltarReproductor();
+            suena = tonoDeEmergencia();
+        } else if (generador != null) {
+            suena = true;
+        }
+        SONANDO = suena;
+        AlarmaExacta.anotarEnElUltimoDisparo(this, "confirmado", suena);
     }
 
     private Uri tonoDeAlarma() {
@@ -272,7 +315,7 @@ public class ServicioAlarma extends Service {
      * usuario pone «ninguno» como tono de alarma— lo genera el sistema. Feo,
      * pero suena, y sonar es lo unico que aqui no se negocia.
      */
-    private void tonoDeEmergencia() {
+    private boolean tonoDeEmergencia() {
         try {
             generador = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
             repique = new Runnable() {
@@ -289,8 +332,10 @@ public class ServicioAlarma extends Service {
                 }
             };
             mano.post(repique);
+            return true;
         } catch (Exception ignorada) {
             // No queda mas que la vibracion.
+            return false;
         }
     }
 
@@ -331,6 +376,8 @@ public class ServicioAlarma extends Service {
     private void parar() {
         sonando = false;
         SONANDO = false;
+        // Si el receptor llego a sonar por su cuenta, tambien se calla aqui.
+        ReceptorAlarma.callarUltimoRecurso();
         if (corte != null) mano.removeCallbacks(corte);
         if (repique != null) mano.removeCallbacks(repique);
 

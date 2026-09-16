@@ -29,6 +29,30 @@ const MAXIMO_AVISOS = 400;
  */
 const CANAL = "alarmas-firme-v2";
 
+/**
+ * Tira los avisos que dejó programados la época 3.x.
+ *
+ * Hasta la 3.5 las alarmas se entregaban a Android como notificaciones
+ * corrientes por este módulo. Desde entonces las lleva el despertador propio
+ * (`despertador.ts`), y aquellas quedaron en la cola del sistema **sin que
+ * nadie las cancelara**: siguen saltando a su hora, mudas bajo No molestar, y
+ * lo que se ve por la mañana es una notificación sin ruido. Es decir, la
+ * pantalla exacta de «la alarma no sonó pero la notificación está ahí».
+ *
+ * Se limpian una vez y se deja constancia de que ya se hizo.
+ */
+export async function limpiarAvisosViejos(): Promise<number> {
+  if (!esNativo()) return 0;
+  try {
+    const pendientes = await LocalNotifications.getPending();
+    if (pendientes.notifications.length === 0) return 0;
+    await LocalNotifications.cancel({ notifications: pendientes.notifications });
+    return pendientes.notifications.length;
+  } catch {
+    return 0;
+  }
+}
+
 export function esNativo(): boolean {
   return Capacitor.isNativePlatform();
 }

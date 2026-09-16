@@ -21,7 +21,12 @@ type Props = {
   onDeshacer: (suceso: Suceso) => void;
   onCambiarDia: (dias: number) => void;
   onNuevaTarea: () => void;
-  onEditarTarea: (id: string) => void;
+  /**
+   * Tocar una fila. Recibe el suceso entero, no solo su id, porque cada tipo
+   * lleva a un sitio distinto: la tarea suelta a su diálogo, el compromiso de
+   * un plan a la ficha del plan, y el bloque de rutina a la rutina.
+   */
+  onEditarTarea: (suceso: Suceso) => void;
   onVerPorque: () => void;
 };
 
@@ -224,7 +229,7 @@ export function PantallaHoy(props: Props) {
               setExcusa("");
             }}
             onDeshacer={() => onDeshacer(s)}
-            onAbrir={() => onEditarTarea(s.id)}
+            onAbrir={() => onEditarTarea(s)}
           />
         ))}
 
@@ -246,7 +251,7 @@ export function PantallaHoy(props: Props) {
                   setExcusa("");
                 }}
                 onDeshacer={() => onDeshacer(s)}
-                onAbrir={() => onEditarTarea(s.id)}
+                onAbrir={() => onEditarTarea(s)}
               />
             ))}
           </>
@@ -402,24 +407,26 @@ function FilaSuceso({
       </div>
       <Punto categoria={suceso.categoria} />
       <div className="min-w-0 flex-1">
-        {suceso.origen === "tarea" ? (
-          <button
-            onClick={onAbrir}
-            className="flex w-full items-center gap-1.5 text-left"
-            aria-label={`Editar ${suceso.nombre}`}
-          >
-            <span className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
-              {suceso.nombre}
-            </span>
-            <span className="shrink-0 text-xs text-tenue" aria-hidden>
-              ✎
-            </span>
-          </button>
-        ) : (
-          <p className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
+        {/*
+          **Todas** las filas se pueden tocar, cada una lleva a su sitio.
+
+          Antes solo la tarea suelta tenía el lápiz, y los bloques de la rutina
+          y los compromisos de los planes no respondían a nada. Desde fuera eso
+          no se lee como «esto se edita en otra pantalla»: se lee como que la
+          app está rota — que es justo lo que pasó.
+        */}
+        <button
+          onClick={onAbrir}
+          className="flex w-full items-center gap-1.5 text-left"
+          aria-label={`Editar ${suceso.nombre}`}
+        >
+          <span className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
             {suceso.nombre}
-          </p>
-        )}
+          </span>
+          <span className="shrink-0 text-xs text-tenue" aria-hidden>
+            ✎
+          </span>
+        </button>
         {saltado && registro?.excusa ? (
           <p className="truncate text-xs text-fallo">{registro.excusa}</p>
         ) : vencido ? (

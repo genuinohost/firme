@@ -160,4 +160,13 @@ export type Suceso = {
   timbre: Timbre;
   avisoPrevioMin: number;
   registro: Registro | null;
+  /**
+   * Id del plan del que viene, si viene de uno.
+   *
+   * Sirve para que tocar la fila lleve a su sitio: la tarea suelta a su
+   * diálogo, el bloque de la rutina a la rutina, y el compromiso de un plan a
+   * la ficha de ese plan. Antes solo las tareas sueltas se podían tocar, y
+   * todo lo demás parecía roto.
+   */
+  plan?: string;
 };

@@ -10,7 +10,8 @@
     "desplegar": "npm run build && firebase deploy --only hosting:firme",
     "revisar-banco": "node scripts/revisar-banco.mjs",
     "publicar": "node scripts/publicar-release.mjs",
-    "aab": "node scripts/compilar-aab.mjs"
+    "aab": "node scripts/compilar-aab.mjs",
+    "revisar-rachas": "vite-node scripts/revisar-rachas.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

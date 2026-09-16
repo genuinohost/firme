@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **14 de septiembre de 2026**.
+Última revisión: **16 de septiembre de 2026** (versión 4.2).
 
 ---
 
@@ -134,22 +134,68 @@ El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 > fallen». Y: «anota todo, que nada se te escape». Esta lista es esa promesa.
 
 ### A. Las alarmas · **lo más grave, no se cierra hasta que suene**
-- [ ] **No sonó la madrugada del 16-09**, con la 4.x instalada. Dice que la app
-      «tiene la notificación»: hay que averiguar si sonó y no despertó, o si ni
-      siquiera se disparó.
-- [ ] ⚠️ **Falta el parte.** Sin él se sigue adivinando. Pedirlo siempre antes
-      de tocar nada.
 
-### B. Las rachas · **«verifica profundamente que no fallen»**
-- [ ] **La racha inicial sigue en cero.** Revisar `logica/racha.ts` a fondo.
-- [ ] Revisar también las rachas de los planes.
-- [ ] Dejar pruebas escritas, no comprobaciones a ojo.
+**Lo hecho en la 4.2 — se le cerraron las salidas al silencio.**
 
-### C. Editar tareas · **sigue roto**
-- [ ] Alex: «solamente, en algún momento, apareció la opción en la primera
-      tarea, no en todas». **Pista clave:** solo las tareas sueltas llevan el
-      lápiz; los bloques de la rutina y los compromisos de los planes no.
-      Él espera poder tocar cualquier fila y editarla.
+Alex dijo: «la alarma no sonó en la madrugada, en la app tienen la
+notificación». Esa frase es la pista entera: **hubo notificación y no hubo
+ruido.** Revisada la cadena de arriba abajo, aparecieron tres agujeros por los
+que se escapa exactamente ese fallo, y los tres están tapados:
+
+- [x] **La app se daba por buena sin comprobar que sonaba.** El receptor
+      arrancaba el servicio, y si arrancar no lanzaba una excepción lo daba por
+      resuelto. La bandera `SONANDO` se ponía a cierto **antes** de reproducir
+      nada. Ahora se pone **después**, sólo si el reproductor está sonando de
+      verdad, y el receptor espera hasta tres segundos a que se confirme.
+- [x] **Si a los tres segundos no hay ruido, se reintenta**, y si sigue mudo
+      **suena el propio receptor**, con el tono de alarma por STREAM_ALARM.
+      Para quedarse en silencio ahora tienen que fallar cuatro cosas seguidas.
+- [x] **El móvil podía volver a dormirse mientras arrancaba el servicio.**
+      AlarmManager sólo mantiene el procesador en pie mientras dura
+      `onReceive`, y arrancar un servicio es asíncrono. Ahora se coge un
+      `WakeLock` antes de nada y se usa `goAsync()`.
+- [x] **Quedaban notificaciones de la época 3.x en la cola de Android.** Aquel
+      sistema entregaba las alarmas como notificaciones corrientes y **nunca se
+      cancelaron** al cambiar al despertador propio. Siguen saltando a su hora,
+      mudas bajo No molestar, y dejan por la mañana justo lo que Alex describe:
+      una notificación sin ruido. Se limpian al abrir la app.
+- [x] **El diario ahora dice si sonó, no sólo si se disparó.** Cada apunte lleva
+      el veredicto (SONÓ / MUDA), si arrancó el servicio, si hubo que
+      reintentar, si tuvo que entrar el último recurso, el volumen de alarma y
+      cómo estaba No molestar. El parte lo enseña en una línea por alarma.
+- [x] **Se lee el filtro de No molestar.** En **silencio total** Android calla
+      también el flujo de alarma: ninguna app del mundo suena con eso puesto. Es
+      la única causa sin arreglo desde dentro, y ahora el parte la nombra.
+
+**Lo que falta**
+
+- [ ] **La prueba de fuego: la madrugada del 17-09.** Si vuelve a fallar, el
+      parte dirá por qué con nombre y apellidos.
+- [ ] Pedir el parte por la mañana. Ya no es para adivinar: es para leer el
+      veredicto.
+
+### B. Las rachas · ✅ **verificadas a fondo, 4.2**
+- [x] **La racha inicial ya no sale en cero.** Eran dos fallos encadenados: el
+      día en curso se medía contra **todos** sus bloques —a las diez de la
+      mañana, tres de diez daba 0,30 y la racha caía a cero— y, al arreglarlo,
+      el filtro no hacía nada porque comparaba el registro contra `undefined`
+      cuando `sucesosDelDia` lo deja en `null`. Ahora el día de hoy se mide
+      sólo por lo que ya tocó, con su margen de gracia.
+- [x] **Las rachas de los planes**, revisadas: una caída llevada a Dios no
+      rompe la racha; una noche sin repasar sí la corta.
+- [x] **Pruebas escritas**, no comprobaciones a ojo: `npm run revisar-rachas`,
+      12 comprobaciones, incluido el caso exacto que veía Alex.
+
+### C. Editar tareas · ✅ **arreglado en la 4.2**
+- [x] **Todas las filas se tocan**, no sólo las tareas sueltas. Antes los
+      bloques de la rutina y los compromisos de los planes no respondían a
+      nada, y desde fuera eso no se lee como «esto se edita en otro sitio»: se
+      lee como que la app está rota.
+- [x] Y cada una **abre lo que se tocó**: la tarea suelta su diálogo, el bloque
+      de rutina su ficha ya abierta, el compromiso de un plan la ficha del plan.
+      Llevar a la lista y que el usuario vuelva a buscar no era arreglarlo.
+- [x] De paso, un fallo escondido: tocar un compromiso de plan marcaba el plan
+      **sin cambiar de pestaña**, así que no pasaba nada de nada.
 
 ### D. Los planes, que se quedaron a medias
 - [ ] **Comentar cada día del plan activo**, no solo al cerrarlo.

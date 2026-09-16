@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type BloqueRutina, type Categoria, type Timbre } from "@/datos/tipos";
 import { DIAS_CORTOS, aMinutos, cruzaMedianoche } from "@/logica/dia";
@@ -29,12 +29,29 @@ export function PantallaRutina({
   rutina,
   volumen,
   onCambiar,
+  abrir = null,
+  onAbierto,
 }: {
   rutina: BloqueRutina[];
   volumen: number;
   onCambiar: (rutina: BloqueRutina[]) => void;
+  /** Id del bloque que hay que abrir nada mas entrar, si se vino tocandolo. */
+  abrir?: string | null;
+  onAbierto?: () => void;
 }) {
   const [editando, setEditando] = useState<BloqueRutina | null>(null);
+
+  // Tocar un bloque en la pantalla del dia tiene que abrir **ese** bloque. Si
+  // solo se cambiara de pestana, Alex se queda delante de la lista buscando de
+  // nuevo lo que ya habia tocado, y eso se lee como que no hizo nada.
+  useEffect(() => {
+    if (!abrir) return;
+    const bloque = rutina.find((b) => b.id === abrir);
+    if (bloque) setEditando(bloque);
+    onAbierto?.();
+    // Solo cuando cambia la peticion; la rutina se lee en ese momento.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrir]);
 
   const ordenada = [...rutina].sort((a, b) => aMinutos(a.hora) - aMinutos(b.hora));
 

@@ -3,7 +3,7 @@ import { cargar, guardar, idNuevo } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
-import { esNativo, pedirPermisosNativos } from "@/logica/alarmasNativas";
+import { esNativo, limpiarAvisosViejos, pedirPermisosNativos } from "@/logica/alarmasNativas";
 import type { AlarmaPerdida } from "@/logica/despertador";
 import {
   alarmasPerdidas,
@@ -68,6 +68,7 @@ export default function App() {
   const [examen, setExamen] = useState<string | null>(null);
   /** Id del plan cuya ficha está abierta. */
   const [planAbierto, setPlanAbierto] = useState<string | null>(null);
+  const [bloqueAbierto, setBloqueAbierto] = useState<string | null>(null);
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
   /** Alarmas que tenían que haber sonado y no sonaron. Se dicen en voz alta. */
   const [perdidas, setPerdidas] = useState<AlarmaPerdida[]>([]);
@@ -93,7 +94,12 @@ export default function App() {
     };
 
     // El permiso es el mismo para todo; el despertador es quien programa.
-    void pedirPermisosNativos().then(rehacer);
+    // Antes se tiran los avisos que dejó la época 3.x: seguían saltando a su
+    // hora, mudos bajo No molestar, y lo que quedaba por la mañana era una
+    // notificación sin ruido — indistinguible de una alarma que falló.
+    void pedirPermisosNativos()
+      .then(() => limpiarAvisosViejos())
+      .then(rehacer);
     const alVolver = () => {
       if (document.visibilityState === "visible") void rehacer();
     };
@@ -234,7 +240,21 @@ export default function App() {
             }
             onCambiarDia={(n) => setDesplazamiento((v) => v + n)}
             onNuevaTarea={() => setTareaAbierta("nueva")}
-            onEditarTarea={(id) => setTareaAbierta(id)}
+            onEditarTarea={(s) => {
+              // Cada fila a su sitio, y abriendo ya lo que se tocó. Sin esto,
+              // tocar un bloque de la rutina no hacía nada y parecía que la app
+              // estuviera rota. Ojo con el plan: marcarlo sin cambiar de
+              // pestaña tampoco se ve, que era el segundo fallo.
+              if (s.origen === "tarea") {
+                setTareaAbierta(s.id);
+              } else if (s.plan) {
+                setPlanAbierto(s.plan);
+                setPestaña("planes");
+              } else {
+                setBloqueAbierto(s.id);
+                setPestaña("rutina");
+              }
+            }}
             onVerPorque={() => setPestaña("porque")}
           />
         ) : null}
@@ -329,6 +349,8 @@ export default function App() {
             rutina={datos.rutina}
             volumen={datos.ajustes.volumen}
             onCambiar={cambiarRutina}
+            abrir={bloqueAbierto}
+            onAbierto={() => setBloqueAbierto(null)}
           />
         ) : null}
 
