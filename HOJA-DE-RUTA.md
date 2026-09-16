@@ -128,6 +128,55 @@ El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 
 ---
 
+## 🔴 Lo pedido el 16-09, por orden de gravedad
+
+> Alex: «trabaja arduamente y profesionalmente para que las alarmas nunca
+> fallen». Y: «anota todo, que nada se te escape». Esta lista es esa promesa.
+
+### A. Las alarmas · **lo más grave, no se cierra hasta que suene**
+- [ ] **No sonó la madrugada del 16-09**, con la 4.x instalada. Dice que la app
+      «tiene la notificación»: hay que averiguar si sonó y no despertó, o si ni
+      siquiera se disparó.
+- [ ] ⚠️ **Falta el parte.** Sin él se sigue adivinando. Pedirlo siempre antes
+      de tocar nada.
+
+### B. Las rachas · **«verifica profundamente que no fallen»**
+- [ ] **La racha inicial sigue en cero.** Revisar `logica/racha.ts` a fondo.
+- [ ] Revisar también las rachas de los planes.
+- [ ] Dejar pruebas escritas, no comprobaciones a ojo.
+
+### C. Editar tareas · **sigue roto**
+- [ ] Alex: «solamente, en algún momento, apareció la opción en la primera
+      tarea, no en todas». **Pista clave:** solo las tareas sueltas llevan el
+      lápiz; los bloques de la rutina y los compromisos de los planes no.
+      Él espera poder tocar cualquier fila y editarla.
+
+### D. Los planes, que se quedaron a medias
+- [ ] **Comentar cada día del plan activo**, no solo al cerrarlo.
+- [ ] Alex no encuentra las notas al finalizar el día del plan. Están en el
+      código desde la 4.0: **o no se ven, o no llegan a esa pantalla.**
+- [ ] **Más planes.** Sigue queriendo que crezca el catálogo.
+
+### E. El diario · **«quedó EXCELENTE», pero…**
+- [ ] **Está escondido.** Sacarlo de dentro de «Más».
+- [ ] **Guardar, compartir y descargar las notas.** Alex: «para muchos es muy
+      importante poder escribir día a día» y no quiere que queden atrapadas.
+
+### F. La pantalla del mensaje
+- [ ] Los temas del banco **parecen un error**. Que se entienda de un vistazo
+      para qué sirven, y que sea hermoso y armonioso.
+
+### G. «Juntos», que está desaprovechado
+- [ ] Grupos de **WhatsApp y Telegram**.
+- [ ] Las redes de **Genuino Love: TikTok e Instagram**.
+- [ ] Alex: «hay que aprovechar muy bien ese apartado».
+
+### H. Privacidad de lo que se escribe
+- [ ] **Código o huella para abrir la app.** El diario y el repaso de santidad
+      son lo más íntimo que guarda, y hoy los ve cualquiera que coja el móvil.
+
+---
+
 ## Fase 1 — Terminar lo empezado
 
 Esto es lo que hace que la app sirva. Antes de Play Store, antes de cuentas.
