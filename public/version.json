@@ -1,11 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 26,
-  "nombre": "4.4",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.4.apk",
+  "codigo": 27,
+  "nombre": "4.5",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.5.apk",
   "novedades": [
-    "El banco de mensajes se recorre por areas, no como una lista de 365 temas",
-    "La pantalla del mensaje se reordeno: lo de hoy, arriba del todo"
+    "Dictar por voz las notas del diario, las de los planes y las tareas",
+    "El boton enseña lo que va oyendo y late al ritmo de tu voz"
   ],
   "importante": false
 }
