@@ -11,7 +11,7 @@
  * Antes hay que tener el APK de release compilado y `gh` con la sesión iniciada.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const APK = "android/app/build/outputs/apk/release/app-release.apk";
 const GRADLE = "android/app/build.gradle";
@@ -41,7 +41,9 @@ console.log(`Publicando ${etiqueta} en ${repo}…`);
 
 // Un nombre con la versión: así el que lo descarga sabe qué tiene.
 const nombreArchivo = `Genuino-${nombre}.apk`;
-execFileSync("cp", [APK, nombreArchivo]);
+// Con copyFileSync y no con `cp`: `cp` solo existe si esto se lanza desde
+// Git Bash, y desde PowerShell el script se caia con un ENOENT confuso.
+copyFileSync(APK, nombreArchivo);
 
 const cuerpo =
   novedades.length > 0
@@ -84,7 +86,7 @@ writeFileSync(
   ) + "\n",
 );
 
-execFileSync("rm", ["-f", nombreArchivo]);
+rmSync(nombreArchivo, { force: true });
 
 console.log(`  version.json apunta a ${enlace}`);
 console.log("");

@@ -1,14 +1,14 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 24,
-  "nombre": "4.2",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.2.apk",
+  "codigo": 25,
+  "nombre": "4.3",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.3.apk",
   "novedades": [
-    "Las alarmas ya no pueden quedarse mudas: si el servicio no suena, suena la app misma",
-    "El parte dice ahora si cada alarma SONO o quedo MUDA, y por que",
-    "Se limpian las notificaciones viejas de la 3.x que saltaban sin ruido",
-    "La racha inicial ya no sale en cero: el dia de hoy se mide por lo que ya toco",
-    "Todas las filas del dia se pueden tocar, y cada una abre lo que tocaste"
+    "El diario sube a la barra de abajo: ya no esta escondido dentro de Mas",
+    "Guardar, compartir o descargar el diario entero, y cada nota por separado",
+    "Codigo de cuatro numeros al abrir la app, en Ajustes",
+    "Escribir sobre un plan cualquier dia, sin esperar al repaso de la noche",
+    "La nota del repaso ya se ve siempre, no solo al terminarlo"
   ],
   "importante": false
 }
