@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type Categoria, type Tarea, type Timbre } from "@/datos/tipos";
+import { BotonDictar } from "./BotonDictar";
 import { Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta, colorDe } from "./piezas";
 
 /**
@@ -90,6 +91,14 @@ export function DialogoTarea({
               placeholder="Llamar al proveedor"
               autoFocus={!editando}
             />
+            {/*
+              Dictar la tarea. Alex: «hay veces donde no puedo escribir» — y una
+              tarea se apunta justo cuando uno está con las manos ocupadas, que
+              es cuando se le ocurre y cuando se le olvida.
+            */}
+            <div className="mt-2">
+              <BotonDictar valor={nombre} onTexto={setNombre} etiqueta="Dictar la tarea" />
+            </div>
           </Campo>
 
           <label className="flex items-center justify-between rounded-xl border border-borde px-3 py-2.5">

@@ -1,14 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 25,
-  "nombre": "4.3",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.3.apk",
+  "codigo": 26,
+  "nombre": "4.4",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.4.apk",
   "novedades": [
-    "El diario sube a la barra de abajo: ya no esta escondido dentro de Mas",
-    "Guardar, compartir o descargar el diario entero, y cada nota por separado",
-    "Codigo de cuatro numeros al abrir la app, en Ajustes",
-    "Escribir sobre un plan cualquier dia, sin esperar al repaso de la noche",
-    "La nota del repaso ya se ve siempre, no solo al terminarlo"
+    "El banco de mensajes se recorre por areas, no como una lista de 365 temas",
+    "La pantalla del mensaje se reordeno: lo de hoy, arriba del todo"
   ],
   "importante": false
 }

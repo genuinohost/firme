@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
+import { BotonDictar } from "./BotonDictar";
 import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -170,6 +171,9 @@ export function ExamenDelPlan({
             onChange={(e) => setNota(e.target.value)}
             placeholder="Cómo me fue hoy con esto..."
           />
+          <div className="mt-2">
+            <BotonDictar valor={nota} onTexto={setNota} etiqueta="Dictar" />
+          </div>
           <p className="mt-1.5 text-xs text-tenue">
             Se guarda en tu diario, junto a si hoy venciste o caíste. No lo ve nadie más.
           </p>

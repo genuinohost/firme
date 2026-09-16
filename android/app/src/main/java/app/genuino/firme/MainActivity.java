@@ -7,8 +7,9 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle estadoGuardado) {
-        // El plugin del despertador se registra antes de que arranque la web.
+        // Los plugins propios se registran antes de que arranque la web.
         registerPlugin(AlarmaExacta.class);
+        registerPlugin(Dictado.class);
         super.onCreate(estadoGuardado);
     }
 }

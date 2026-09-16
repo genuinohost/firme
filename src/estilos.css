@@ -8,6 +8,8 @@
   --color-texto: #e9ecef;
   --color-tenue: #8b949e;
   --color-acento: #c9a227;
+  /* El halo del botón de dictar, que late con el nivel de voz. */
+  --color-acento-suave: #c9a2271f;
   --color-logro: #3f9e7a;
   --color-fallo: #b9503a;
 

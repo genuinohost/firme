@@ -9,6 +9,7 @@ import {
   exportarTexto,
   nombreDeArchivo,
 } from "@/logica/exportar";
+import { BotonDictar } from "./BotonDictar";
 import { AreaTexto, Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -94,7 +95,9 @@ export function PantallaDiario({
           onChange={(e) => setEscribiendo(e.target.value)}
           placeholder="Hoy me costó, pero..."
         />
-        <div className="mt-2">
+        <div className="mt-2 flex flex-col gap-2">
+          {/* Dictar antes que guardar: primero se escribe, luego se guarda. */}
+          <BotonDictar valor={escribiendo} onTexto={setEscribiendo} etiqueta="Dictar la nota" />
           <Boton
             variante="fuerte"
             ancho

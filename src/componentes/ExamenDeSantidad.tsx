@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
+import { BotonDictar } from "./BotonDictar";
 import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -234,6 +235,9 @@ export function ExamenDeSantidad({
                 onChange={(e) => setNota(e.target.value)}
                 placeholder="Qué me ayudó hoy a mantenerme en pie..."
               />
+              <div className="mt-2">
+                <BotonDictar valor={nota} onTexto={setNota} etiqueta="Dictar" />
+              </div>
               <p className="mt-1.5 text-xs text-tenue">
                 Se guarda en tu diario. No lo ve nadie más.
               </p>
@@ -335,6 +339,9 @@ export function ExamenDeSantidad({
                     : "Cómo me sentí al vencer hoy..."
                 }
               />
+              <div className="mt-2">
+                <BotonDictar valor={nota} onTexto={setNota} etiqueta="Dictar" />
+              </div>
               <p className="mt-1.5 text-xs text-tenue">
                 Se guarda en tu diario. No lo ve nadie más.
               </p>

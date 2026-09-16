@@ -12,6 +12,7 @@ import {
   rachaDelPlan,
   rachaMaximaDelPlan,
 } from "@/logica/planes";
+import { BotonDictar } from "./BotonDictar";
 import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -136,7 +137,8 @@ export function DetallePlan({
             placeholder="Lo que quieras dejar anotado hoy..."
           />
         </div>
-        <div className="mt-2">
+        <div className="mt-2 flex flex-col gap-2">
+          <BotonDictar valor={borrador} onTexto={setBorrador} etiqueta="Dictar" />
           <Boton
             ancho
             deshabilitado={borrador.trim().length === 0}

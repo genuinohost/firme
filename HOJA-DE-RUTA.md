@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **16 de septiembre de 2026** (versión 4.4).
+Última revisión: **16 de septiembre de 2026** (versión 4.5).
 
 ---
 
@@ -125,6 +125,78 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## 🆕 Lo pedido el 16-09 por la tarde
+
+### I. Dictar por voz · ✅ **hecho en la 4.5**
+> Alex: «necesito poder crear tareas y comentarios en mi diario con voz. Hay
+> veces donde no puedo escribir».
+
+No es comodidad. Esta app se usa **a las tres de la madrugada**, medio dormido
+y con una mano. Una nota que hay que teclear en esas condiciones es una nota
+que no se escribe — y el diario vale justo por lo que se anota **cuando
+aprieta**, no por lo que se redacta tranquilo al día siguiente.
+
+- [x] **Plugin nativo propio** (`Dictado.java`, con `SpeechRecognizer`). Se
+      descartó el de la comunidad: una dependencia más que puede chocar con
+      Capacitor 8 y el SDK 36, para algo que son cien líneas — y así el idioma
+      y el comportamiento son los que queremos.
+- [x] **Micrófono en los cuatro sitios**: nota del diario, nota de un plan,
+      nota del repaso de la noche (las dos variantes) y **nombre de una tarea**.
+- [x] **El botón no aparece si el móvil no sabe transcribir.** Se pregunta al
+      sistema. Un micrófono que se toca y no hace nada deja la app pareciendo
+      rota, que es peor que no ofrecerlo.
+- [x] **Enseña lo que va oyendo** mientras se habla, y **late al ritmo de la
+      voz**: dictar a ciegas y descubrir al final que no cogió nada es lo que
+      hace que nadie vuelva a usarlo.
+- [x] El permiso se pide **al tocar el botón**, no al arrancar: pedirlo antes de
+      que se entienda para qué es la forma más rápida de que te lo nieguen.
+- [x] **Dos silencios de 2,5 s** antes de cortar. De serie corta al primer
+      silencio, y quien dicta una nota se para a pensar a mitad de frase.
+- [x] `<queries>` en el manifiesto: sin eso, en Android 11+ el sistema dice
+      que no hay motor de voz **aunque lo haya**.
+- [x] Lo dictado **se añade** a lo escrito, nunca lo sustituye, con pruebas
+      (`npm run revisar-dictado`): si eso falla sale «Hoy me costólevantarme»,
+      y quien lo ve no vuelve a tocar el micrófono.
+- [x] Respaldo en el navegador, para probar la pantalla sin compilar un APK.
+- [ ] **Falta probarlo en el móvil de Alex.** En el navegador del escritorio el
+      micrófono está bloqueado; lo que se comprobó ahí es que el fallo se
+      cuenta bien y el botón vuelve a su sitio.
+
+### J. Cuenta, perfil y amigos · **fase aparte, no es una tarde**
+> Alex: «la opción de iniciar sesión, tener un perfil muy elegante, con
+> detalles de ciudad, país, etc., y la capacidad para agregar amigos. Todo
+> estilo la app Biblia YouVersion».
+
+**Esto cambia la naturaleza de la app y hay que decirlo claro.** Hasta hoy
+Genuino no tiene servidor ni cuenta: todo vive en el teléfono, y eso es lo que
+hace que funcione sin conexión, que no cueste nada al mes y que la política de
+privacidad quepa en una página. En cuanto haya cuentas y amigos hay **datos de
+personas en un servidor**, y con ellos vienen cuatro cosas que no son
+opcionales:
+
+1. **Coste mensual** que hoy es cero.
+2. **Política de privacidad y formulario de datos de Play Store rehechos.**
+   Google pregunta qué se recoge y dónde se guarda, y hay que responder la
+   verdad. Declararlo mal es motivo de retirada.
+3. **Borrado de cuenta obligatorio.** Play exige que quien crea una cuenta
+   pueda borrarla desde dentro de la app *y* desde una web.
+4. **El diario NO sube.** Es lo más íntimo que guarda la app; sube el perfil y
+   la amistad, no lo que se escribe. Esto se decide ahora y no se toca después.
+
+- [ ] Decidir el cimiento: **Firebase Auth + Firestore** (ya hay proyecto
+      Firebase en pie y la app ya despliega ahí) frente a Supabase.
+- [ ] Entrar con Google y con correo. Nada de contraseñas nuestras.
+- [ ] Perfil: nombre, foto, **ciudad y país**, versículo de cabecera, desde
+      cuándo, racha y días en pie.
+- [ ] Amigos: buscar por nombre de usuario, invitar por enlace, aceptar.
+- [ ] Qué se ve de un amigo — y esto importa más que el diseño: **la constancia
+      anima, la comparación hunde.** Enseñar rachas ajenas en una app de
+      disciplina cristiana puede volverla un escaparate. Se enseña lo que sirve
+      para animar, no para medirse.
+- [ ] Rehacer privacidad + el formulario de datos de Play antes de publicar.
 
 ---
 
