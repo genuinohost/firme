@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 5.6).
+Última revisión: **17 de septiembre de 2026** (versión 5.7).
 
 ---
 
@@ -249,6 +249,24 @@ se tragaba, el contador de alarmas contaba intents cancelados, el cajón de
 reposo contestaba «desconocido». **Ninguno daba error.** Todo fallo que se
 captura y se convierte en un valor de aspecto normal es un fallo que no se puede
 depurar. Cuando algo «no hace nada», sospechar primero de un `catch` silencioso.
+
+---
+
+## 🏪 Google Play: dónde está el trámite (17-09)
+
+- [x] Cuenta de desarrollador creada, **Genuino Love**, personal, ID
+      8797743598995316700. Los 25 $ pagados el 15-09.
+- [x] **Identidad enviada y aceptada por el formulario**, a nombre de JOHNNY
+      ALEXANDER MARTINEZ. «Enviada — nosotros nos encargamos del resto».
+- [x] ⚠️ **La licencia de conducir venezolana la rechazó**; el **pasaporte** sí
+      entró. Si hay que repetirlo con otra cuenta, ir directo al pasaporte: es
+      un documento de viaje internacional y su sistema sabe leerlo.
+- [ ] Esperando la revisión de Google. **Varios días.**
+- [ ] **Verificar el teléfono de contacto** — bloqueado hasta que aprueben la
+      identidad. Es el orden que ellos imponen, no un fallo.
+- [ ] **Rehacer el formulario de datos de Play**, ahora que hay cuentas: Google
+      pregunta qué se recoge y dónde, y declararlo mal es motivo de retirada.
+- [ ] Capturas de pantalla para la ficha.
 
 ---
 
@@ -579,7 +597,20 @@ que se escapa exactamente ese fallo, y los tres están tapados:
       repasos a medias y nunca llegó a verlas, y acabó pidiendo como nueva una
       función que llevaba dentro desde la 4.0. Una función que no se ve es una
       función que no está: ahora se ve siempre.
-- [ ] **Más planes.** Sigue queriendo que crezca el catálogo (van 15).
+- [x] **Más planes: de 15 a 21** (5.7). Elegidos por lo que pesa en su
+      comunidad, no por rellenar la lista: **Interceder por nombre**,
+      **Guardar los ojos** (el teléfono y la mirada), **Grabar la Palabra**,
+      **Honrar a mi esposa**, **Perdonar de corazón** y **Poner orden en el
+      dinero**.
+- [x] Tres llevan **restauración** —una caída llevada a Dios no rompe la
+      racha—: santidad, los ojos y perdonar. **Confirmado por Alex el 17-09**
+      tras planteárselo: «está bien así, déjalo con restauración». En «los
+      ojos» es donde más importa: quien cae ahí ya llega cargando vergüenza, y
+      una racha que se pone a cero por ser sincero **enseña a esconderlo**.
+- [x] **`npm run revisar-planes`**: horas bien escritas, días en rango, timbres
+      que existen, versículos con su cita, y que ningún plan con puntos se
+      quede sin hora de repaso. Un plan mal formado no revienta — se ofrece,
+      alguien lo empieza, y falla el día que tenía que sonar.
 
 ### E. El diario · ✅ **hecho en la 4.3**
 - [x] **Ya no está escondido.** Sube a la barra de abajo, como sexta pestaña,
