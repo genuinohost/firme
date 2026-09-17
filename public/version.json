@@ -1,11 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 31,
-  "nombre": "4.9",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.9.apk",
+  "codigo": 32,
+  "nombre": "5.0",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.0.apk",
   "novedades": [
-    "El parte ahora dice tambien las alarmas que NO llegaron a dispararse",
-    "Arregladas tres cifras del diagnostico que daban una imagen falsa"
+    "NUEVO: copia tus alarmas de madrugada al reloj del movil, como red de seguridad",
+    "El reloj del telefono no lo congela ninguna capa del fabricante",
+    "Las peticiones ya no dependen de una cabecera del servidor"
   ],
   "importante": false
 }
