@@ -72,7 +72,7 @@ export default defineConfig({
          * app en lugar de la política. El servidor la devuelve bien —así que
          * Google no lo notaría—, pero una persona sí.
          */
-        navigateFallbackDenylist: [/^\/privacidad/],
+        navigateFallbackDenylist: [/^\/privacidad/, /^\/borrar-cuenta/],
       },
       manifest: {
         name: "Genuino — disciplina cristiana",

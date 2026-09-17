@@ -124,6 +124,22 @@ Genuino es de la comunidad cristiana Genuino Love.
 | Icono 512×512 | `docs/tienda/icono-play-512.png` |
 | Gráfico destacado 1024×500 | `docs/tienda/destacado-1024x500.png` |
 | Capturas de teléfono | **pendientes** — mínimo 2, hasta 8 |
+| Página de borrado de cuenta | `https://genuino-pro.web.app/borrar-cuenta.html` ✅ |
+
+**Las capturas las hace Alex desde su móvil**, no desde el ordenador. No es
+pereza: las del emulador se notan, y la que más vende —la alarma sonando con el
+teléfono bloqueado— **no existe fuera de un teléfono real**. Su móvil ya tiene
+racha de verdad y planes activos, así que salen con datos reales y no de
+mentira.
+
+Las seis, en este orden (el primero es el que se ve en el listado):
+
+1. **Hoy**, con la racha a la vista y algún bloque ya cumplido
+2. **La alarma sonando, con el móvil bloqueado** — la que ninguna otra app tiene
+3. **Un plan** abierto: su propósito, su versículo y su racha propia
+4. **El repaso de la noche**, punto por punto
+5. **El diario**, con alguna nota escrita
+6. **El mensaje del día**, listo para compartir en WhatsApp
 
 ⚠️ **La captura que más vende no se puede hacer desde el ordenador:** la alarma
 sonando con el móvil bloqueado. Es lo único que ninguna otra app hace, y tiene
@@ -133,18 +149,78 @@ que salir de un teléfono de verdad.
 
 ## Seguridad de datos · respuestas
 
-Auditado en el código el 15-09-2026: ni analítica, ni anuncios, ni rastreo, ni
-un solo dato personal sale del dispositivo.
+> ⚠️ **Rehecho el 17-09-2026, al abrir las cuentas.** La versión anterior decía
+> «no recopila ningún dato» y era cierta hasta la 5.2. **Con cuentas dejó de
+> serlo**, y declararlo mal es motivo de retirada de la app — no una advertencia.
+> El aviso estaba escrito aquí desde el 15-09 y se cumplió.
+
+Auditado contra el código: `src/logica/nube.ts`, `firestore.rules` y
+`capacitor.config.json`.
+
+### ¿Recopila datos de usuarios? → **SÍ** (sólo si crea una cuenta)
+
+La cuenta es **opcional**. Sin ella no se recoge absolutamente nada. Eso se
+declara marcando cada dato como **«opcional»**, no como obligatorio.
+
+| Categoría de Play | Dato | Se recoge | Se comparte | Obligatorio | Para qué |
+|---|---|---|---|---|---|
+| Información personal | **Nombre** | Sí | No | No | Que otros usuarios lo reconozcan |
+| Información personal | **Dirección de correo** | Sí | No | No | Identificar la cuenta; no se enseña a nadie |
+| Información personal | **ID de usuario** | Sí | No | No | Identificar la cuenta y las amistades |
+| Información personal | **Otra información** (ciudad y país, escritos por el usuario) | Sí | No | No | Que otros hermanos sepan de dónde es |
+| Fotos y vídeos | **Fotos** (el avatar de Google) | Sí | No | No | Foto del perfil |
+| Actividad en la app | **Otro contenido generado por el usuario** (el versículo del perfil) | Sí | No | No | Encabezar el perfil |
+| Actividad en la app | **Otras acciones** (con quién tiene amistad) | Sí | No | No | La función de amigos |
+
+**Finalidad de todo lo anterior:** *Funciones de la app* y *Gestión de la
+cuenta*. **Nunca** publicidad, marketing, analítica ni personalización.
+
+### ⚠️ La pregunta delicada: creencias religiosas
+
+Play tiene la categoría **«Información personal → Creencias políticas o
+religiosas»**, que es **dato sensible**. Genuino es una app cristiana y el
+perfil lleva un versículo elegido por la persona.
+
+**Recomendación: declararlo que SÍ.** No porque esté claro que haga falta —un
+perfil dentro de una app religiosa no es lo mismo que preguntarle a alguien su
+religión—, sino porque **el riesgo es asimétrico**: declararlo de más no cuesta
+nada; declararlo de menos y que Google lo interprete al revés cuesta la app.
+
+Y si se declara, Play exige decir por qué: *funciones de la app*, nunca
+publicidad.
+
+### El resto de respuestas
 
 | Pregunta | Respuesta |
 |---|---|
-| ¿Recopila datos de usuarios? | **No** |
-| ¿Comparte datos con terceros? | **No** |
-| ¿Cifra los datos en tránsito? | Sí (HTTPS en las dos descargas de configuración) |
-| ¿Se pueden eliminar los datos? | Sí: desinstalar o borrar datos de la app |
+| ¿Comparte datos con terceros? | **No.** Firebase es nuestro proveedor de alojamiento, no un tercero con el que se comparta |
+| ¿Cifra los datos en tránsito? | **Sí.** Todo va por HTTPS/TLS |
+| ¿Se pueden pedir que se borren? | **Sí**, desde dentro de la app y también por correo |
+| URL de borrado de cuenta | `https://genuino-pro.web.app/borrar-cuenta.html` |
+| Política de privacidad | `https://genuino-pro.web.app/privacidad.html` |
+| ¿Sigue las normas de Familias? | No aplica: público 18+ |
 
-> ⚠️ Si algún día se añaden cuentas o copia en la nube, **esta sección y la
-> política de privacidad hay que rehacerlas antes** de publicar esa versión.
+### Lo que NO se recoge, y hay que saber decirlo
+
+Esto no es una promesa de intención: **la app no tiene el código para enviarlo**,
+y las reglas de Firestore no aceptarían recibirlo.
+
+- El **diario** y las **notas personales**
+- Los **repasos de la noche**, incluido el de santidad — donde se anota una
+  caída y lo que se le dijo a Dios por ella
+- La rutina, las tareas, las horas de las alarmas
+- Las rachas, el historial y los favoritos
+- El código de seguridad de la app (sólo se guarda una huella, en el teléfono)
+- **Ubicación**: la ciudad la escribe el usuario a mano. **No se pide ni se usa
+  el permiso de ubicación**, y por tanto **no se declara «Ubicación»** — hacerlo
+  sería falso y además activa requisitos que no tocan.
+
+### El micrófono
+
+Se usa para dictar notas y tareas. Lo transcribe **el motor de voz del propio
+Android**; la app **no guarda el audio ni lo envía a ningún sitio**. En el
+formulario esto **no se declara como recogida de datos**, porque no sale nada
+hacia nosotros — pero sí está explicado en la política de privacidad.
 
 ## Clasificación de contenido
 
