@@ -1,12 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 35,
-  "nombre": "5.3",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.3.apk",
+  "codigo": 36,
+  "nombre": "5.4",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.4.apk",
   "novedades": [
-    "YA PUEDES AGREGAR AMIGOS: entra con Google y pon tu perfil",
-    "Busca a un hermano por su nombre de usuario y pidele amistad",
-    "Tu diario y tus notas NO suben: se quedan en este telefono"
+    "El error al entrar ahora dice que paso de verdad, en vez de «algo salio mal»"
   ],
   "importante": false
 }
