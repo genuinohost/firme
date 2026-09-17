@@ -12,6 +12,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
+import android.provider.AlarmClock;
 import android.provider.Settings;
 
 import com.getcapacitor.JSArray;
@@ -688,6 +689,66 @@ public class AlarmaExacta extends Plugin {
             llamada.resolve();
         } catch (Exception e) {
             llamada.reject("No arranco el servicio: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Copia una alarma al reloj del propio movil.
+     *
+     * <p><b>La red de seguridad.</b> Por bien que este hecho nuestro
+     * despertador, vive dentro de una app de terceros — y en MIUI, en EMUI y en
+     * ColorOS el sistema se reserva el derecho de congelar esas apps de
+     * madrugada. El reloj del telefono no: es del sistema, y ninguna capa del
+     * fabricante lo mata.
+     *
+     * <p>Asi que para las alarmas que de verdad no pueden fallar se ofrece
+     * duplicarlas ahi. Sonaran las dos, y eso es feo. Pero Alex dijo que estas
+     * alarmas son «parte de la columna vertebral para cumplir a Dios», y ante
+     * esa frase un pitido de mas es un precio ridiculo comparado con un
+     * silencio.
+     *
+     * <p>{@code EXTRA_SKIP_UI} evita que se abra el reloj por cada alarma. Aun
+     * asi hay moviles que lo ignoran y ensenan su pantalla: por eso se copian
+     * de una en una y la app avisa de lo que va a pasar.
+     */
+    @PluginMethod
+    public void copiarAlReloj(PluginCall llamada) {
+        Integer hora = llamada.getInt("hora");
+        Integer minuto = llamada.getInt("minuto");
+        String titulo = llamada.getString("titulo", "Genuino");
+        JSArray dias = llamada.getArray("dias");
+
+        if (hora == null || minuto == null) {
+            llamada.reject("faltan-datos");
+            return;
+        }
+
+        try {
+            Intent intencion = new Intent(AlarmClock.ACTION_SET_ALARM);
+            intencion.putExtra(AlarmClock.EXTRA_HOUR, hora.intValue());
+            intencion.putExtra(AlarmClock.EXTRA_MINUTES, minuto.intValue());
+            intencion.putExtra(AlarmClock.EXTRA_MESSAGE, titulo);
+            intencion.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+            intencion.putExtra(AlarmClock.EXTRA_VIBRATE, true);
+
+            // Los dias de la semana, si los hay. El reloj los espera de 1 a 7
+            // empezando en domingo; nosotros los llevamos de 0 a 6.
+            if (dias != null && dias.length() > 0) {
+                java.util.ArrayList<Integer> semana = new java.util.ArrayList<>();
+                for (int i = 0; i < dias.length(); i++) {
+                    semana.add(((Integer) dias.get(i)) + 1);
+                }
+                intencion.putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, semana);
+            }
+
+            intencion.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intencion);
+
+            JSObject r = new JSObject();
+            r.put("copiada", true);
+            llamada.resolve(r);
+        } catch (Exception e) {
+            llamada.reject("sin-reloj: " + e.getMessage());
         }
     }
 

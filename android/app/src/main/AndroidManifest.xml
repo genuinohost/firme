@@ -97,6 +97,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!--
+      Poner una alarma en el reloj del propio movil, como respaldo de las que de
+      verdad no pueden fallar. El reloj es una app del sistema y ninguna capa
+      del fabricante lo congela de madrugada; nuestro despertador si.
+    -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+
+    <!--
       Alarmas al minuto exacto. Sin esto Android agrupa los avisos y los
       retrasa hasta que el móvil despierte por su cuenta, que es justo lo que
       hacía inútil la versión web.

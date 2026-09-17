@@ -10,6 +10,7 @@ import {
   pedirAccesoNoMolestar,
   pedirExencionBateria,
   abrirInicioAutomatico,
+  copiarAlReloj,
   pedirPermisoExactas,
   probarDespertador,
   sonarYa,
@@ -236,6 +237,8 @@ export function PantallaAjustes({
       </Tarjeta>
 
       <ClaveOpenRouter />
+
+      <RespaldoEnElReloj rutina={datos.rutina} />
 
       <Cerradura />
 
@@ -1055,6 +1058,90 @@ function Cerradura() {
         Esto impide que alguien abra la app y se ponga a leer. No cifra lo
         guardado, y <strong>no hay forma de recuperarlo si lo olvidas</strong>:
         elige uno que no se te vaya.
+      </p>
+    </Tarjeta>
+  );
+}
+
+/**
+ * Duplicar las alarmas de madrugada en el reloj del móvil.
+ *
+ * **La red de seguridad, y hay que explicarla bien.** Por bien hecho que esté
+ * nuestro despertador, vive dentro de una app de terceros — y MIUI, EMUI y
+ * ColorOS se reservan el derecho de congelar esas apps de madrugada. El reloj
+ * del teléfono no: es del sistema, y ninguna capa del fabricante lo mata.
+ *
+ * Sólo se ofrecen **las de antes de las 7**. No es una cifra caprichosa: son
+ * las que fallan, las que nadie puede recuperar después, y las únicas por las
+ * que merece la pena aguantar que suenen dos cosas a la vez. Copiar la rutina
+ * entera llenaría el reloj de diez alarmas y acabaría desactivándolas todas.
+ */
+function RespaldoEnElReloj({ rutina }: { rutina: import("@/datos/tipos").BloqueRutina[] }) {
+  const [aviso, setAviso] = useState("");
+  const [copiando, setCopiando] = useState(false);
+
+  const madrugada = rutina.filter((b) => {
+    if (!b.activo || b.timbre === "ninguno") return false;
+    const h = Number(b.hora.split(":")[0]);
+    return h < 7;
+  });
+
+  if (!esNativo() || madrugada.length === 0) return null;
+
+  return (
+    <Tarjeta>
+      <Etiqueta>respaldo en el reloj del móvil</Etiqueta>
+      <p className="mt-2 text-sm leading-relaxed">
+        Tu móvil puede congelar las apps de madrugada, y contra eso no hay permiso
+        que valga. <strong>El reloj del propio teléfono no lo congela nadie</strong>,
+        porque es del sistema.
+      </p>
+      <p className="mt-2 text-sm leading-relaxed">
+        Esto copia al reloj tus{" "}
+        <strong>
+          {madrugada.length} {madrugada.length === 1 ? "alarma" : "alarmas"} de antes de
+          las 7
+        </strong>
+        , como red por si la nuestra falla.
+      </p>
+
+      <div className="mt-3 flex flex-col gap-1.5">
+        {madrugada.map((b) => (
+          <div key={b.id} className="flex items-baseline gap-3 text-sm">
+            <span className="cifras w-12 shrink-0 text-acento">{b.hora}</span>
+            <span className="min-w-0 flex-1 truncate">{b.nombre}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3">
+        <Boton
+          ancho
+          deshabilitado={copiando}
+          onClick={async () => {
+            setCopiando(true);
+            setAviso("");
+            const n = await copiarAlReloj(
+              madrugada.map((b) => ({ hora: b.hora, nombre: b.nombre, dias: b.dias })),
+            );
+            setCopiando(false);
+            setAviso(
+              n === 0
+                ? "No se pudo. Ponlas a mano en el reloj del móvil."
+                : `Copiadas ${n}. Míralas en la app Reloj de tu móvil.`,
+            );
+          }}
+        >
+          {copiando ? "Copiando…" : "Copiar al reloj del móvil"}
+        </Boton>
+      </div>
+
+      {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
+
+      <p className="mt-3 text-xs leading-relaxed text-tenue">
+        <strong>Van a sonar las dos</strong>, la nuestra y la del reloj. Es feo, y es a
+        propósito: más vale un pitido de más que un silencio a las tres. Cuando la
+        nuestra lleve semanas sin fallarte, borra estas desde la app Reloj.
       </p>
     </Tarjeta>
   );

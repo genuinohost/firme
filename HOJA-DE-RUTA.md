@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 4.9).
+Última revisión: **17 de septiembre de 2026** (versión 5.0).
 
 ---
 
@@ -125,6 +125,31 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## 🛟 La red de seguridad: copiar las alarmas al reloj del móvil (5.0)
+
+Alex activó el «inicio automático» el 17-09 por la tarde. Esa es la causa más
+probable de los dos días mudos y probablemente baste. Pero hay algo que ninguna
+app puede prometer: **vive dentro de una app de terceros, y MIUI, EMUI y ColorOS
+se reservan el derecho de congelarlas de madrugada.** Contra eso no hay permiso
+que valga.
+
+**El reloj del propio teléfono no lo congela nadie**, porque es del sistema.
+
+- [x] **Copiar al reloj las alarmas de antes de las 7**, con un botón en
+      Ajustes (`AlarmClock.ACTION_SET_ALARM` con `EXTRA_SKIP_UI`).
+- [x] **Sólo las de madrugada**, y no es una cifra caprichosa: son las que
+      fallan, las que no se pueden recuperar después, y las únicas por las que
+      merece la pena aguantar que suenen dos cosas a la vez. Copiar la rutina
+      entera llenaría el reloj de diez alarmas y acabaría con Alex
+      desactivándolas todas.
+- [x] **Se dice que van a sonar las dos**, y que eso es a propósito. Él dijo que
+      estas alarmas son «parte de la columna vertebral para cumplir a Dios»:
+      ante esa frase, un pitido de más es un precio ridículo comparado con un
+      silencio. Y se le dice cómo quitarlas cuando la nuestra se haya ganado la
+      confianza.
 
 ---
 

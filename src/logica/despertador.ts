@@ -91,6 +91,12 @@ type PluginAlarmaExacta = {
   pedirAccesoNoMolestar(): Promise<void>;
   abrirInicioAutomatico(): Promise<{ abierta: boolean; donde?: string }>;
   hayInicioAutomatico(): Promise<{ hay: boolean; fabricante: string }>;
+  copiarAlReloj(opciones: {
+    hora: number;
+    minuto: number;
+    titulo: string;
+    dias: number[];
+  }): Promise<{ copiada: boolean }>;
   abrirAjustesDeLaApp(): Promise<void>;
 };
 
@@ -272,6 +278,46 @@ export async function abrirInicioAutomatico(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Copia unas alarmas al reloj del propio móvil.
+ *
+ * **La red de seguridad.** Por bien hecho que esté nuestro despertador, vive
+ * dentro de una app de terceros — y MIUI, EMUI y ColorOS se reservan el derecho
+ * de congelar esas apps de madrugada. El reloj del teléfono no: es del sistema,
+ * y ninguna capa del fabricante lo mata.
+ *
+ * Sonarán las dos, y eso es feo. Pero Alex dijo que estas alarmas son «parte de
+ * la columna vertebral para cumplir a Dios»: ante esa frase, un pitido de más
+ * es un precio ridículo comparado con un silencio.
+ *
+ * Devuelve cuántas se copiaron. Se van de una en una y con una pausa: hay
+ * móviles que ignoran «no abras la pantalla» y abren el reloj en cada una, y
+ * lanzarlas todas de golpe deja al usuario con diez pantallas encima.
+ */
+export async function copiarAlReloj(
+  bloques: { hora: string; nombre: string; dias: number[] }[],
+): Promise<number> {
+  if (!hayDespertador()) return 0;
+  let copiadas = 0;
+  for (const b of bloques) {
+    const [h, m] = b.hora.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) continue;
+    try {
+      await AlarmaExacta.copiarAlReloj({
+        hora: h,
+        minuto: m,
+        titulo: `Genuino · ${b.nombre}`,
+        dias: b.dias,
+      });
+      copiadas++;
+    } catch {
+      // Un móvil sin reloj compatible: se sigue con las demás.
+    }
+    await new Promise((r) => setTimeout(r, 350));
+  }
+  return copiadas;
 }
 
 export async function abrirAjustesDeLaApp(): Promise<void> {
