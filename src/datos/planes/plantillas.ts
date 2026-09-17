@@ -478,6 +478,272 @@ export const PLANTILLAS: PlantillaPlan[] = [
   },
 
   {
+    plantilla: "intercesion",
+    nombre: "Interceder por nombre",
+    emoji: "🙏",
+    categoria: "fe",
+    resumen: "Orar por personas concretas, con su nombre, todos los días.",
+    proposito:
+      "Orar «por todos» no es orar por nadie. Interceder es ponerse en medio con nombres puestos: tu casa, el hermano que flaquea, el que te hizo mal. Lo que más cambia a un hombre no es lo que pide para sí, sino lo que carga por otro.",
+    versiculo:
+      "Confesaos vuestras faltas unos á otros, y rogad los unos por los otros, para que seáis sanos.",
+    cita: "Santiago 5:16",
+    horasSugeridas: [
+      { etiqueta: "5:00 — con la madrugada", hora: "05:00" },
+      { etiqueta: "12:00 — a mediodía", hora: "12:00" },
+      { etiqueta: "21:00 — antes de dormir", hora: "21:00" },
+    ],
+    compromisos: [
+      {
+        clase: "bloque",
+        nombre: "Interceder por los míos",
+        hora: "21:00",
+        duracionMin: 20,
+        dias: [0, 1, 2, 3, 4, 5, 6],
+        timbre: "campana",
+        avisoPrevioMin: 0,
+        porque: "Hay nombres que sólo tú vas a llevar hoy delante de Dios.",
+      },
+    ],
+    puntos: [
+      {
+        texto: "Oré por mi casa, uno por uno y por su nombre",
+        versiculo: "Yo y mi casa serviremos á Jehová.",
+        cita: "Josué 24:15",
+      },
+      {
+        texto: "Oré por alguien que está lejos o pasando necesidad",
+        versiculo: "Sobrellevad los unos las cargas de los otros.",
+        cita: "Gálatas 6:2",
+      },
+      {
+        texto: "Oré por alguien que me hizo mal, sin rencor",
+        versiculo: "Orad por los que os ultrajan y os persiguen.",
+        cita: "Mateo 5:44",
+      },
+    ],
+    horaExamen: "21:30",
+    timbreExamen: "campana",
+  },
+
+  {
+    plantilla: "ojos",
+    nombre: "Guardar los ojos",
+    emoji: "👁️",
+    categoria: "fe",
+    resumen:
+      "La batalla del teléfono y de la mirada. La que nadie ve, y la que decide el resto.",
+    proposito:
+      "Nadie cae de golpe: cae en lo que mira cuando está solo. Es la pelea más callada que hay y la que más hombres está tumbando. Y aquí una caída confesada no te aparta, porque lo que rompe la comunión no es tropezar: es quedarse en el suelo.",
+    versiculo: "Hice pacto con mis ojos: ¿cómo pues había yo de pensar en virgen?",
+    cita: "Job 31:1",
+    compromisos: [],
+    puntos: [
+      {
+        texto: "Aparté la mirada a tiempo, sin negociar conmigo mismo",
+        versiculo: "Aparta mis ojos, que no vean la vanidad; avívame en tu camino.",
+        cita: "Salmos 119:37",
+      },
+      {
+        texto: "No busqué a solas lo que me avergonzaría enseñar",
+        versiculo: "No pondré delante de mis ojos cosa injusta.",
+        cita: "Salmos 101:3",
+      },
+      {
+        texto: "El teléfono estuvo en su sitio: no me llevó él a mí",
+        versiculo: "Todo me es lícito, mas yo no me meteré debajo de potestad de nada.",
+        cita: "1 Corintios 6:12",
+      },
+      {
+        texto: "Cuando vino la tentación, corrí en vez de razonar",
+        versiculo: "Huid la fornicación.",
+        cita: "1 Corintios 6:18",
+      },
+    ],
+    horaExamen: "22:00",
+    timbreExamen: "campana",
+    // Una sola pregunta, como en santidad: esto no se mide en porcentajes.
+    modoExamen: "unSoloCheck",
+    // Y una caída llevada a Dios no rompe la racha. Aquí importa más que en
+    // ningún otro plan: quien cae en esto ya llega cargando vergüenza, y una
+    // racha que se pone a cero por ser sincero enseña justo lo contrario de lo
+    // que hay que enseñar — enseña a esconderlo.
+    admiteRestauracion: true,
+  },
+
+  {
+    plantilla: "memorizar",
+    nombre: "Grabar la Palabra",
+    emoji: "📗",
+    categoria: "mente",
+    resumen: "Un versículo por semana, repasado cada día hasta que sea tuyo.",
+    proposito:
+      "Lo que sabes de memoria es lo único que vas a tener cuando no puedas abrir el libro: en la madrugada, en la prueba, en la tentación. Leer alimenta; memorizar arma.",
+    versiculo: "En mi corazón he guardado tus dichos, para no pecar contra ti.",
+    cita: "Salmos 119:11",
+    compromisos: [
+      {
+        clase: "bloque",
+        nombre: "Repasar el versículo de la semana",
+        hora: "07:00",
+        duracionMin: 10,
+        dias: [0, 1, 2, 3, 4, 5, 6],
+        timbre: "pulso",
+        avisoPrevioMin: 0,
+        porque: "Diez minutos hoy, y lo tendrás dentro el resto de tu vida.",
+      },
+    ],
+    puntos: [
+      {
+        texto: "Repetí el versículo de esta semana sin mirarlo",
+        versiculo: "Este libro de la ley nunca se apartará de tu boca.",
+        cita: "Josué 1:8",
+      },
+      {
+        texto: "Lo usé hoy: para mí, o para alguien que lo necesitaba",
+        versiculo: "La palabra de Cristo more en vosotros en abundancia.",
+        cita: "Colosenses 3:16",
+      },
+    ],
+    horaExamen: "21:30",
+    timbreExamen: "pulso",
+  },
+
+  {
+    plantilla: "esposa",
+    nombre: "Honrar a mi esposa",
+    emoji: "💍",
+    categoria: "familia",
+    resumen: "Lo que se cuida cada día no hay que rescatarlo después.",
+    proposito:
+      "Un matrimonio no se rompe de golpe: se enfría en los detalles que se dejaron de hacer. Esto no es romanticismo, es obediencia — y tu oración depende de ello más de lo que parece.",
+    versiculo:
+      "Vosotros maridos, habitad con ellas según ciencia, dando honor á la mujer, para que vuestras oraciones no sean impedidas.",
+    cita: "1 Pedro 3:7",
+    compromisos: [
+      {
+        clase: "bloque",
+        nombre: "Orar juntos",
+        hora: "21:00",
+        duracionMin: 15,
+        dias: [0, 1, 2, 3, 4, 5, 6],
+        timbre: "campana",
+        avisoPrevioMin: 5,
+        porque: "El matrimonio que ora junto no se deshace en silencio.",
+      },
+    ],
+    puntos: [
+      {
+        texto: "La escuché de verdad, sin el teléfono en la mano",
+        versiculo: "Todo hombre sea pronto para oir, tardío para hablar.",
+        cita: "Santiago 1:19",
+      },
+      {
+        texto: "Le hablé con dulzura, aunque estuviera cansado",
+        versiculo: "Maridos, amad á vuestras mujeres, y no seáis desapacibles con ellas.",
+        cita: "Colosenses 3:19",
+      },
+      {
+        texto: "Hice algo por ella que nadie más vio",
+        versiculo: "El amor es sufrido, es benigno; no busca lo suyo.",
+        cita: "1 Corintios 13:4",
+      },
+      {
+        texto: "No dejé el día cerrado en enojo",
+        versiculo: "No se ponga el sol sobre vuestro enojo.",
+        cita: "Efesios 4:26",
+      },
+    ],
+    horaExamen: "22:00",
+    timbreExamen: "campana",
+  },
+
+  {
+    plantilla: "perdonar",
+    nombre: "Perdonar de corazón",
+    emoji: "🕊️",
+    categoria: "fe",
+    resumen: "Soltar lo que llevas cargando. Pesa más de lo que crees.",
+    proposito:
+      "El rencor se guarda creyendo que castiga al otro, y al final sólo te pudre a ti. Perdonar no es decir que no dolió: es soltarlo de tus manos y dejarlo en las de Dios, que sabe juzgar mejor que tú.",
+    versiculo:
+      "Antes sed los unos con los otros benignos, misericordiosos, perdonándoos los unos á los otros, como también Dios os perdonó en Cristo.",
+    cita: "Efesios 4:32",
+    compromisos: [],
+    puntos: [
+      {
+        texto: "No alimenté el recuerdo de lo que me hicieron",
+        versiculo: "No os venguéis vosotros mismos, amados míos.",
+        cita: "Romanos 12:19",
+      },
+      {
+        texto: "Hablé bien —o callé— de quien me hizo daño",
+        versiculo: "No seas vencido de lo malo; mas vence con el bien el mal.",
+        cita: "Romanos 12:21",
+      },
+      {
+        texto: "Pedí perdón donde yo fui el que falló",
+        versiculo: "Ve, reconcíliate primero con tu hermano.",
+        cita: "Mateo 5:24",
+      },
+    ],
+    horaExamen: "21:30",
+    timbreExamen: "pulso",
+    // Perdonar no se consigue de una vez, y esta racha no puede castigar al que
+    // un día vuelve a sentir el golpe. Se cae, y se vuelve a soltar.
+    admiteRestauracion: true,
+  },
+
+  {
+    plantilla: "dinero",
+    nombre: "Poner orden en el dinero",
+    emoji: "🧾",
+    categoria: "trabajo",
+    resumen: "Cuentas claras, deudas pagadas y nada debiéndole a nadie.",
+    proposito:
+      "El dinero desordenado roba paz, roba sueño y roba testimonio. Administrar lo poco con fidelidad no es tacañería: es lo que Dios mira antes de confiar lo mucho.",
+    versiculo: "El que es fiel en lo muy poco, también en lo más es fiel.",
+    cita: "Lucas 16:10",
+    compromisos: [
+      {
+        clase: "bloque",
+        nombre: "Repasar las cuentas",
+        hora: "20:00",
+        duracionMin: 15,
+        dias: [0],
+        timbre: "pulso",
+        avisoPrevioMin: 0,
+        porque: "Quince minutos a la semana valen más que preocuparse siete días.",
+      },
+    ],
+    puntos: [
+      {
+        texto: "Apunté lo que gasté, sin maquillarlo",
+        versiculo: "Considera atentamente el aspecto de tus ovejas.",
+        cita: "Proverbios 27:23",
+      },
+      {
+        texto: "Cumplí lo que prometí pagar",
+        versiculo: "No debáis á nadie nada, sino amaros unos á otros.",
+        cita: "Romanos 13:8",
+      },
+      {
+        texto: "No compré por ansiedad ni por compararme",
+        versiculo: "Sean vuestras costumbres sin avaricia; contentos de lo presente.",
+        cita: "Hebreos 13:5",
+      },
+      {
+        texto: "Aparté lo de Dios antes que lo mío",
+        versiculo:
+          "Honra á Jehová de tu sustancia, y de las primicias de todos tus frutos.",
+        cita: "Proverbios 3:9",
+      },
+    ],
+    horaExamen: "21:30",
+    timbreExamen: "pulso",
+  },
+
+  {
     plantilla: "personalizado",
     nombre: "Plan propio",
     emoji: "✍️",

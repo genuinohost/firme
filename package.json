@@ -14,7 +14,8 @@
     "revisar-rachas": "vite-node scripts/revisar-rachas.ts",
     "revisar-areas": "vite-node scripts/revisar-banco-areas.ts",
     "revisar-dictado": "vite-node scripts/revisar-dictado.ts",
-    "apk": "node scripts/compilar-apk.mjs"
+    "apk": "node scripts/compilar-apk.mjs",
+    "revisar-planes": "vite-node scripts/revisar-planes.ts"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.1",
