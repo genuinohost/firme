@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 5.2).
+Última revisión: **17 de septiembre de 2026** (versión 5.3).
 
 ---
 
@@ -411,79 +411,52 @@ aprieta**, no por lo que se redacta tranquilo al día siguiente.
       micrófono está bloqueado; lo que se comprobó ahí es que el fallo se
       cuenta bien y el botón vuelve a su sitio.
 
-### J. Cuenta, perfil y amigos · **en marcha, falta un clic de Alex**
+### J. Cuenta, perfil y amigos · ✅ **abierto el 17-09 en la 5.3**
 > Alex: «la opción de iniciar sesión, tener un perfil muy elegante, con detalles
 > de ciudad, país, etc., y la capacidad para agregar amigos. Todo estilo la app
-> Biblia YouVersion». Aprobado el 16-09: **Firebase**.
+> Biblia YouVersion». Y ese mismo día: «debemos seguir mejorando. Quiero la
+> capacidad de agregar amigos».
 
-**Hecho**
+**Funcionando.** Alex activó el acceso con Google en la consola y
+`google-services.json` vino ya con sus dos clientes de OAuth.
 
-- [x] **Firebase montado sobre el proyecto que ya existe** (`genuino-host`).
-      Registradas la app web y la de Android, y las dos huellas del certificado
-      de firma (SHA-1 y SHA-256), que es lo que hace falta para que el acceso
-      con Google funcione en el móvil.
-- [x] **Reglas de Firestore escritas y desplegadas** (`firestore.rules`). Es lo
-      único que separa los datos de las personas de cualquiera con una conexión:
-      la app cliente se puede reescribir en una tarde, las reglas no. Todo lo
-      que no se prohíbe ahí, está permitido para todo el mundo.
+- [x] Entrar con **Google**, con el selector nativo de Android — un toque, sin
+      contraseñas que recordar. En el navegador, ventana emergente.
 - [x] **Perfil**: nombre, nombre de usuario único, foto, **ciudad y país** (con
-      bandera, y Venezuela la primera), versículo de cabecera y desde cuándo.
-- [x] **Amigos**: buscar por nombre de usuario, pedir, aceptar, quitar. Cada
-      lado guarda su copia — parece redundante y es justo lo que impide que
-      nadie toque la lista de otro salvo para dejar ahí una solicitud suya.
-- [x] **El nombre de usuario es único de verdad.** Firestore no tiene índices
-      únicos: se consigue haciendo del nombre la clave de un documento y
-      prohibiendo sobrescribirlo, todo dentro de una transacción.
-- [x] **Borrar la cuenta desde dentro, y que se borre.** Play lo exige y además
-      es lo decente. Se avisa expresamente de que **el diario no se toca**,
-      porque lo que más asusta al borrar es no saber si te llevas eso también.
-- [x] **Política de privacidad rehecha.** Ya no puede decir «no recogemos ningún
-      dato»: ahora dice exactamente qué sube con cuenta, qué no sube nunca,
-      dónde se guarda y cómo borrarlo. También el micrófono del dictado.
-- [x] **Firebase se carga en diferido.** Pesa más que media app; cargarlo al
-      arrancar le costaría un par de segundos a cada usuario en cada apertura,
-      incluidos los que nunca vayan a crear cuenta — que van a ser la mayoría,
-      muchos con mala conexión y un teléfono barato. Sólo se carga al entrar en
-      la pantalla de la cuenta, o al arrancar si ya se había entrado en ese
-      móvil.
+      bandera, Venezuela la primera), versículo de cabecera y desde cuándo.
+- [x] **Amigos**: buscar por nombre de usuario, pedir, aceptar, quitar.
+- [x] **Borrar la cuenta** desde dentro, y que se borre. Play lo exige y además
+      es lo decente.
+- [x] **Reglas de Firestore** desplegadas: es lo único que separa los datos de
+      las personas de cualquiera con una conexión.
+- [x] **Firebase se carga en diferido**: quien no use la cuenta no paga ni un
+      segundo de arranque por ella.
 
-**La decisión de fondo, tomada y escrita en tres sitios**
+**Las dos decisiones de fondo, que no se tocan**
 
-**El diario, las notas y los repasos no suben nunca.** Ni cifrados, ni «solo
-para el dueño», ni «por si se pierde el móvil». Ahí se anota una caída y lo que
-se le dijo a Dios por ella. Está dicho en `nube.ts`, en `firestore.rules` y en
-la propia pantalla — porque la tentación de sincronizarlo «para que no se
-pierda» va a volver, y va a sonar razonable.
+1. **El diario, las notas y los repasos no suben nunca.** Escrito en tres
+   sitios —`nube.ts`, `firestore.rules` y la propia pantalla— porque la
+   tentación de sincronizarlo «para que no se pierda» va a volver y va a sonar
+   razonable.
+2. **No hay tabla de rachas de los amigos**, ni «quién va ganando», ni
+   insignias. La constancia anima; la comparación hunde. Las cifras del perfil
+   salen del propio teléfono y **no las ve ningún amigo**.
 
-Y la segunda, que no es técnica: **no hay tabla de rachas de los amigos**, ni
-«quién va ganando», ni insignias. La constancia anima; la comparación hunde, y
-convertir la fidelidad en un marcador volvería esto un escaparate. Las cifras
-del perfil salen del propio teléfono y **no las ve ningún amigo**.
+**Lo que falta**
 
-**⚠️ Bloqueado esperando a Alex — dos clics en la consola**
-
-`identitytoolkit` responde `CONFIGURATION_NOT_FOUND`: **Authentication no está
-activado** en el proyecto. Sin eso, entrar con Google no puede funcionar, y por
-eso **no se publica APK todavía**: no se entrega una pantalla que lleva a un
-callejón.
-
-1. Consola de Firebase → **Authentication** → *Comenzar*.
-2. Pestaña **Sign-in method** → activar **Google** → elegir el correo de soporte
-   → Guardar.
-
-Después: volver a bajar `google-services.json` (ahora viene sin los clientes de
-OAuth), compilar, probar el acceso de verdad en el móvil y publicar.
-
-**Lo que falta después**
-
-- [ ] Probar el acceso con Google en el móvil de Alex.
+- [ ] ⚠️ **Añadir `genuino-pro.web.app` a los dominios autorizados** de
+      Authentication. Ahora mismo están `localhost`,
+      `genuino-host.firebaseapp.com` y `genuino-host.web.app` — falta el de la
+      app. **No bloquea el móvil** (el acceso nativo no usa esa lista), pero sin
+      él la versión web no puede entrar.
 - [ ] **Rehacer el formulario de datos de Play Store.** Google pregunta qué se
       recoge y dónde; declararlo mal es motivo de retirada.
-- [ ] Decidir qué se ve de un amigo. Hoy: nombre, usuario, foto. Nada más, a
-      propósito, hasta decidirlo con cuidado.
 - [ ] Invitar por enlace, además de por nombre de usuario.
-- [ ] Vigilar el coste. Hoy el plan gratuito sobra de largo, pero deja de ser
-      cero en cuanto haya volumen.
+- [ ] Decidir qué más se ve de un amigo. Hoy: nombre, usuario y foto. Nada más,
+      a propósito.
+- [ ] ⚠️ **MFA en la cuenta de Google antes del 20 de octubre de 2026** o se
+      pierde el acceso a la consola de Firebase — la de esta app y la de
+      genuinohost.com. Avisado en la propia consola.
 
 ---
 

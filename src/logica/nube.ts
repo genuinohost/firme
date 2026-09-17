@@ -27,16 +27,19 @@ import { Capacitor } from "@capacitor/core";
 /**
  * Si las cuentas están abiertas al público.
  *
- * **Se queda en `false` hasta que Authentication esté activado en la consola de
- * Firebase.** Mientras no lo esté, entrar con Google no puede funcionar, y una
- * entrada de menú que lleva a un callejón sin salida hace más daño que no tener
- * la función: quien la toca concluye que la app está rota, y de ahí no se
- * vuelve.
+ * Abiertas el **17 de septiembre de 2026**, cuando Alex activó el acceso con
+ * Google en la consola de Firebase y `google-services.json` vino ya con sus dos
+ * clientes de OAuth.
  *
- * Para abrirlas: consola → Authentication → Comenzar → Sign-in method →
- * Google. Después, poner esto en `true` y publicar.
+ * Estuvo en `false` desde que se escribió la pantalla hasta ese momento, y a
+ * propósito: entrar no podía funcionar sin eso, y **una entrada de menú que
+ * lleva a un callejón hace más daño que no tener la función** — quien la toca
+ * concluye que la app está rota, y de ahí no se vuelve.
+ *
+ * Si algún día hay que cerrarlas —una fuga, un abuso—, esto vuelve a `false` y
+ * la app sigue funcionando entera sin cuenta, como el primer día.
  */
-export const CUENTAS_ABIERTAS = false;
+export const CUENTAS_ABIERTAS = true;
 
 const CONFIG = {
   apiKey: "AIzaSyBPt4IdZBkTCa8MarOdg6MopgDbFWO4l1M",
