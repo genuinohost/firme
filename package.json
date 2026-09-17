@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "desplegar": "npm run build && firebase deploy --only hosting:firme",
+    "desplegar": "node scripts/desplegar.mjs",
     "revisar-banco": "node scripts/revisar-banco.mjs",
     "publicar": "node scripts/publicar-release.mjs",
     "aab": "node scripts/compilar-aab.mjs",
