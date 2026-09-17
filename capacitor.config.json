@@ -11,8 +11,8 @@
       "iconColor": "#c9a227"
     },
     "FirebaseAuthentication": {
-      "_lee_esto": "El plugin NO habilita ningun proveedor por si solo: hay que nombrarlos aqui. Sin esta lista, entrar con Google falla con «Google sign-in provider is not enabled», y ese mensaje solo se ve si la app se molesta en enseñar el error de verdad en vez de un «algo salio mal».",
-      "skipNativeAuth": false,
+      "_lee_esto": "Dos cosas, y las dos costaron un intento cada una. PROVIDERS: el plugin no habilita ningun proveedor por si solo; sin nombrarlo aqui, entrar con Google falla con «Google sign-in provider is not enabled». SKIPNATIVEAUTH EN TRUE: esta app usa el SDK de JavaScript para Firestore —el perfil y los amigos—, asi que quien tiene que quedar dentro de Firebase es la capa JS. Con esto en false entraban LAS DOS: el plugin por lo nativo y nosotros por JS, y la pantalla volvia a pedir la cuenta y se quedaba rebotando. El plugin solo debe traer la credencial; entrar es cosa nuestra.",
+      "skipNativeAuth": true,
       "providers": [
         "google.com"
       ]
