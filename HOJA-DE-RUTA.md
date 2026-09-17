@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 5.3).
+Última revisión: **17 de septiembre de 2026** (versión 5.6).
 
 ---
 
@@ -412,6 +412,24 @@ aprieta**, no por lo que se redacta tranquilo al día siguiente.
       cuenta bien y el botón vuelve a su sitio.
 
 ### J. Cuenta, perfil y amigos · ✅ **abierto el 17-09 en la 5.3**
+
+**Los dos tropiezos al abrirlo, y lo que enseñaron**
+
+1. **«Algo salió mal. Inténtalo otra vez.»** Ese mensaje era mío, y es el pecado
+   que llevamos todo el día persiguiendo. Con él se perdieron **dos diagnósticos
+   equivocados** —`rgcfaIncludeGoogle`, descartado comparando los dos APK clase
+   por clase, y el VPN, descartado por Alex apagándolo— y un rato largo. Al
+   enseñar el error de verdad, la causa salió **en un solo intento**: faltaba
+   declarar `providers: ["google.com"]` en `capacitor.config.json`, porque el
+   plugin no habilita ninguno por su cuenta.
+2. **El acceso rebotaba** a la pantalla de elegir cuenta. `skipNativeAuth`
+   estaba en `false`, así que entraban **las dos capas**: el plugin por lo
+   nativo y nosotros por JavaScript. El plugin sólo debe traer la credencial;
+   quien tiene que quedar dentro de Firebase es la capa JS, que es la que
+   Firestore reconoce.
+
+**Regla que sale de aquí:** un mensaje de error bonito que oculta la causa no es
+amabilidad, es una factura aplazada. Se enseña el código feo.
 > Alex: «la opción de iniciar sesión, tener un perfil muy elegante, con detalles
 > de ciudad, país, etc., y la capacidad para agregar amigos. Todo estilo la app
 > Biblia YouVersion». Y ese mismo día: «debemos seguir mejorando. Quiero la

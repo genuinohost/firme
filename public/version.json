@@ -1,10 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 37,
-  "nombre": "5.5",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.5.apk",
+  "codigo": 38,
+  "nombre": "5.6",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.6.apk",
   "novedades": [
-    "ARREGLADO: ya se puede entrar con Google y agregar amigos"
+    "Entrar con Google ya no rebota a la pantalla de elegir cuenta"
   ],
   "importante": false
 }
