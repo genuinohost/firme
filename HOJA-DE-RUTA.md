@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 4.8).
+Última revisión: **17 de septiembre de 2026** (versión 4.9).
 
 ---
 
@@ -125,6 +125,50 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## 🔴 El parte del 17-09: qué dijo y qué se arregló con él
+
+**El primer parte de verdad**, y descartó de golpe casi todo lo que llevábamos
+dos días mirando. Xiaomi 23078PND5G, Android 16.
+
+**Lo que está bien** (y por tanto deja de ser sospechoso): alarmas exactas
+concedidas, fuera del ahorro de batería, avisos permitidos, acceso a No molestar
+concedido y el filtro en «todo pasa», **volumen de alarma 15/15**, sin
+restricción en segundo plano, sin ahorro de energía.
+
+**Lo que dijo de verdad:** el diario salta de **16/09 22:00** a nada. El 16
+dispararon **doce alarmas con 0 segundos de desfase** — funciona. Y el 17 **no
+se disparó ni una**. No es que sonaran mudas: **el sistema no despertó a la
+app**. Eso apunta a que MIUI la congeló de madrugada, que es exactamente lo que
+evita el «inicio automático».
+
+**Tres fallos del propio diagnóstico, que salieron al leerlo:**
+
+- [x] **El cajón de reposo decía «desconocido» y tiraba la prueba.** El código
+      decodificaba 10/20/30/40/45 y mandaba todo lo demás a «desconocido» —
+      incluido el **50, «NUNCA»**, que es el peor de la lista: con ese el
+      sistema le retira a la app el derecho a despertarse. Ahora se decodifica,
+      y si sale cualquier otro se **enseña el número**.
+- [x] **«Armadas con Android: 141 de 141» era mentira.** `cancelarTodas` crea
+      los PendingIntent con `FLAG_UPDATE_CURRENT` para poder cancelarlos, y
+      `AlarmManager.cancel()` quita la alarma pero **deja vivo el
+      PendingIntent**; la comprobación con `FLAG_NO_CREATE` los seguía
+      encontrando. Solo hay {@code VENTANA}=24 puestas de verdad. Ahora se
+      cancelan también los PendingIntent, y el parte dice «24 de 141, se arman
+      de 24 en 24» — que es la verdad y además se entiende.
+- [x] **El aviso «⚠ no coinciden» gritaba sin motivo.**
+      `getNextAlarmClock()` devuelve la siguiente alarma **de cualquier app**;
+      que el despertador del móvil de Alex a las 9:30 no sea la nuestra de las
+      16:30 es lo normal. Ahora sólo avisa cuando significa algo: que el sistema
+      no tenga ninguna, o que la suya caiga después de la nuestra.
+- [x] **Y lo más importante: el parte ahora dice lo que FALTA.** Antes sólo
+      guardaba lo que sonó, así que una noche entera perdida era un hueco entre
+      dos líneas y había que darse cuenta de una **ausencia**. Ahora cada alarma
+      que no se disparó queda apuntada como **NO LLEGÓ**, con su hora y su
+      nombre. Tres veredictos, que son tres problemas distintos: *NO LLEGÓ* (el
+      sistema no despertó a la app), *MUDA* (llegó y el ruido falló) y *SONÓ*.
 
 ---
 

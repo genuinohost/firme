@@ -29,6 +29,8 @@ export type EstadoDespertador = {
    * notas y salía verde aunque Android las hubiera tirado todas.
    */
   confirmadas: number;
+  /** Cuántas se le entregan a Android de una vez; el resto se arman solas. */
+  ventana: number;
   /** Marca de tiempo de la próxima, o 0 si no hay ninguna. */
   proxima: number;
   /** La siguiente alarma que tiene el sistema, sea de la app que sea. */

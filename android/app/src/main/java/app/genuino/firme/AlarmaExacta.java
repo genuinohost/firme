@@ -153,6 +153,10 @@ public class AlarmaExacta extends Plugin {
         respuesta.put("programadas", puestas);
         respuesta.put("enLista", guardadas.length());
         respuesta.put("confirmadas", cuantasTieneElSistema(contexto));
+        // Cuantas se le entregan a Android de una vez. Sin este dato, ver
+        // «24 armadas de 141» parece un fallo y no lo es: las demas se arman
+        // solas segun van sonando.
+        respuesta.put("ventana", VENTANA);
         llamada.resolve(respuesta);
     }
 
@@ -255,6 +259,18 @@ public class AlarmaExacta extends Plugin {
                 int id = cola.getJSONObject(i).optInt("id", i + 1);
                 PendingIntent pendiente = intencionDe(contexto, id, true);
                 if (gestor != null && pendiente != null) gestor.cancel(pendiente);
+                // Y se tira tambien el PendingIntent, no solo la alarma.
+                //
+                // `AlarmManager.cancel()` quita la alarma pero **deja vivo el
+                // PendingIntent**, y `intencionDe(..., false)` con
+                // FLAG_NO_CREATE lo sigue encontrando. Como `cancelarTodas` los
+                // crea al vuelo con FLAG_UPDATE_CURRENT para poder cancelarlos,
+                // el resultado era que el diagnostico contaba como «armadas»
+                // las 141 de la lista cuando en realidad solo hay
+                // {@link #VENTANA} puestas. El parte salia verde mientras el
+                // sistema tenia 24: exactamente la clase de mentira que este
+                // diagnostico existia para no contar.
+                if (pendiente != null) pendiente.cancel();
             }
         } catch (Exception ignorada) {
             // Una cola ilegible no debe impedir programar la nueva.
@@ -330,6 +346,18 @@ public class AlarmaExacta extends Plugin {
                 fallo.put("cuando", cuando);
                 fallo.put("titulo", a.optString("titulo", "Firme"));
                 perdidas.put(fallo);
+
+                // Y queda anotado en el diario como lo que es: una alarma que
+                // no se disparo.
+                //
+                // Hasta ahora el diario solo guardaba lo que SI sono, asi que
+                // una noche entera perdida se leia como un hueco entre dos
+                // lineas — y habia que darse cuenta de una **ausencia**. El
+                // parte del 17-09 saltaba de «16/09 22:00» a nada, y eso solo
+                // lo ve quien ya sospecha. Un diagnostico tiene que decir lo
+                // que falta, no dejar que se deduzca.
+                apuntarPerdida(contexto, a.optInt("id", i + 1), cuando,
+                        a.optString("titulo", "Genuino"));
             }
         } catch (Exception ignorada) {
             // Sin datos legibles no se puede afirmar que faltara ninguna.
@@ -338,6 +366,41 @@ public class AlarmaExacta extends Plugin {
         JSObject respuesta = new JSObject();
         respuesta.put("perdidas", perdidas.toString());
         llamada.resolve(respuesta);
+    }
+
+    /**
+     * Deja escrito en el diario que una alarma no se disparo.
+     *
+     * Se comprueba antes que no estuviera ya apuntada: `revisarPerdidas` corre
+     * cada vez que se abre la app, y sin esto la misma noche perdida se
+     * apuntaria una y otra vez hasta llenar el diario de copias.
+     */
+    private static void apuntarPerdida(Context contexto, int id, long prevista, String titulo) {
+        try {
+            SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            JSONArray diario = new JSONArray(prefs.getString(CLAVE_DIARIO, "[]"));
+
+            for (int i = 0; i < diario.length(); i++) {
+                if (diario.getJSONObject(i).optLong("prevista", -1) == prevista) return;
+            }
+
+            JSONObject apunte = new JSONObject();
+            apunte.put("id", id);
+            apunte.put("prevista", prevista);
+            apunte.put("real", 0);
+            apunte.put("sono", false);
+            apunte.put("titulo", titulo);
+            apunte.put("noLlego", true);
+            diario.put(apunte);
+
+            JSONArray recorte = new JSONArray();
+            int desde = Math.max(0, diario.length() - 120);
+            for (int i = desde; i < diario.length(); i++) recorte.put(diario.get(i));
+
+            prefs.edit().putString(CLAVE_DIARIO, recorte.toString()).apply();
+        } catch (Exception ignorada) {
+            // Un diario que no se deja escribir no debe romper el diagnostico.
+        }
     }
 
     /** Lo que hay programado ahora mismo, para la pantalla de comprobacion. */
@@ -446,16 +509,26 @@ public class AlarmaExacta extends Plugin {
             android.app.usage.UsageStatsManager uso =
                     contexto.getSystemService(android.app.usage.UsageStatsManager.class);
             if (uso == null) return "desconocido";
-            switch (uso.getAppStandbyBucket()) {
+            int cajon = uso.getAppStandbyBucket();
+            switch (cajon) {
+                case 5:  return "exenta";
                 case 10: return "activa";
                 case 20: return "trabajadora";
                 case 30: return "frecuente";
                 case 40: return "rara";
                 case 45: return "RESTRINGIDA";
-                default: return "desconocido";
+                // 50 es NEVER: el sistema da la app por no usada y le retira
+                // todo. Faltaba, y es justo el peor de la lista — caia en
+                // «desconocido» y el parte del 17-09 enseño «desconocido»
+                // tapando lo unico que podia estar explicando el fallo.
+                case 50: return "NUNCA";
+                // Y si sale cualquier otra cosa, se dice el numero. Un
+                // diagnostico que contesta «desconocido» tira la prueba a la
+                // basura: el numero al menos se puede buscar.
+                default: return "desconocido (" + cajon + ")";
             }
         } catch (Exception e) {
-            return "desconocido";
+            return "no se pudo leer: " + e.getClass().getSimpleName();
         }
     }
 

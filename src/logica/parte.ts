@@ -37,6 +37,9 @@ type Apunte = {
   sinPrimerPlano?: string;
   volumen?: number;
   noMolestar?: string;
+  /** Una alarma que no llegó a dispararse: no tiene hora real. */
+  noLlego?: boolean;
+  titulo?: string;
 };
 type EnCola = { id: number; cuando: number; titulo: string };
 
@@ -61,7 +64,10 @@ export function redactarParte(e: EstadoDespertador): string {
     `  No molestar: ${e.filtroNoMolestar}` +
       (e.filtroNoMolestar === "SILENCIO TOTAL" ? " ← ninguna alarma puede sonar" : ""),
   );
-  l.push(`  Cajón de reposo: ${e.cajon}${e.cajon === "RESTRINGIDA" ? " ←" : ""}`);
+  // «NUNCA» y «RESTRINGIDA» son las dos malas: con cualquiera de las dos el
+  // sistema le retira a la app el derecho a despertarse.
+  const cajonMalo = e.cajon === "RESTRINGIDA" || e.cajon === "NUNCA";
+  l.push(`  Cajón de reposo: ${e.cajon}${cajonMalo ? " ← el sistema nos tiene apartados" : ""}`);
   l.push(`  Restringida en segundo plano: ${e.restringidaEnSegundoPlano ? "SÍ ←" : "no"}`);
   l.push(`  Ahorro de energía activo: ${e.ahorroDeEnergia ? "SÍ ←" : "no"}`);
   l.push(
@@ -72,17 +78,39 @@ export function redactarParte(e: EstadoDespertador): string {
 
   l.push("ALARMAS");
   l.push(`  En la lista: ${e.enCola}`);
-  l.push(`  Armadas con Android: ${e.confirmadas}`);
-  l.push(`  Nuestra próxima: ${e.proxima ? hora(e.proxima) : "ninguna ←"}`);
-  // Si el sistema dice otra hora, alguien nos tiró las alarmas: esa es la
-  // comprobación de verdad, porque la da Android y no nosotros.
+  // Se dice cuántas se entregan de una vez. Ver «24 armadas de 141» parece un
+  // fallo y no lo es: las demás se arman solas según van sonando, y la lista
+  // entera vive en disco para poder rehacerla tras reiniciar.
+  const tope = Math.min(e.enCola, e.ventana || e.enCola);
   l.push(
-    `  La que el sistema tiene por siguiente: ${
+    `  Armadas con Android: ${e.confirmadas} de ${tope}` +
+      (e.ventana && e.enCola > e.ventana ? ` (se arman de ${e.ventana} en ${e.ventana})` : "") +
+      (e.confirmadas < tope ? " ←" : ""),
+  );
+  l.push(`  Nuestra próxima: ${e.proxima ? hora(e.proxima) : "ninguna ←"}`);
+  l.push(
+    `  La siguiente del sistema, sea de quien sea: ${
       e.proximaDelSistema ? hora(e.proximaDelSistema) : "ninguna ←"
     }`,
   );
-  if (e.proxima && e.proximaDelSistema && e.proxima !== e.proximaDelSistema) {
-    l.push("  ⚠ No coinciden: el sistema no tiene puesta la nuestra.");
+  /*
+    Cuándo avisar de que no coinciden — y esto importa más de lo que parece.
+
+    `getNextAlarmClock()` devuelve la siguiente alarma **de cualquier app**. Si
+    el usuario tiene puesto su despertador del móvil a las 9:30 y la nuestra es
+    a las 16:30, que no coincidan es lo normal y no significa nada.
+
+    El parte del 17-09 gritaba «el sistema no tiene puesta la nuestra» justo en
+    ese caso. Un diagnóstico que grita cuando no pasa nada se deja de leer, y
+    entonces no sirve el día que sí pasa.
+
+    Lo que sí es un problema: que el sistema no tenga ninguna, o que la suya
+    caiga **después** de la nuestra — porque entonces la nuestra no está.
+  */
+  if (e.proxima && !e.proximaDelSistema) {
+    l.push("  ⚠ El sistema no tiene NINGUNA alarma puesta. Nos las tiró.");
+  } else if (e.proxima && e.proximaDelSistema > e.proxima) {
+    l.push("  ⚠ La nuestra debería sonar antes y el sistema no la tiene.");
   }
 
   try {
@@ -106,10 +134,14 @@ export function redactarParte(e: EstadoDespertador): string {
       l.push("  Ninguno. Ninguna alarma ha llegado a dispararse. ←");
     } else {
       for (const d of diario) {
-        const desfase = d.prevista ? Math.round((d.real - d.prevista) / 1000) : null;
+        const desfase = d.prevista && d.real ? Math.round((d.real - d.prevista) / 1000) : null;
         // El veredicto va delante, porque es lo único que de verdad se pregunta.
-        const veredicto =
-          d.sono === undefined
+        // Tres estados, y hay que distinguirlos porque son tres problemas
+        // distintos: la que no llegó (el sistema no despertó a la app), la que
+        // llegó y salió muda (el ruido falló), y la que sonó.
+        const veredicto = d.noLlego
+          ? "NO LLEGÓ ←"
+          : d.sono === undefined
             ? "·"
             : d.sono
               ? "SONÓ"
@@ -122,11 +154,19 @@ export function redactarParte(e: EstadoDespertador): string {
         if (d.confirmado === false) notas.push("se apagó solo");
         if (typeof d.volumen === "number" && d.volumen >= 0) notas.push(`volumen ${d.volumen}%`);
         if (d.noMolestar && d.noMolestar !== "todo pasa") notas.push(d.noMolestar);
-        l.push(
-          `  ${veredicto}  ${hora(d.real)}` +
-            (desfase !== null ? `  (prevista ${hora(d.prevista)}, ${desfase}s)` : "") +
-            (notas.length > 0 ? `  — ${notas.join(", ")}` : ""),
-        );
+        if (d.noLlego) {
+          l.push(
+            `  ${veredicto}  ${hora(d.prevista)}` +
+              (d.titulo ? `  ${d.titulo}` : "") +
+              "  — el sistema no despertó a la app",
+          );
+        } else {
+          l.push(
+            `  ${veredicto}  ${hora(d.real)}` +
+              (desfase !== null ? `  (prevista ${hora(d.prevista)}, ${desfase}s)` : "") +
+              (notas.length > 0 ? `  — ${notas.join(", ")}` : ""),
+          );
+        }
       }
     }
   } catch {
