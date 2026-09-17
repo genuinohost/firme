@@ -1,12 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 34,
-  "nombre": "5.2",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.2.apk",
+  "codigo": 35,
+  "nombre": "5.3",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.3.apk",
   "novedades": [
-    "Parar y Posponer desde la notificacion, siempre y sin abrir la app",
-    "La alarma pospuesta vuelve con su nombre y sus botones, y aguanta el reposo",
-    "Permiso nuevo para que la alarma encienda la pantalla sola"
+    "YA PUEDES AGREGAR AMIGOS: entra con Google y pon tu perfil",
+    "Busca a un hermano por su nombre de usuario y pidele amistad",
+    "Tu diario y tus notas NO suben: se quedan en este telefono"
   ],
   "importante": false
 }
