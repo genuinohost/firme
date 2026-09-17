@@ -8,3 +8,9 @@ firebase-debug.log*
 dev-dist/
 Firme.apk
 public/Firme.apk
+
+# La clave de la cuenta de servicio de Firebase. Vive en ~/.firebase, fuera de
+# aqui, pero si alguna vez se copia al repositorio por descuido esto la para:
+# es una credencial con permiso de administrador sobre el proyecto entero.
+*-firebase-adminsdk-*.json
+genuino-despliegue.json

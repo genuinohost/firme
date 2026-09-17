@@ -1,11 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 27,
-  "nombre": "4.5",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.5.apk",
+  "codigo": 28,
+  "nombre": "4.6",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.6.apk",
   "novedades": [
-    "Dictar por voz las notas del diario, las de los planes y las tareas",
-    "El boton enseña lo que va oyendo y late al ritmo de tu voz"
+    "La app abre ella misma el inicio automatico de tu Xiaomi: es lo que mata las alarmas",
+    "El aviso de alarma perdida lo pone primero, por delante del ahorro de bateria"
   ],
   "importante": false
 }

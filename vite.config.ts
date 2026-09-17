@@ -45,6 +45,21 @@ export default defineConfig({
       includeAssets: ["icono.svg", "icono-180.png"],
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        /**
+         * Firebase fuera del precacheado.
+         *
+         * Son 700 KB entre Firestore y Auth, y el service worker se los baja
+         * **en la primera visita** aunque nadie vaya a crear una cuenta — que
+         * van a ser casi todos. Al entrar Firebase, el precacheado pasó de 728
+         * KB a 1,4 MB de golpe: el doble de datos en el primer arranque, y
+         * mucho de ello para una pantalla que la mayoría no abrirá nunca.
+         *
+         * Se cargan cuando hacen falta y se cachean entonces. Esto no es una
+         * optimización de manual: en Venezuela, con una conexión mala y un
+         * teléfono barato, ese medio mega es la diferencia entre que la app
+         * abra o que alguien la cierre creyendo que no funciona.
+         */
+        globIgnores: ["**/index.esm-*.js"],
         // Los avisos de las notificaciones viven aparte para poder tocarlos
         // sin pelearse con el service worker que genera Workbox.
         importScripts: ["/sw-avisos.js"],
