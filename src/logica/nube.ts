@@ -441,5 +441,21 @@ export function comoFallo(e: unknown): string {
   ) {
     return "Las cuentas todavía no están activadas. Vuelve a probar en un rato.";
   }
-  return "Algo salió mal. Inténtalo otra vez.";
+  /*
+    Lo que no se reconoce **se enseña tal cual**.
+
+    Aquí ponía «Algo salió mal. Inténtalo otra vez.» y eso es exactamente el
+    pecado que llevamos todo el día persiguiendo: un fallo convertido en una
+    frase de aspecto normal que no permite depurar nada. Alex vio ese mensaje
+    ante un `NoClassDefFoundError` —faltaba media librería dentro del APK— y
+    daba a entender que bastaba con volver a intentarlo, cuando no iba a
+    funcionar nunca.
+
+    Un código feo en pantalla es incómodo. Un mensaje bonito que oculta la causa
+    cuesta horas. Se elige lo incómodo.
+  */
+  const pista = (codigo || mensaje || "").toString().slice(0, 120);
+  return pista
+    ? `No se pudo entrar. Enséñale esto a quien lleve la app: ${pista}`
+    : "No se pudo entrar, y no se pudo averiguar por qué.";
 }

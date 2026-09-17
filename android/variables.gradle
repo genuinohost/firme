@@ -13,4 +13,18 @@ ext {
     androidxJunitVersion = '1.3.0'
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
+
+    /*
+      Entrar con Google, del plugin @capacitor-firebase/authentication.
+
+      Sin esta linea el plugin declara sus dependencias de Google como
+      `compileOnly`: **compilan, pero no se empaquetan**. La app se construye sin
+      un solo aviso y en el telefono la clase no existe — entrar con Google
+      revienta con un NoClassDefFoundError que no dice nada por si mismo.
+
+      Es exactamente el mismo patron que nos ha mordido cinco veces hoy: nada
+      falla en el momento de construir, y el fallo aparece lejos del sitio donde
+      se decidio.
+    */
+    rgcfaIncludeGoogle = true
 }
