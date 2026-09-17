@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { abrirEnlace } from "@/logica/enlaces";
+import { copiar } from "@/logica/compartir";
 import {
   descartar,
   hayVersionNueva,
@@ -16,6 +18,16 @@ import { Boton, Etiqueta } from "./piezas";
  */
 export function AvisoActualizacion() {
   const [version, setVersion] = useState<VersionPublicada | null>(null);
+  /**
+   * En qué punto va la descarga, desde fuera de la app.
+   *
+   * La app **no instala sola** a propósito: hacerlo exige
+   * `REQUEST_INSTALL_PACKAGES`, que Google Play rechaza salvo en gestores de
+   * archivos y navegadores. Así que descarga el navegador, y el instalador
+   * queda esperando en la bandeja de notificaciones — donde nadie lo busca si
+   * no se lo dicen. Alex ya se quedó una vez con un «no veo el instalador».
+   */
+  const [paso, setPaso] = useState<"quieto" | "abierto" | "fallo">("quieto");
 
   useEffect(() => {
     void hayVersionNueva().then(setVersion);
@@ -51,7 +63,7 @@ export function AvisoActualizacion() {
           <Boton
             variante="fuerte"
             ancho
-            onClick={() => window.open(version.enlace, "_blank", "noopener,noreferrer")}
+            onClick={async () => setPaso((await abrirEnlace(version.enlace)) ? "abierto" : "fallo")}
           >
             Descargar
           </Boton>
@@ -67,6 +79,35 @@ export function AvisoActualizacion() {
           </Boton>
         ) : null}
       </div>
+
+      {paso === "abierto" ? (
+        <div className="mt-3 rounded-xl border border-acento/40 bg-acento/5 p-3">
+          <p className="text-sm leading-relaxed">
+            Se está descargando en tu navegador. Cuando termine,{" "}
+            <strong>baja la barra de notificaciones y toca el archivo</strong> —
+            o búscalo en <strong>Descargas</strong>, se llama{" "}
+            <span className="cifras">Genuino-{version.nombre}.apk</span>.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            La primera vez, Android te pedirá permiso para instalar desde el
+            navegador. Es normal: dáselo y vuelve a tocar el archivo.
+          </p>
+        </div>
+      ) : null}
+
+      {paso === "fallo" ? (
+        <div className="mt-3 rounded-xl border border-fallo/40 bg-fallo/10 p-3">
+          <p className="text-sm leading-relaxed">
+            No se pudo abrir el navegador. Copia esta dirección y ábrela a mano:
+          </p>
+          <p className="mt-2 break-all text-xs text-tenue">{version.enlace}</p>
+          <div className="mt-2">
+            <Boton ancho onClick={() => void copiar(version.enlace)}>
+              Copiar el enlace
+            </Boton>
+          </div>
+        </div>
+      ) : null}
 
       <p className="mt-2 text-xs leading-relaxed text-tenue">
         Se instala encima sin perder tus datos. Abre la app después, que es cuando

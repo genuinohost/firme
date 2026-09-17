@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         // Los plugins propios se registran antes de que arranque la web.
         registerPlugin(AlarmaExacta.class);
         registerPlugin(Dictado.class);
+        registerPlugin(Navegador.class);
         super.onCreate(estadoGuardado);
     }
 }

@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 4.6).
+Última revisión: **17 de septiembre de 2026** (versión 4.7).
 
 ---
 
@@ -125,6 +125,49 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## 🔴 El fallo de la 4.7: `window.open` no hacía nada
+
+Alex, el 17-09: «no se descarga el instalador desde la app». Verificado contra
+el código fuente de Capacitor, y la causa se llevaba por delante **tres cosas a
+la vez sin dejar rastro**.
+
+**`window.open(url, "_blank")` dentro de la app no hace absolutamente nada.**
+Android solo lo atiende si el WebView lleva `setSupportMultipleWindows(true)` y
+un `onCreateWindow` que lo recoja; Capacitor no pone ninguno de los dos, así
+que la llamada **devuelve `null` en silencio**. No falla, no avisa, no registra
+nada — la peor forma de romperse, porque nadie puede depurar lo que no se queja.
+
+Estaba en tres sitios, con la misma línea copiada:
+
+| Dónde | Qué llevaba roto |
+|---|---|
+| Aviso de versión nueva | no descargaba el instalador |
+| Ajustes → versión | el botón no hacía nada |
+| **«Juntos»** | **ningún enlace de grupo ni de red abría** |
+
+Eso explica algo que se había leído mal: «Juntos» no estaba desaprovechado sólo
+por faltarle las URL — **aunque se hubieran puesto las buenas, no habría abierto
+ninguna.**
+
+- [x] Plugin nativo `Navegador.java`: un `ACTION_VIEW` y que decida Android
+      quién lo atiende. El navegador descarga; un enlace de WhatsApp lo recoge
+      WhatsApp.
+- [x] **Devuelve si se pudo abrir, y se mira.** Dar por hecho que sí es el error
+      que tuvo esto escondido tanto tiempo. Si no se pudo, se enseña la
+      dirección y un botón para copiarla.
+- [x] Después de tocar «Descargar», la app **dice dónde ha ido el archivo**: a
+      la bandeja de notificaciones y a Descargas, con su nombre. Alex ya se
+      quedó una vez con un «no veo el instalador» — el instalador estaba, pero
+      nadie le había dicho dónde mirar.
+- [x] Y avisa de que Android pedirá permiso para instalar desde el navegador la
+      primera vez, que es donde se atasca casi todo el mundo.
+
+⚠️ **Esta corrección no puede llegar por la vía que arregla.** La versión que
+Alex tiene instalada tiene el botón roto, así que **la 4.7 hay que instalarla a
+mano una vez**. A partir de ahí, la actualización desde la app ya funciona.
 
 ---
 

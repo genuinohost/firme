@@ -8,6 +8,8 @@ import {
   type Enlace,
   type Reunion,
 } from "@/logica/comunidad";
+import { abrirEnlace } from "@/logica/enlaces";
+import { copiar } from "@/logica/compartir";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
 /**
@@ -57,6 +59,7 @@ export function PantallaComunidad() {
   const [comunidad, setComunidad] = useState<Comunidad>(() => leerGuardada());
   const [cargando, setCargando] = useState(false);
   const [ahora, setAhora] = useState(() => new Date());
+  const [sinAbrir, setSinAbrir] = useState("");
 
   useEffect(() => {
     void actualizar().then(setComunidad);
@@ -71,7 +74,16 @@ export function PantallaComunidad() {
     setCargando(false);
   };
 
-  const abrir = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
+  /**
+   * Abrir un grupo o una red.
+   *
+   * Si no se pudo —no hay WhatsApp instalado, por ejemplo— se dice y se enseña
+   * el enlace para copiarlo. Antes esto era un `window.open` que dentro de la
+   * app no hacía nada en absoluto: se tocaba un grupo y no pasaba nada.
+   */
+  const abrir = async (url: string) => {
+    if (!(await abrirEnlace(url))) setSinAbrir(url);
+  };
 
   // En vivo primero, luego lo de hoy, y después el resto de la semana.
   const reuniones = [...comunidad.reuniones].sort((a, b) => {
@@ -132,6 +144,35 @@ export function PantallaComunidad() {
             <FilaEnlace key={e.id} enlace={e} onAbrir={() => abrir(e.url)} />
           ))}
         </section>
+      ) : null}
+
+      {/*
+        Si no se pudo abrir —no tiene WhatsApp instalado, o el enlace es de una
+        app que no está— se enseña la dirección para copiarla. Un enlace que se
+        toca y no hace nada deja a alguien pensando que la app está rota; uno
+        que dice qué pasó y le da el texto, no.
+      */}
+      {sinAbrir ? (
+        <div className="rounded-xl border border-acento/40 bg-acento/5 p-3">
+          <p className="text-sm leading-relaxed">
+            No se pudo abrir. Copia la dirección y pégala en tu navegador:
+          </p>
+          <p className="mt-2 break-all text-xs text-tenue">{sinAbrir}</p>
+          <div className="mt-2 flex gap-2">
+            <div className="flex-1">
+              <Boton
+                ancho
+                onClick={async () => {
+                  await copiar(sinAbrir);
+                  setSinAbrir("");
+                }}
+              >
+                Copiar el enlace
+              </Boton>
+            </div>
+            <Boton onClick={() => setSinAbrir("")}>Cerrar</Boton>
+          </div>
+        </div>
       ) : null}
 
       <div className="mt-2">

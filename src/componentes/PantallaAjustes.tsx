@@ -32,6 +32,7 @@ import {
   type VersionPublicada,
 } from "@/logica/actualizacion";
 import { parar, sonar } from "@/logica/sonido";
+import { abrirEnlace } from "@/logica/enlaces";
 import {
   acierta,
   graciaDeLaCerradura,
@@ -809,7 +810,7 @@ function Version() {
             ))}
           </ul>
           <div className="mt-3">
-            <Boton variante="fuerte" ancho onClick={() => window.open(nueva.enlace, "_blank")}>
+            <Boton variante="fuerte" ancho onClick={() => void abrirEnlace(nueva.enlace)}>
               Descargar la {nueva.nombre}
             </Boton>
           </div>
