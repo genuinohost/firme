@@ -9,6 +9,13 @@
     "LocalNotifications": {
       "smallIcon": "ic_stat_firme",
       "iconColor": "#c9a227"
+    },
+    "FirebaseAuthentication": {
+      "_lee_esto": "El plugin NO habilita ningun proveedor por si solo: hay que nombrarlos aqui. Sin esta lista, entrar con Google falla con «Google sign-in provider is not enabled», y ese mensaje solo se ve si la app se molesta en enseñar el error de verdad en vez de un «algo salio mal».",
+      "skipNativeAuth": false,
+      "providers": [
+        "google.com"
+      ]
     }
   }
 }
