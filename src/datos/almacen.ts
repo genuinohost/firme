@@ -49,7 +49,9 @@ export function datosIniciales(): Datos {
       frasesPropias: [],
       volumen: 0.7,
       horaRepaso: "21:30",
-      posponerMin: 5,
+      // Diez, que es lo que pidio Alex: cinco no da tiempo a nada y quince ya
+      // es volverse a dormir. Se puede cambiar en Ajustes.
+      posponerMin: 10,
     },
   };
 }

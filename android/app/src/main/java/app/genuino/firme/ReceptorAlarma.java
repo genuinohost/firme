@@ -286,6 +286,36 @@ public class ReceptorAlarma extends BroadcastReceiver {
                 contexto, id, abrir,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        /*
+          Los mismos dos botones que la del servicio, y esto importa mas de lo
+          que parece.
+
+          Alex: «otras veces sonaba y no me daba opcion de parar ahi, sino que
+          tenia que abrir la app y pararla adentro». Era **esta** notificacion:
+          la del servicio si llevaba «Parar», pero el respaldo salia pelado. Y
+          el respaldo es justo el que aparece cuando algo ya ha ido mal — el
+          peor momento para dejar a alguien sin salida, medio dormido, con la
+          alarma encima.
+
+          Una alarma que no se puede parar desde donde se ve no es una alarma:
+          es un castigo.
+        */
+        Intent callar = new Intent(contexto, ServicioAlarma.class);
+        callar.setAction(ServicioAlarma.ACCION_PARAR);
+        PendingIntent pararla = PendingIntent.getService(
+                contexto, 1, callar,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent luego = new Intent(contexto, ServicioAlarma.class);
+        luego.setAction(ServicioAlarma.ACCION_POSPONER);
+        luego.putExtra("id", id);
+        luego.putExtra("titulo", titulo);
+        luego.putExtra("cuerpo", cuerpo);
+        luego.putExtra("idSuceso", idSuceso);
+        PendingIntent posponerla = PendingIntent.getService(
+                contexto, 2, luego,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         Notification aviso = new NotificationCompat.Builder(contexto, AlarmaExacta.CANAL)
                 .setSmallIcon(R.drawable.ic_stat_firme)
                 .setColor(0xFFC9A227)
@@ -298,6 +328,8 @@ public class ReceptorAlarma extends BroadcastReceiver {
                 .setAutoCancel(true)
                 .setContentIntent(entrar)
                 .setFullScreenIntent(entrar, true)
+                .addAction(0, "Parar", pararla)
+                .addAction(0, "Posponer 10 min", posponerla)
                 .build();
 
         NotificationManager gestor =

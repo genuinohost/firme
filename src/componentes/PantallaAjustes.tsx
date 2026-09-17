@@ -8,6 +8,7 @@ import {
   hayDespertador,
   pararDespertador,
   pedirAccesoNoMolestar,
+  pedirPantallaCompleta,
   pedirExencionBateria,
   abrirInicioAutomatico,
   copiarAlReloj,
@@ -521,6 +522,21 @@ function ComprobacionSistema() {
                     : "Confirmadas por Android, una a una."
           }
         />
+        {/*
+          El permiso que enciende la pantalla. Android 14 lo sacó aparte y se lo
+          niega a las apps instaladas después, **sin avisar**: el
+          `setFullScreenIntent` no falla, simplemente no hace nada. Alex lo vio
+          como «sonó pero no encendió la pantalla sola».
+        */}
+        <Linea
+          bien={estado.puedePantallaCompleta}
+          titulo="Puede encender la pantalla al sonar"
+          detalle={
+            estado.puedePantallaCompleta
+              ? "Sí. La alarma se abre sola con el móvil bloqueado."
+              : "No. Sonará, pero tendrás que desbloquear y buscarla en la bandeja."
+          }
+        />
         <Linea
           bien={estado.avisosActivos && estado.canalActivo}
           titulo="Los avisos están permitidos"
@@ -587,6 +603,11 @@ function ComprobacionSistema() {
         {!estado.accesoNoMolestar ? (
           <Boton ancho onClick={() => void pedirAccesoNoMolestar()}>
             Permitir saltarse No molestar
+          </Boton>
+        ) : null}
+        {!estado.puedePantallaCompleta ? (
+          <Boton variante="fuerte" ancho onClick={() => void pedirPantallaCompleta()}>
+            Permitir que encienda la pantalla
           </Boton>
         ) : null}
         {/*

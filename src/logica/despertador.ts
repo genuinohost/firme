@@ -42,6 +42,16 @@ export type EstadoDespertador = {
   exentaDeBateria: boolean;
   /** Sin esto, «saltar No molestar» del canal de respaldo no hace nada. */
   accesoNoMolestar: boolean;
+  /**
+   * Si la app puede abrirse sola a pantalla completa al sonar.
+   *
+   * Es lo que hace que el móvil **encienda la pantalla** con el teléfono
+   * bloqueado, en vez de dejar sólo una notificación en la bandeja. Android 14
+   * lo sacó a un permiso aparte y se lo niega a las apps instaladas después de
+   * actualizar — y sin avisar: `setFullScreenIntent` no falla, simplemente no
+   * hace nada. Alex lo vio tal cual: «sonó pero no encendió la pantalla sola».
+   */
+  puedePantallaCompleta: boolean;
   avisosActivos: boolean;
   canalActivo: boolean;
   sonandoAhora: boolean;
@@ -80,6 +90,7 @@ export type EstadoDespertador = {
 type PluginAlarmaExacta = {
   programar(opciones: {
     alarmas: AlarmaParaAndroid[];
+    posponerMin: number;
   }): Promise<{ programadas: number; confirmadas: number }>;
   estado(): Promise<EstadoDespertador>;
   probar(opciones: { segundos: number }): Promise<{ cuando: number }>;
@@ -89,6 +100,7 @@ type PluginAlarmaExacta = {
   pedirPermisoExactas(): Promise<void>;
   pedirExencionBateria(): Promise<void>;
   pedirAccesoNoMolestar(): Promise<void>;
+  pedirPantallaCompleta(): Promise<void>;
   abrirInicioAutomatico(): Promise<{ abierta: boolean; donde?: string }>;
   hayInicioAutomatico(): Promise<{ hay: boolean; fabricante: string }>;
   copiarAlReloj(opciones: {
@@ -134,7 +146,12 @@ export async function programarDespertador(
     }));
 
   try {
-    const r = await AlarmaExacta.programar({ alarmas });
+    const r = await AlarmaExacta.programar({
+      alarmas,
+      // Va con la cola porque el botón de posponer vive en una notificación, y
+      // ésa no puede preguntarle nada a la app cuando suena de madrugada.
+      posponerMin: datos.ajustes?.posponerMin ?? 10,
+    });
     // Si el sistema aceptó menos de las que le dimos, eso es un fallo que hay
     // que decir, no una cifra que maquillar.
     if (r.confirmadas < r.programadas) {
@@ -318,6 +335,22 @@ export async function copiarAlReloj(
     await new Promise((r) => setTimeout(r, 350));
   }
   return copiadas;
+}
+
+/**
+ * Pide el permiso de abrirse a pantalla completa.
+ *
+ * Sin él la alarma suena pero **no enciende la pantalla**: hay que desbloquear
+ * el móvil y buscarla en la bandeja. Medio dormido, a las tres de la madrugada,
+ * eso es la diferencia entre levantarse y volver a dormirse.
+ */
+export async function pedirPantallaCompleta(): Promise<void> {
+  if (!hayDespertador()) return;
+  try {
+    await AlarmaExacta.pedirPantallaCompleta();
+  } catch {
+    /* en Android anterior al 14 no hace falta pedir nada */
+  }
 }
 
 export async function abrirAjustesDeLaApp(): Promise<void> {

@@ -55,6 +55,41 @@ public class ServicioAlarma extends Service {
 
     public static final String ACCION_SONAR = "app.genuino.firme.SONAR";
     public static final String ACCION_PARAR = "app.genuino.firme.PARAR";
+    public static final String ACCION_POSPONER = "app.genuino.firme.POSPONER";
+
+    /**
+     * Cuanto se pospone. Diez minutos, que es lo que pidio Alex.
+     *
+     * Ni cinco —no da tiempo a nada— ni quince —ya es volverse a dormir—. Y
+     * sobre todo: **se puede posponer las veces que haga falta**, porque la
+     * alarma pospuesta vuelve con sus dos botones intactos.
+     */
+    private static final int POSPONER_POR_DEFECTO = 10;
+
+    /**
+     * Los minutos que eligio el usuario en Ajustes.
+     *
+     * Se leen de disco y no de la parte web: el boton vive en una notificacion,
+     * y cuando suena a las tres de la madrugada la app lleva horas cerrada. Una
+     * cifra escrita a fuego aqui seria una segunda fuente de verdad, y las dos
+     * acabarian diciendo cosas distintas.
+     */
+    private int minutosDePosponer() {
+        try {
+            return getSharedPreferences(AlarmaExacta.PREFS, MODE_PRIVATE)
+                    .getInt(AlarmaExacta.CLAVE_POSPONER, POSPONER_POR_DEFECTO);
+        } catch (Exception e) {
+            return POSPONER_POR_DEFECTO;
+        }
+    }
+
+    /**
+     * Desplazamiento de los identificadores de las pospuestas.
+     *
+     * Una alarma pospuesta NO puede reutilizar el id de la original: la cola
+     * usa 1..N y pisarlo se llevaria por delante otra alarma de la rutina.
+     */
+    private static final int ID_POSPUESTA = 700000;
 
     /** Canal mudo: aqui el sonido lo pone el servicio, no la notificacion. */
     public static final String CANAL_SERVICIO = "despertador-firme-servicio";
@@ -96,6 +131,11 @@ public class ServicioAlarma extends Service {
 
         if (ACCION_PARAR.equals(accion)) {
             parar();
+            return START_NOT_STICKY;
+        }
+
+        if (ACCION_POSPONER.equals(accion)) {
+            posponer(intencion);
             return START_NOT_STICKY;
         }
 
@@ -172,6 +212,7 @@ public class ServicioAlarma extends Service {
                 .setContentIntent(entrar)
                 .setFullScreenIntent(entrar, true)
                 .addAction(0, "Parar", pararla)
+                .addAction(0, "Posponer " + minutosDePosponer() + " min", posponerla(id, titulo, cuerpo, idSuceso))
                 .build();
 
         try {
@@ -361,6 +402,56 @@ public class ServicioAlarma extends Service {
     }
 
     // -------------------------------------------------------------------- fin
+
+    /**
+     * El boton de posponer, para la notificacion.
+     *
+     * Lleva consigo el titulo y el cuerpo porque la alarma pospuesta tiene que
+     * volver **siendo la misma**: con su nombre y su porque. Una alarma que
+     * vuelve diciendo «Genuino» a secas no le dice a nadie a que se levanta.
+     */
+    private PendingIntent posponerla(int id, String titulo, String cuerpo, String idSuceso) {
+        Intent luego = new Intent(this, ServicioAlarma.class);
+        luego.setAction(ACCION_POSPONER);
+        luego.putExtra("id", id);
+        luego.putExtra("titulo", titulo);
+        luego.putExtra("cuerpo", cuerpo);
+        luego.putExtra("idSuceso", idSuceso);
+        return PendingIntent.getService(
+                this, 2, luego,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    /**
+     * Callar ahora y volver dentro de los minutos que eligio el usuario.
+     *
+     * Se programa con la misma maquinaria que las de verdad —{@code
+     * setAlarmClock} por medio de {@link AlarmaExacta}— y no con un temporizador
+     * nuestro: un temporizador dentro del proceso muere en cuanto el sistema
+     * mate la app, que es exactamente lo que pasa de madrugada. Una posposicion
+     * que no sobrevive al reposo es una posposicion que no existe.
+     */
+    private void posponer(Intent intencion) {
+        int id = intencion == null ? 1 : intencion.getIntExtra("id", 1);
+        String titulo = textoDe(intencion, "titulo", "Genuino");
+        String cuerpo = textoDe(intencion, "cuerpo", "Es la hora.");
+        String idSuceso = textoDe(intencion, "idSuceso", "");
+
+        long cuando = System.currentTimeMillis() + minutosDePosponer() * 60_000L;
+        try {
+            AlarmaExacta.programarUna(
+                    getApplicationContext(),
+                    ID_POSPUESTA + (id % 1000),
+                    cuando,
+                    titulo,
+                    cuerpo + "  (pospuesta)",
+                    idSuceso);
+        } catch (Exception ignorada) {
+            // Si no se pudo reprogramar, al menos se calla; volver a sonar sin
+            // parar seria peor que no posponer.
+        }
+        parar();
+    }
 
     /** Lo llama la app cuando el usuario atiende la alarma. */
     public static void callar(Context contexto) {

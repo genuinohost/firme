@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 5.1).
+Última revisión: **17 de septiembre de 2026** (versión 5.2).
 
 ---
 
@@ -125,6 +125,44 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## ✅ La alarma sonó (17-09) · y las dos cosas que faltaban (5.2)
+
+**Primera prueba superada.** Alex, tras activar el «inicio automático» y probar
+con la pantalla apagada: «SÍ sonó 😍». Y dos observaciones suyas que valían oro.
+
+### «Paré la alarma SIN abrir la app. Verifica que siempre sea así»
+
+Existía, pero **sólo por un camino**. La notificación del servicio llevaba
+«Parar»; la **del respaldo salía pelada** — y el respaldo es justo el que
+aparece cuando algo ya ha ido mal, el peor momento para dejar a alguien sin
+salida, medio dormido y con la alarma encima. Eso explica su «otras veces
+sonaba y no me daba opción de parar ahí».
+
+- [x] **«Parar» y «Posponer» en las dos notificaciones**, siempre.
+- [x] **Posponer, que no existía en ninguna.** Se reprograma con la misma
+      maquinaria que las de verdad (`setAlarmClock`), **no con un temporizador
+      nuestro**: un temporizador dentro del proceso muere en cuanto el sistema
+      mate la app, que es exactamente lo que pasa de madrugada. Una posposición
+      que no sobrevive al reposo es una posposición que no existe.
+- [x] La alarma pospuesta vuelve **con su nombre y su porqué**, y con sus dos
+      botones: se puede posponer las veces que haga falta.
+- [x] Los minutos salen del **ajuste del usuario**, no de una cifra escrita a
+      fuego. Se guardan en disco al programar, porque una notificación no puede
+      preguntarle nada a la app cuando suena a las tres. Por defecto, **10**.
+- [x] Identificadores de pospuesta en su propio rango: reutilizar el de la
+      original se llevaría por delante otra alarma de la rutina.
+
+### «No encendió la pantalla sola»
+
+- [x] **Android 14 sacó a un permiso aparte** lo de abrirse a pantalla completa,
+      y **se lo niega a las apps instaladas después** — sin avisar:
+      `setFullScreenIntent` no falla, simplemente no hace nada. Otro fallo
+      silencioso, el quinto de la serie.
+- [x] Ahora se pregunta con `canUseFullScreenIntent()`, sale como línea propia
+      en el diagnóstico y en el parte, y hay **botón para concederlo**.
 
 ---
 

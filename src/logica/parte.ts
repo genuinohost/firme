@@ -58,6 +58,7 @@ export function redactarParte(e: EstadoDespertador): string {
   l.push(`  Fuera del ahorro de batería: ${si(e.exentaDeBateria)}`);
   l.push(`  Avisos permitidos: ${si(e.avisosActivos && e.canalActivo)}`);
   l.push(`  Acceso a No molestar: ${si(e.accesoNoMolestar)}`);
+  l.push(`  Puede encender la pantalla: ${si(e.puedePantallaCompleta)}`);
   // En silencio total Android calla tambien el flujo de alarma: ninguna app
   // del mundo suena con eso puesto, y hay que decirlo con todas las letras.
   l.push(

@@ -51,6 +51,15 @@ public class AlarmaExacta extends Plugin {
     /** Apuntes de cada disparo, para detectar las que no sonaron. */
     public static final String CLAVE_DIARIO = "diario";
     public static final String CLAVE_ULTIMO_FALLO = "ultimoFallo";
+    /**
+     * Cuantos minutos se pospone, segun el ajuste del usuario.
+     *
+     * Vive aqui porque el boton de posponer esta en una notificacion, y una
+     * notificacion no puede preguntarle nada a la parte web: cuando suena a las
+     * tres de la madrugada, la app puede llevar horas cerrada. Se guarda al
+     * programar y se lee al posponer.
+     */
+    public static final String CLAVE_POSPONER = "posponerMin";
 
     /** Margen para no reprogramar algo que acaba de sonar. */
     private static final long MARGEN_MS = 2000;
@@ -146,7 +155,10 @@ public class AlarmaExacta extends Plugin {
         // En ese orden: si armar fallase a medias, la lista sigue en disco y el
         // rearmado de la siguiente alarma lo recupera solo.
         SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        prefs.edit().putString(CLAVE_COLA, guardadas.toString()).apply();
+        prefs.edit()
+                .putString(CLAVE_COLA, guardadas.toString())
+                .putInt(CLAVE_POSPONER, llamada.getInt("posponerMin", 10))
+                .apply();
 
         int puestas = armarLasProximas(contexto);
 
@@ -454,6 +466,7 @@ public class AlarmaExacta extends Plugin {
         respuesta.put("volumenAlarmaMaximo", volumenMaximo);
         respuesta.put("exentaDeBateria", exentaDeBateria(contexto));
         respuesta.put("accesoNoMolestar", accesoNoMolestar(contexto));
+        respuesta.put("puedePantallaCompleta", puedePantallaCompleta(contexto));
         respuesta.put("avisosActivos", avisosActivos(contexto));
         respuesta.put("canalActivo", canalActivo(contexto));
         respuesta.put("sonandoAhora", ServicioAlarma.SONANDO);
@@ -614,6 +627,30 @@ public class AlarmaExacta extends Plugin {
             PowerManager energia = contexto.getSystemService(PowerManager.class);
             return energia != null
                     && energia.isIgnoringBatteryOptimizations(contexto.getPackageName());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Si la app puede abrirse sola a pantalla completa cuando suena.
+     *
+     * <p>Es el permiso que hace que el movil **encienda la pantalla y enseñe la
+     * alarma** con el telefono bloqueado, en vez de dejar solo una notificacion
+     * en la bandeja. Android 14 lo saco de la lista de siempre y lo puso
+     * aparte: hasta entonces bastaba con declararlo en el manifiesto, y desde
+     * la 14 el sistema lo concede solo a las apps que **ya estaban instaladas**
+     * al actualizar. Una app instalada despues —como esta— se lo encuentra
+     * denegado y no se entera: el {@code setFullScreenIntent} no falla, sencillamente
+     * no hace nada.
+     *
+     * <p>Alex lo vio tal cual: «sono pero no encendio la pantalla sola».
+     */
+    private static boolean puedePantallaCompleta(Context contexto) {
+        if (Build.VERSION.SDK_INT < 34) return true;
+        try {
+            NotificationManager gestor = contexto.getSystemService(NotificationManager.class);
+            return gestor != null && gestor.canUseFullScreenIntent();
         } catch (Exception e) {
             return false;
         }
@@ -904,6 +941,25 @@ public class AlarmaExacta extends Plugin {
         r.put("hay", sospechoso);
         r.put("fabricante", Build.MANUFACTURER);
         llamada.resolve(r);
+    }
+
+    /**
+     * Abre el ajuste donde se concede lo de abrirse a pantalla completa.
+     *
+     * Android 14 le dio pantalla propia. En versiones anteriores no hace falta
+     * pedir nada, asi que se cae a los ajustes de la app para no dejar el boton
+     * llevando a ninguna parte.
+     */
+    @PluginMethod
+    public void pedirPantallaCompleta(PluginCall llamada) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            abrir(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                    .setData(Uri.parse("package:" + getContext().getPackageName())));
+        } else {
+            abrir(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.parse("package:" + getContext().getPackageName())));
+        }
+        llamada.resolve();
     }
 
     /** Abre los ajustes de la app, donde estan bateria y No molestar. */
