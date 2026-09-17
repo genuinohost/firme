@@ -1,12 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 32,
-  "nombre": "5.0",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.0.apk",
+  "codigo": 33,
+  "nombre": "5.1",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.1.apk",
   "novedades": [
-    "NUEVO: copia tus alarmas de madrugada al reloj del movil, como red de seguridad",
-    "El reloj del telefono no lo congela ninguna capa del fabricante",
-    "Las peticiones ya no dependen de una cabecera del servidor"
+    "Quitada una cruz roja que asustaba sin motivo: 24 de 141 es lo normal"
   ],
   "importante": false
 }
