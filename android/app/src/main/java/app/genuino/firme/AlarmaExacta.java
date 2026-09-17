@@ -671,6 +671,107 @@ public class AlarmaExacta extends Plugin {
         llamada.resolve();
     }
 
+    /**
+     * Abre la pantalla de «inicio automatico» del fabricante.
+     *
+     * Este es **el ajuste que mas alarmas mata en Xiaomi**, y no sale en ningun
+     * sitio de los ajustes de Android: lo pone cada fabricante donde quiere,
+     * con un nombre distinto, y a veces ni siquiera esta en Ajustes sino dentro
+     * de su propia app de «seguridad». Sin el, MIUI congela la app y sus
+     * alarmas no llegan a sonar aunque todos los permisos de Android esten
+     * concedidos.
+     *
+     * A Alex se le dieron las instrucciones por escrito y su respuesta fue «no
+     * lo consegui». Eso no es culpa suya: unas instrucciones que no se pueden
+     * seguir son unas instrucciones que no sirven. Asi que aqui se abre la
+     * pantalla directamente.
+     *
+     * Se prueban las direcciones conocidas de cada marca **preguntando antes al
+     * sistema si existen**, en vez de lanzarlas a ciegas: abrir una que no
+     * existe deja la app con una pantalla en blanco o la tumba.
+     */
+    @PluginMethod
+    public void abrirInicioAutomatico(PluginCall llamada) {
+        String[][] candidatas = {
+            // Xiaomi / Redmi / POCO
+            {"com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"},
+            {"com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity"},
+            // Huawei / Honor
+            {"com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"},
+            {"com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"},
+            {"com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"},
+            // Oppo / realme / OnePlus (ColorOS)
+            {"com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"},
+            {"com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"},
+            {"com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"},
+            // Vivo / iQOO
+            {"com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"},
+            {"com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"},
+            // Samsung
+            {"com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"},
+            {"com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity"},
+            // Letv, Asus y compañia
+            {"com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity"},
+            {"com.asus.mobilemanager", "com.asus.mobilemanager.autostart.AutoStartActivity"},
+            // Transsion: Infinix, Tecno, itel
+            {"com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity"},
+        };
+
+        JSObject respuesta = new JSObject();
+        for (String[] c : candidatas) {
+            Intent intencion = new Intent();
+            intencion.setClassName(c[0], c[1]);
+            if (existe(intencion)) {
+                abrir(intencion);
+                respuesta.put("abierta", true);
+                respuesta.put("donde", c[0]);
+                llamada.resolve(respuesta);
+                return;
+            }
+        }
+
+        // Ninguna conocida: al menos se deja al usuario en los ajustes de la
+        // app, que es desde donde muchas marcas enlazan a lo suyo.
+        abrir(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse("package:" + getContext().getPackageName())));
+        respuesta.put("abierta", false);
+        llamada.resolve(respuesta);
+    }
+
+    /** ¿Existe esa pantalla en este movil? Lanzarla a ciegas tumba la app. */
+    private boolean existe(Intent intencion) {
+        try {
+            return getContext().getPackageManager()
+                    .resolveActivity(intencion, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Si este movil es de los que se inventan su propio matador de apps.
+     *
+     * Sirve para no enseñar un boton que no lleva a ninguna parte en un movil
+     * que no tiene esa pantalla — un boton que no hace nada es peor que no
+     * tener boton.
+     */
+    @PluginMethod
+    public void hayInicioAutomatico(PluginCall llamada) {
+        String marca = (Build.MANUFACTURER + " " + Build.BRAND).toLowerCase();
+        boolean sospechoso =
+                marca.contains("xiaomi") || marca.contains("redmi") || marca.contains("poco")
+                || marca.contains("huawei") || marca.contains("honor")
+                || marca.contains("oppo") || marca.contains("realme") || marca.contains("oneplus")
+                || marca.contains("vivo") || marca.contains("iqoo")
+                || marca.contains("samsung")
+                || marca.contains("letv") || marca.contains("asus")
+                || marca.contains("infinix") || marca.contains("tecno") || marca.contains("itel");
+        JSObject r = new JSObject();
+        r.put("hay", sospechoso);
+        r.put("fabricante", Build.MANUFACTURER);
+        llamada.resolve(r);
+    }
+
     /** Abre los ajustes de la app, donde estan bateria y No molestar. */
     @PluginMethod
     public void abrirAjustesDeLaApp(PluginCall llamada) {

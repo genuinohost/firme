@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **16 de septiembre de 2026** (versión 4.5).
+Última revisión: **17 de septiembre de 2026** (versión 4.6).
 
 ---
 
@@ -247,6 +247,28 @@ OAuth), compilar, probar el acceso de verdad en el móvil y publicar.
 > fallen». Y: «anota todo, que nada se te escape». Esta lista es esa promesa.
 
 ### A. Las alarmas · **lo más grave, no se cierra hasta que suene**
+
+**17-09: tampoco sonaron.** Ya no se adivina más sobre el código — lo de la 4.2
+está bien hecho y probado. Lo que queda por descartar es **el móvil**, y en un
+Xiaomi hay un sospechoso por encima de todos:
+
+- [x] **Botón que abre el «inicio automático» del fabricante** (4.6). Es el
+      ajuste que más alarmas mata en MIUI, **no aparece en ninguna lista de
+      permisos de Android**, y sin él el sistema congela la app y se traga sus
+      alarmas aunque todo lo demás esté concedido. Ya se le dieron a Alex las
+      instrucciones por escrito el 15-09 y su respuesta fue **«no lo conseguí»**
+      — unas instrucciones que no se pueden seguir no sirven de nada. Ahora la
+      app abre la pantalla ella misma, probando las direcciones conocidas de
+      cada marca y **preguntando antes al sistema si existen** (lanzar una que
+      no existe deja una pantalla en blanco o tumba la app).
+- [x] El botón sale en **dos sitios**: en Ajustes, y **en el aviso de alarma
+      perdida por delante del ahorro de batería** — en un Xiaomi esa es la
+      causa más probable, y la primera tarjeta que se lee es la que se toca.
+- [ ] ⚠️ **Sigue faltando el parte.** Es lo único que distingue «no se disparó»
+      de «se disparó y salió muda», y desde la 4.2 lo dice con todas las letras
+      (SONÓ / MUDA, volumen, No molestar). **También dice qué versión está
+      instalada**, que es la otra mitad del problema: el 16-09 se perdió medio
+      día depurando un arreglo que nunca había llegado al teléfono.
 
 **Lo hecho en la 4.2 — se le cerraron las salidas al silencio.**
 

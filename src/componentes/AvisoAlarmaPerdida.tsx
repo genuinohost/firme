@@ -1,5 +1,11 @@
+import { useEffect, useState } from "react";
 import type { AlarmaPerdida } from "@/logica/despertador";
-import { pedirExencionBateria } from "@/logica/despertador";
+import {
+  abrirInicioAutomatico,
+  hayInicioAutomatico,
+  pedirExencionBateria,
+} from "@/logica/despertador";
+import { consejoDelFabricante } from "@/logica/parte";
 import { Boton, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -21,6 +27,17 @@ export function AvisoAlarmaPerdida({
   perdidas: AlarmaPerdida[];
   onCerrar: () => void;
 }) {
+  const [marca, setMarca] = useState<{ hay: boolean; fabricante: string } | null>(null);
+  const [aviso, setAviso] = useState("");
+
+  useEffect(() => {
+    let vivo = true;
+    void hayInicioAutomatico().then((m) => vivo && setMarca(m));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   const hora = (f: Date) =>
     `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
 
@@ -68,8 +85,46 @@ export function AvisoAlarmaPerdida({
           </div>
         </Tarjeta>
 
+        {/*
+          En un Xiaomi, un Huawei o un Oppo esto va **antes** que el ahorro de
+          batería: el «inicio automático» del fabricante mata más alarmas que
+          ningún ajuste de Android, no aparece en la lista de permisos, y la
+          primera tarjeta que se lee es la que se toca.
+        */}
+        {marca?.hay ? (
+          <Tarjeta className="mt-3 border-acento/40">
+            <Etiqueta>lo primero en un {marca.fabricante}</Etiqueta>
+            <p className="mt-2 text-sm leading-relaxed">
+              Tu móvil trae un <strong>«inicio automático»</strong> propio, aparte de
+              los permisos de Android. Si Genuino no lo tiene activado, el sistema
+              congela la app y sus alarmas no llegan a sonar — aunque todo lo demás
+              esté bien.
+            </p>
+            <div className="mt-3">
+              <Boton
+                variante="fuerte"
+                ancho
+                onClick={async () => {
+                  const fue = await abrirInicioAutomatico();
+                  setAviso(
+                    fue
+                      ? "Busca Genuino en la lista y actívalo."
+                      : consejoDelFabricante(marca.fabricante) ??
+                          "Busca «inicio automático» en los ajustes y activa Genuino.",
+                  );
+                }}
+              >
+                Abrir «inicio automático»
+              </Boton>
+            </div>
+            {aviso ? (
+              <p className="mt-2 text-xs leading-relaxed text-tenue">{aviso}</p>
+            ) : null}
+          </Tarjeta>
+        ) : null}
+
         <Tarjeta className="mt-3">
-          <Etiqueta>lo que casi siempre lo causa</Etiqueta>
+          <Etiqueta>{marca?.hay ? "y además" : "lo que casi siempre lo causa"}</Etiqueta>
           <p className="mt-2 text-sm leading-relaxed">
             El ahorro de batería congela la app y el sistema se traga sus alarmas.
             Sacar a Genuino de esa lista lo arregla, y no gasta batería de forma

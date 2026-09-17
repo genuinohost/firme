@@ -9,6 +9,7 @@ import {
   pararDespertador,
   pedirAccesoNoMolestar,
   pedirExencionBateria,
+  abrirInicioAutomatico,
   pedirPermisoExactas,
   probarDespertador,
   sonarYa,
@@ -567,6 +568,27 @@ function ComprobacionSistema() {
         {!estado.accesoNoMolestar ? (
           <Boton ancho onClick={() => void pedirAccesoNoMolestar()}>
             Permitir saltarse No molestar
+          </Boton>
+        ) : null}
+        {/*
+          El «inicio automático» del fabricante: el ajuste que más alarmas mata
+          en Xiaomi, Huawei y Oppo, y que no aparece en ninguna lista de
+          permisos de Android. Las instrucciones por escrito ya se probaron y no
+          funcionaron —«no lo conseguí»—, así que aquí se abre la pantalla.
+        */}
+        {consejoDelFabricante(estado.fabricante) ? (
+          <Boton
+            ancho
+            onClick={async () => {
+              const fue = await abrirInicioAutomatico();
+              setAviso(
+                fue
+                  ? "Busca Genuino en la lista y actívalo."
+                  : consejoDelFabricante(estado.fabricante) ?? "",
+              );
+            }}
+          >
+            Abrir «inicio automático» de {estado.fabricante}
           </Boton>
         ) : null}
         <Boton ancho onClick={() => void abrirAjustesDeLaApp()}>

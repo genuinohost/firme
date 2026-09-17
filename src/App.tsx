@@ -5,6 +5,7 @@ import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/lo
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, limpiarAvisosViejos, pedirPermisosNativos } from "@/logica/alarmasNativas";
 import { apuntarQueSeSalio, darPorAbierta, tocaPedirlo } from "@/logica/cerradura";
+import { CUENTAS_ABIERTAS } from "@/logica/nube";
 import type { AlarmaPerdida } from "@/logica/despertador";
 import {
   alarmasPerdidas,
@@ -343,13 +344,18 @@ export default function App() {
             nombre={datos.ajustes.nombre}
             racha={racha}
             opciones={[
-              {
-                id: "cuenta",
-                icono: "◍",
-                titulo: "Mi cuenta",
-                detalle: "Tu perfil y los hermanos que caminan contigo",
-                onIr: () => setPestaña("cuenta"),
-              },
+              // La cuenta sólo se enseña cuando de verdad se puede entrar.
+              ...(CUENTAS_ABIERTAS
+                ? [
+                    {
+                      id: "cuenta",
+                      icono: "◍",
+                      titulo: "Mi cuenta",
+                      detalle: "Tu perfil y los hermanos que caminan contigo",
+                      onIr: () => setPestaña("cuenta"),
+                    },
+                  ]
+                : []),
               {
                 id: "porque",
                 icono: "✦",

@@ -87,6 +87,8 @@ type PluginAlarmaExacta = {
   pedirPermisoExactas(): Promise<void>;
   pedirExencionBateria(): Promise<void>;
   pedirAccesoNoMolestar(): Promise<void>;
+  abrirInicioAutomatico(): Promise<{ abierta: boolean; donde?: string }>;
+  hayInicioAutomatico(): Promise<{ hay: boolean; fabricante: string }>;
   abrirAjustesDeLaApp(): Promise<void>;
 };
 
@@ -229,6 +231,44 @@ export async function pedirAccesoNoMolestar(): Promise<void> {
     await AlarmaExacta.pedirAccesoNoMolestar();
   } catch {
     /* no todas las versiones lo ofrecen */
+  }
+}
+
+/**
+ * ¿Tiene este móvil un matador de apps propio?
+ *
+ * Sirve para no enseñar un botón que no lleva a ninguna parte. Un botón que se
+ * toca y no hace nada deja la app pareciendo rota, y en la pantalla de «por qué
+ * no sonó la alarma» eso es lo último que hace falta.
+ */
+export async function hayInicioAutomatico(): Promise<{ hay: boolean; fabricante: string }> {
+  if (!hayDespertador()) return { hay: false, fabricante: "" };
+  try {
+    return await AlarmaExacta.hayInicioAutomatico();
+  } catch {
+    return { hay: false, fabricante: "" };
+  }
+}
+
+/**
+ * Abre la pantalla de «inicio automático» del fabricante.
+ *
+ * Es **el ajuste que más alarmas mata en Xiaomi** y no aparece en ningún sitio
+ * de los ajustes de Android: cada marca lo esconde donde quiere y con otro
+ * nombre. A Alex se le dieron las instrucciones por escrito y su respuesta fue
+ * «no lo conseguí» — unas instrucciones que no se pueden seguir no sirven, así
+ * que ahora se abre la pantalla y punto.
+ *
+ * Devuelve si se pudo abrir la de verdad o si hubo que caer en los ajustes de
+ * la app. Eso cambia lo que se le dice después, y decirlo mal es dejar a
+ * alguien buscando algo que no está ahí.
+ */
+export async function abrirInicioAutomatico(): Promise<boolean> {
+  if (!hayDespertador()) return false;
+  try {
+    return (await AlarmaExacta.abrirInicioAutomatico()).abierta;
+  } catch {
+    return false;
   }
 }
 

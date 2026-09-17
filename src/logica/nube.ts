@@ -24,6 +24,20 @@ import { Capacitor } from "@capacitor/core";
  * había entrado antes en este móvil.
  */
 
+/**
+ * Si las cuentas están abiertas al público.
+ *
+ * **Se queda en `false` hasta que Authentication esté activado en la consola de
+ * Firebase.** Mientras no lo esté, entrar con Google no puede funcionar, y una
+ * entrada de menú que lleva a un callejón sin salida hace más daño que no tener
+ * la función: quien la toca concluye que la app está rota, y de ahí no se
+ * vuelve.
+ *
+ * Para abrirlas: consola → Authentication → Comenzar → Sign-in method →
+ * Google. Después, poner esto en `true` y publicar.
+ */
+export const CUENTAS_ABIERTAS = false;
+
 const CONFIG = {
   apiKey: "AIzaSyBPt4IdZBkTCa8MarOdg6MopgDbFWO4l1M",
   authDomain: "genuino-host.firebaseapp.com",
