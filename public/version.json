@@ -1,10 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 33,
-  "nombre": "5.1",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.1.apk",
+  "codigo": 34,
+  "nombre": "5.2",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.2.apk",
   "novedades": [
-    "Quitada una cruz roja que asustaba sin motivo: 24 de 141 es lo normal"
+    "Parar y Posponer desde la notificacion, siempre y sin abrir la app",
+    "La alarma pospuesta vuelve con su nombre y sus botones, y aguanta el reposo",
+    "Permiso nuevo para que la alarma encienda la pantalla sola"
   ],
   "importante": false
 }
