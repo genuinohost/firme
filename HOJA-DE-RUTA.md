@@ -128,6 +128,40 @@ El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 
 ---
 
+## 🔴 CORS: por qué la app nunca supo que había versión nueva
+
+Alex, el 17-09: «no actualiza desde la app y es importante». Y antes, el 16-09:
+«la aplicación no me deja actualizar a la 4.0». **Nunca funcionó.**
+
+Dentro de la app la web se sirve desde `https://localhost`, así que pedir
+`genuino-pro.web.app/version.json` es una petición **entre orígenes distintos**.
+Firebase Hosting no mandaba `Access-Control-Allow-Origin`, el navegador la
+bloqueaba, `fetch` lanzaba, y el `catch` concluía **«no hay nada nuevo»**.
+
+Sin un error en ninguna parte. Sólo un silencio que se leía como «estás al día».
+
+**Y le pasaba lo mismo a `comunidad.json`** — por eso «Juntos» se veía vacío. No
+era que faltaran los enlaces: **el archivo que los trae no llegaba nunca.**
+
+- [x] **Cabecera CORS en `firebase.json`** para los dos archivos, y desplegada.
+      Esto arregla **los móviles ya instalados sin que actualicen nada**, que es
+      lo que importaba hoy.
+- [x] **Y no depender de eso**: las dos peticiones pasan ahora por
+      `CapacitorHttp`, que pide desde el lado nativo, **donde CORS no existe**.
+      Confiar en una cabecera que cualquiera puede quitar sin darse cuenta es
+      dejar la puerta abierta al mismo fallo.
+- [x] Con tiempo de espera, además: sin él una respuesta lenta deja la promesa
+      colgada para siempre y el aviso no sale igualmente.
+
+**El patrón que se repite en todos los fallos de estos dos días** — y conviene
+tenerlo delante: `window.open` devolvía `null`, el `fetch` bloqueado lanzaba y
+se tragaba, el contador de alarmas contaba intents cancelados, el cajón de
+reposo contestaba «desconocido». **Ninguno daba error.** Todo fallo que se
+captura y se convierte en un valor de aspecto normal es un fallo que no se puede
+depurar. Cuando algo «no hace nada», sospechar primero de un `catch` silencioso.
+
+---
+
 ## 🔴 El parte del 17-09: qué dijo y qué se arregló con él
 
 **El primer parte de verdad**, y descartó de golpe casi todo lo que llevábamos

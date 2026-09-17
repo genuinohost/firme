@@ -22,8 +22,13 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, max-age=0"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
           }
-        ]
+        ],
+        "comment_cors": "CORS. Dentro de la app de Android la web se sirve desde https://localhost, asi que pedir estos archivos es una peticion entre origenes distintos. Sin esta cabecera el navegador la bloquea, fetch() lanza, y el codigo lo captura y concluye «no hay nada nuevo»: el aviso de version nueva no salia NUNCA y la pantalla Juntos se quedaba vacia. Ninguno de los dos daba error. Son archivos publicos y de solo lectura, asi que abrirlos a todo el mundo no expone nada."
       },
       {
         "source": "/comunidad.json",
@@ -31,8 +36,13 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, max-age=0"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
           }
-        ]
+        ],
+        "comment_cors": "CORS. Dentro de la app de Android la web se sirve desde https://localhost, asi que pedir estos archivos es una peticion entre origenes distintos. Sin esta cabecera el navegador la bloquea, fetch() lanza, y el codigo lo captura y concluye «no hay nada nuevo»: el aviso de version nueva no salia NUNCA y la pantalla Juntos se quedaba vacia. Ninguno de los dos daba error. Son archivos publicos y de solo lectura, asi que abrirlos a todo el mundo no expone nada."
       },
       {
         "comment": "El service worker y el manifiesto no se cachean: si no, el móvil se queda con una versión vieja y las alarmas dejan de actualizarse.",

@@ -1,3 +1,5 @@
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
+
 /**
  * La comunidad: los grupos y las reuniones en vivo.
  *
@@ -82,14 +84,49 @@ function tocaConsultar(): boolean {
  * Trae la comunidad de internet. Si falla —sin conexión, servidor caído— se
  * queda lo último que se guardó, que es mejor que una pantalla vacía.
  */
+/**
+ * Pedir el archivo sin que CORS lo impida.
+ *
+ * Dentro de la app la web se sirve desde `https://localhost`, así que esto es
+ * una petición entre orígenes distintos y Firebase Hosting no mandaba
+ * `Access-Control-Allow-Origin`. El navegador la bloqueaba, `fetch` lanzaba, y
+ * el `catch` devolvía lo guardado — que la primera vez está vacío.
+ *
+ * **Por eso «Juntos» se veía vacío.** No era que faltaran los enlaces: es que
+ * el archivo que los trae no llegaba nunca, y sin dar ni un error.
+ *
+ * `CapacitorHttp` pide desde el lado nativo, donde CORS no existe.
+ */
+async function pedirJson<T>(url: string): Promise<T | null> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const r = await CapacitorHttp.get({
+        url,
+        headers: { "Cache-Control": "no-cache" },
+        readTimeout: 15_000,
+        connectTimeout: 15_000,
+      });
+      if (r.status < 200 || r.status >= 300) return null;
+      return (typeof r.data === "string" ? JSON.parse(r.data) : r.data) as T;
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const r = await fetch(url, { cache: "no-cache" });
+    if (!r.ok) return null;
+    return (await r.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function actualizar(forzar = false): Promise<Comunidad> {
   if (!forzar && !tocaConsultar()) return leerGuardada();
 
   try {
-    const respuesta = await fetch(URL_COMUNIDAD, { cache: "no-cache" });
-    if (!respuesta.ok) return leerGuardada();
-    const datos = (await respuesta.json()) as Comunidad;
-    if (!Array.isArray(datos.enlaces)) return leerGuardada();
+    const datos = await pedirJson<Comunidad>(URL_COMUNIDAD);
+    if (!datos || !Array.isArray(datos.enlaces)) return leerGuardada();
 
     localStorage.setItem(GUARDADO, JSON.stringify(datos));
     localStorage.setItem(GUARDADO_FECHA, String(Date.now()));

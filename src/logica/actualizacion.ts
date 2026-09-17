@@ -1,4 +1,4 @@
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
 /**
  * Avisar de que hay una versión nueva.
@@ -87,15 +87,56 @@ function estaDescartada(codigo: number): boolean {
  * Devuelve la versión publicada si es más nueva que la instalada y el usuario no
  * la ha descartado. En cualquier otro caso, null.
  */
+/**
+ * Pedir un JSON sin que CORS lo impida.
+ *
+ * **Esto costó dos días.** Dentro de la app la web se sirve desde
+ * `https://localhost`, así que pedir `genuino-pro.web.app/version.json` es una
+ * petición entre orígenes distintos. Firebase Hosting no manda
+ * `Access-Control-Allow-Origin`, así que el navegador la bloqueaba, `fetch`
+ * lanzaba, y el `catch` de arriba concluía «no hay nada nuevo».
+ *
+ * **El aviso de versión nueva no salió nunca**, y nadie podía saberlo: no había
+ * error en ninguna parte, solo un silencio que parecía «estás al día».
+ *
+ * La cabecera ya está puesta en el servidor, pero eso no basta: depender de una
+ * cabecera que cualquiera puede quitar sin darse cuenta es dejar la puerta
+ * abierta al mismo fallo. `CapacitorHttp` hace la petición **desde el lado
+ * nativo**, donde CORS no existe — y así funciona aunque el servidor cambie.
+ */
+async function pedirJson<T>(url: string): Promise<T | null> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const r = await CapacitorHttp.get({
+        url,
+        headers: { "Cache-Control": "no-cache" },
+        // Sin esto, una respuesta lenta deja la promesa colgada para siempre.
+        readTimeout: 15_000,
+        connectTimeout: 15_000,
+      });
+      if (r.status < 200 || r.status >= 300) return null;
+      return (typeof r.data === "string" ? JSON.parse(r.data) : r.data) as T;
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const r = await fetch(url, { cache: "no-cache" });
+    if (!r.ok) return null;
+    return (await r.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function hayVersionNueva(forzar = false): Promise<VersionPublicada | null> {
   // En el navegador no tiene sentido: ahí siempre se sirve lo último.
   if (!Capacitor.isNativePlatform()) return null;
   if (!forzar && !tocaConsultar()) return null;
 
   try {
-    const respuesta = await fetch(URL_VERSION, { cache: "no-cache" });
-    if (!respuesta.ok) return null;
-    const datos = (await respuesta.json()) as VersionPublicada;
+    const datos = await pedirJson<VersionPublicada>(URL_VERSION);
+    if (!datos) return null;
 
     try {
       localStorage.setItem(ULTIMA_CONSULTA, String(Date.now()));
