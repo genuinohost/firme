@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 5.0).
+Última revisión: **17 de septiembre de 2026** (versión 5.1).
 
 ---
 
@@ -125,6 +125,33 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## ⚠️ La cruz roja que no era un fallo (5.1)
+
+Alex mandó una captura de Ajustes con **«24 alarmas puestas en el sistema ✗ —
+Android se guardó 24 de las 141 que le dimos»** en rojo.
+
+**Eso es el funcionamiento normal, no un fallo.** A Android no se le entregan
+las 141 a propósito: `setAlarmClock` es la alarma más cara que existe para el
+sistema, así que se le dan **las próximas 24** y las demás se arman solas según
+van sonando.
+
+El mismo error de criterio estaba en el parte y **allí se corrigió en la 4.9;
+en esta tarjeta se quedó**. Peor todavía: al arreglar en la 4.9 el contador que
+mentía —contaba `PendingIntent` ya cancelados y decía 141—, la cifra pasó a ser
+honesta y **destapó la comparación mala**, que hasta entonces quedaba tapada por
+la mentira.
+
+- [x] La tarjeta compara ahora contra **lo que debería haber puesto**
+      (`min(enCola, ventana)`), no contra la lista entera.
+- [x] Y lo explica en vez de dejarlo en un número suelto: «las 24 siguientes,
+      quedan 141 en la lista y se van armando solas».
+
+**Un diagnóstico que grita cuando no pasa nada se deja de leer** — y entonces no
+sirve el día que sí pasa. Es la segunda vez en dos días que este mismo principio
+aparece; queda escrito para que no haya una tercera.
 
 ---
 

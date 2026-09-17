@@ -493,17 +493,32 @@ function ComprobacionSistema() {
           pasar desapercibido: hasta ahora se contaba lo que nosotros creíamos
           haber programado, no lo que el sistema tiene de verdad.
         */}
+        {/*
+          Ojo con lo que aquí se considera «bien».
+
+          A Android **no se le entregan las 141 de golpe a propósito**: se le
+          dan las próximas 24 y, cada vez que una suena, se arman las
+          siguientes. Comparar contra la lista entera pintaba en rojo el
+          funcionamiento normal — «24 de 141» con una cruz roja, y Alex
+          pensando que su teléfono estaba tirando alarmas.
+
+          El mismo error estaba en el parte y allí se corrigió; aquí se quedó.
+          Un diagnóstico que grita cuando no pasa nada se deja de leer, y
+          entonces no sirve el día que sí pasa.
+        */}
         <Linea
-          bien={estado.confirmadas > 0 && estado.confirmadas >= estado.enCola}
+          bien={estado.confirmadas > 0 && estado.confirmadas >= esperadas(estado)}
           titulo={`${estado.confirmadas} alarmas puestas en el sistema`}
           detalle={
             estado.confirmadas === 0
               ? "Ninguna. Revisa que tu rutina tenga bloques con timbre."
-              : estado.confirmadas < estado.enCola
-                ? `Android se guardó ${estado.confirmadas} de las ${estado.enCola} que le dimos.`
-                : estado.proxima > 0
-                  ? `La próxima, a las ${reloj(estado.proxima)}.`
-                  : "Confirmadas por Android, una a una."
+              : estado.confirmadas < esperadas(estado)
+                ? `Android solo guardó ${estado.confirmadas} de las ${esperadas(estado)} que tocaban.`
+                : estado.enCola > estado.confirmadas
+                  ? `Las ${estado.confirmadas} siguientes. Quedan ${estado.enCola} en la lista y se van armando solas.`
+                  : estado.proxima > 0
+                    ? `La próxima, a las ${reloj(estado.proxima)}.`
+                    : "Confirmadas por Android, una a una."
           }
         />
         <Linea
@@ -1145,4 +1160,16 @@ function RespaldoEnElReloj({ rutina }: { rutina: import("@/datos/tipos").BloqueR
       </p>
     </Tarjeta>
   );
+}
+
+/**
+ * Cuántas alarmas deberían estar puestas en el sistema ahora mismo.
+ *
+ * No son todas las de la lista: a Android se le entregan las próximas
+ * `ventana` —24— y las demás se arman solas según van sonando. `setAlarmClock`
+ * es la alarma más cara que existe para el sistema, y registrar 141 de golpe es
+ * pedirle algo que ningún despertador de verdad le pide.
+ */
+function esperadas(estado: EstadoDespertador): number {
+  return Math.min(estado.enCola, estado.ventana || estado.enCola);
 }
