@@ -11,7 +11,8 @@
  * Antes hay que tener el APK de release compilado y `gh` con la sesión iniciada.
  */
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const APK = "android/app/build/outputs/apk/release/app-release.apk";
 const GRADLE = "android/app/build.gradle";
@@ -34,6 +35,37 @@ const etiqueta = `v${nombre}`;
 const novedades = process.argv.slice(2);
 
 // El repositorio se saca de git, para no tenerlo escrito en dos sitios.
+/**
+ * Que la web compilada lleve la misma versión que el APK.
+ *
+ * El 17-09-2026 se publicó una 4.7 que por dentro era la 4.6: `cap sync` copia
+ * lo que haya en `dist`, y `dist` se había compilado antes de subir el número.
+ * El manifiesto decía 29 y el JavaScript 28, así que la app pedía actualizarse
+ * **para siempre** y al instalar no se callaba.
+ *
+ * Esto se comprueba aquí y no solo al compilar, porque publicar es el último
+ * punto donde el fallo todavía es barato: una vez subido, ya está en los
+ * teléfonos.
+ */
+function laWebCuadra() {
+  const carpeta = "dist/assets";
+  if (!existsSync(carpeta)) return false;
+  let bien = false;
+  for (const archivo of readdirSync(carpeta)) {
+    if (!archivo.endsWith(".js")) continue;
+    if (readFileSync(join(carpeta, archivo), "utf8").includes(`"${nombre}"`)) bien = true;
+  }
+  return bien;
+}
+
+if (!laWebCuadra()) {
+  console.error(`La web de ${"dist"} no lleva la versión ${nombre}.`);
+  console.error("El APK saldría con un número en el manifiesto y otro por dentro,");
+  console.error("y la app pediría actualizarse para siempre. Compila con:");
+  console.error("  npm run apk");
+  process.exit(1);
+}
+
 const remoto = execFileSync("git", ["remote", "get-url", "origin"], { encoding: "utf8" }).trim();
 const repo = remoto.replace(/^.*github\.com[:/]/, "").replace(/\.git$/, "");
 

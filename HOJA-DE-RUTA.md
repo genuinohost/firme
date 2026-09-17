@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 4.7).
+Última revisión: **17 de septiembre de 2026** (versión 4.8).
 
 ---
 
@@ -125,6 +125,41 @@ el negocio, **Genuino Love** la comunidad, **Genuino** la app.
 
 El razonamiento completo, incluido por qué el título dice «Disciplina» y no
 «Despertador», está en `docs/play-store.md`.
+
+---
+
+## 🔴 La 4.7 que por dentro era la 4.6
+
+Alex, tras instalar dos veces: «sigue en 4.6». No era despiste suyo.
+
+**`npx cap sync` copia lo que haya en `dist` en ese momento**, y `dist` se había
+compilado *antes* de subir el número en `build.gradle`. Vite hornea la versión
+al compilar leyendo ese archivo, así que el APK salió con:
+
+| | Decía |
+|---|---|
+| Manifiesto de Android | `versionCode 29` · `versionName 4.7` |
+| **JavaScript de dentro** | **4.6** |
+
+Y no era solo un número mal puesto en una pantalla: `versionInstalada()` devolvía
+**28** mientras `version.json` anunciaba **29**, así que la app iba a **insistir
+para siempre** con que había una actualización que al instalarse no callaba el
+aviso.
+
+- [x] **`npm run apk`** (`scripts/compilar-apk.mjs`): compila la web **primero**,
+      comprueba que el JavaScript lleva de verdad la versión de `build.gradle`,
+      y sólo entonces sincroniza y compila. El orden deja de depender de que
+      alguien se acuerde.
+- [x] **`npm run publicar` se niega** a subir un APK cuya web no cuadre. Publicar
+      es el último punto donde el fallo todavía es barato: después ya está en
+      los teléfonos.
+- [x] De paso, dos fallos en los scripts de compilación que llevaban ahí desde
+      siempre: el ayudante `correr()` **ignoraba las opciones**, así que el
+      `cwd: "android"` de gradlew se perdía; y con `shell: true` en Windows un
+      `gradlew.bat` suelto se busca en el PATH y no en el `cwd`. Los dos
+      fallaban con un «Command failed» que no decía nada.
+- [x] Publicada la **4.8**, con manifiesto y JavaScript comprobados uno a uno
+      antes de subirla.
 
 ---
 

@@ -1,12 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 29,
-  "nombre": "4.7",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.7.apk",
+  "codigo": 30,
+  "nombre": "4.8",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.8.apk",
   "novedades": [
-    "ARREGLADO: el boton de descargar la actualizacion no hacia nada",
-    "Los enlaces de Juntos tampoco abrian: mismo fallo, ya corregido",
-    "Ahora la app te dice donde queda el instalador al descargarlo"
+    "ARREGLADO: el instalador decia 4.7 por fuera y 4.6 por dentro",
+    "Los enlaces de Juntos y el boton de descargar ya funcionan de verdad",
+    "La app abre ella misma el inicio automatico de tu Xiaomi"
   ],
   "importante": false
 }

@@ -10,17 +10,28 @@
  */
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const gradle = readFileSync("android/app/build.gradle", "utf8");
 const nombre = gradle.match(/versionName\s+"([^"]+)"/)?.[1] ?? "sin-version";
 const codigo = gradle.match(/versionCode\s+(\d+)/)?.[1] ?? "0";
 
-const correr = (cmd, args) =>
-  execFileSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32" });
+// Ojo con las opciones: sin recogerlas, el `cwd: "android"` de gradlew se
+// perdia y el comando se lanzaba desde la raiz del proyecto, donde no existe.
+const ENVOLTORIO = process.platform === "win32" ? "gradlew.bat" : "gradlew";
+
+const correr = (cmd, args, opciones = {}) =>
+  execFileSync(cmd, args, {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+    ...opciones,
+  });
 
 correr("npm", ["run", "build"]);
 correr("npx", ["cap", "sync", "android"]);
-correr(process.platform === "win32" ? "gradlew.bat" : "./gradlew", ["bundleRelease", "--no-daemon"], {
+// Ruta absoluta: con `shell: true` en Windows, un `gradlew.bat` suelto se busca
+// en el PATH y no en el `cwd`.
+correr(join(process.cwd(), "android", ENVOLTORIO), ["bundleRelease", "--no-daemon"], {
   cwd: "android",
 });
 
