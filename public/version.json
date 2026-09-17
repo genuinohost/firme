@@ -1,12 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 30,
-  "nombre": "4.8",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.8.apk",
+  "codigo": 31,
+  "nombre": "4.9",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-4.9.apk",
   "novedades": [
-    "ARREGLADO: el instalador decia 4.7 por fuera y 4.6 por dentro",
-    "Los enlaces de Juntos y el boton de descargar ya funcionan de verdad",
-    "La app abre ella misma el inicio automatico de tu Xiaomi"
+    "El parte ahora dice tambien las alarmas que NO llegaron a dispararse",
+    "Arregladas tres cifras del diagnostico que daban una imagen falsa"
   ],
   "importante": false
 }
