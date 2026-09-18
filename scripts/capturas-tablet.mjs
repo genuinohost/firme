@@ -40,6 +40,13 @@ const DESTINO = "docs/tienda/capturas/tablet";
  * que redondear.
  */
 const MEDIDAS = [
+  // El teléfono también, aunque parezca que no hace falta.
+  //
+  // Las capturas originales son 1220×2440, o sea **1:2**, y Play las mandaba a
+  // «necesita recorte» en vez de aceptarlas: el hueco de teléfono pide 9:16
+  // igual que los de tablet. Se veían bien en la biblioteca y no se podían
+  // usar, que es la peor manera de fallar.
+  { nombre: "tel", ancho: 1440, alto: 2560 },
   { nombre: "7", ancho: 1368, alto: 2432 },
   // La de 10" va más grande para que no se vea blanda en una pantalla que es
   // físicamente mayor.
