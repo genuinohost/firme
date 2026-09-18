@@ -223,6 +223,15 @@ export async function leerPerfil(uid: string): Promise<Perfil | null> {
   };
 }
 
+/** Minúsculas y sin tildes: así «José» encuentra a «jose» y al revés. */
+export function sinTildes(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+}
+
 /** Un nombre de usuario legal: minúsculas, números, punto y guion bajo. */
 export function limpiarUsuario(bruto: string): string {
   return bruto
@@ -273,6 +282,10 @@ export async function guardarPerfil(perfil: Perfil, usuarioAnterior?: string): P
     const datos: Record<string, unknown> = {
       nombre: perfil.nombre.trim(),
       usuario: perfil.usuario,
+      // Una copia del nombre en minúsculas y sin tildes, sólo para buscar.
+      // Firestore no sabe buscar sin distinguir mayúsculas, así que la forma
+      // de hacerlo es guardar ya normalizado lo que se va a comparar.
+      busca: sinTildes(perfil.nombre),
       desde: perfil.desde ?? Date.now(),
     };
     // Los campos vacíos no se guardan: un perfil lleno de cadenas vacías es
@@ -289,14 +302,86 @@ export async function guardarPerfil(perfil: Perfil, usuarioAnterior?: string): P
 
 // --------------------------------------------------------------------- amigos
 
-export async function buscarPorUsuario(usuario: string): Promise<Perfil | null> {
-  const limpio = limpiarUsuario(usuario);
-  if (!usuarioValido(limpio)) return null;
+/**
+ * Buscar a un hermano.
+ *
+ * **Antes sólo encontraba por el nombre de usuario exacto**, y eso es un muro:
+ * nadie se sabe de memoria el usuario de otro. Alex intentó agregar a José, no
+ * le salió nadie, y dio por hecho que la función estaba rota — cuando lo que
+ * pasaba es que había buscado «José» y su usuario era `jagpromax`.
+ *
+ * Ahora se prueba en tres pasos, del más exacto al más amplio, y se devuelve
+ * una lista: quien busca «jose» puede encontrar a varios, y eso está bien.
+ */
+export async function buscarHermanos(consulta: string): Promise<Perfil[]> {
+  const texto = sinTildes(consulta).replace(/^@/, "");
+  if (texto.length < 3) return [];
+
   const { bd } = await nube();
-  const { doc, getDoc } = await import("firebase/firestore");
-  const clave = await getDoc(doc(bd, "handles", limpio));
-  if (!clave.exists()) return null;
-  return leerPerfil(String(clave.data().uid));
+  const { doc, getDoc, collection, query, where, orderBy, limit, getDocs } = await import(
+    "firebase/firestore"
+  );
+
+  const encontrados = new Map<string, Perfil>();
+
+  const anotar = (uid: string, x: Record<string, unknown>) => {
+    if (encontrados.has(uid)) return;
+    encontrados.set(uid, {
+      uid,
+      nombre: String(x.nombre ?? ""),
+      usuario: String(x.usuario ?? ""),
+      foto: x.foto ? String(x.foto) : undefined,
+      ciudad: x.ciudad ? String(x.ciudad) : undefined,
+      pais: x.pais ? String(x.pais) : undefined,
+      versiculo: x.versiculo ? String(x.versiculo) : undefined,
+      cita: x.cita ? String(x.cita) : undefined,
+      desde: typeof x.desde === "number" ? x.desde : undefined,
+    });
+  };
+
+  // 1. El nombre de usuario exacto. Es lo más barato y lo más probable cuando
+  //    alguien le ha pasado su usuario a otro.
+  const limpio = limpiarUsuario(texto);
+  if (usuarioValido(limpio)) {
+    try {
+      const clave = await getDoc(doc(bd, "handles", limpio));
+      if (clave.exists()) {
+        const perfil = await leerPerfil(String(clave.data().uid));
+        if (perfil) encontrados.set(perfil.uid, perfil);
+      }
+    } catch {
+      // Si esto falla, todavía quedan los otros dos caminos.
+    }
+  }
+
+  // 2. Por el principio del nombre de usuario.
+  const porPrefijo = async (campo: string) => {
+    try {
+      const r = await getDocs(
+        query(
+          collection(bd, "usuarios"),
+          where(campo, ">=", texto),
+          where(campo, "<=", texto + ""),
+          orderBy(campo),
+          limit(8),
+        ),
+      );
+      for (const d of r.docs) anotar(d.id, d.data());
+    } catch {
+      // Una consulta sin índice no debe tumbar la búsqueda entera.
+    }
+  };
+
+  if (usuarioValido(limpio)) await porPrefijo("usuario");
+  // 3. Y por el principio del nombre, que es como busca la gente de verdad.
+  await porPrefijo("busca");
+
+  return [...encontrados.values()].slice(0, 8);
+}
+
+/** Por el nombre de usuario exacto. Se mantiene para lo que ya lo usaba. */
+export async function buscarPorUsuario(usuario: string): Promise<Perfil | null> {
+  return (await buscarHermanos(usuario))[0] ?? null;
 }
 
 export async function listarAmigos(uid: string): Promise<Amigo[]> {
@@ -326,6 +411,8 @@ export async function listarAmigos(uid: string): Promise<Amigo[]> {
  */
 export async function pedirAmistad(yo: Perfil, otro: Perfil): Promise<void> {
   if (yo.uid === otro.uid) throw new Error("uno-mismo");
+  if (!yo.uid || !yo.usuario) throw new Error("paso:mi-perfil-incompleto");
+  if (!otro.uid || !otro.usuario) throw new Error("paso:su-perfil-incompleto");
   const { bd } = await nube();
   const { doc, writeBatch } = await import("firebase/firestore");
   const lote = writeBatch(bd);
@@ -417,6 +504,12 @@ export function comoFallo(e: unknown): string {
   const mensaje = e instanceof Error ? e.message : String(e);
   const codigo = (e as { code?: string })?.code ?? "";
 
+  if (mensaje.includes("paso:mi-perfil-incompleto")) {
+    return "Tu perfil está a medias. Guárdalo antes de agregar a nadie.";
+  }
+  if (mensaje.includes("paso:su-perfil-incompleto")) {
+    return "Esa persona todavía no ha terminado su perfil. Que lo guarde y vuelve a probar.";
+  }
   if (mensaje.includes("nombre-ocupado")) return "Ese nombre de usuario ya lo tiene alguien.";
   if (mensaje.includes("uno-mismo")) return "Ese eres tú.";
   if (codigo === "auth/network-request-failed" || mensaje.includes("network")) {
@@ -426,7 +519,13 @@ export function comoFallo(e: unknown): string {
     return "";
   }
   if (codigo === "permission-denied") {
-    return "No tienes permiso para eso.";
+    // Este mensaje **tiene que decir algo que se pueda usar**. «No tienes
+    // permiso» describe el síntoma y esconde la causa, y con eso no se arregla
+    // nada: lo que hace falta saber es en qué operación se cayó.
+    return (
+      "El servidor rechazó la operación (permission-denied). " +
+      (mensaje ? "Detalle: " + mensaje.slice(0, 90) : "")
+    ).trim();
   }
   // Los dos fallos de «esto no esta encendido en la consola». Se distinguen
   // del resto a proposito: no son culpa de quien lo usa ni se arreglan

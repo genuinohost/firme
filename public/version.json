@@ -1,10 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 39,
-  "nombre": "5.7",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.7.apk",
+  "codigo": 40,
+  "nombre": "5.8",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.8.apk",
   "novedades": [
-    "Seis planes nuevos: interceder por nombre, guardar los ojos, memorizar, tu esposa, perdonar y el dinero"
+    "Quitado el nombre de ejemplo del registro: ahora dice solo lo que va en cada campo"
   ],
   "importante": false
 }

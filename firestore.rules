@@ -41,7 +41,13 @@ service cloud.firestore {
         && (!('pais' in d) || (d.pais is string && d.pais.size() <= 60))
         && (!('versiculo' in d) || (d.versiculo is string && d.versiculo.size() <= 300))
         && (!('cita' in d) || (d.cita is string && d.cita.size() <= 60))
-        && (!('foto' in d) || (d.foto is string && d.foto.size() <= 500));
+        // La foto va **dentro del perfil**, encogida a 192 píxeles: unos diez
+        // kilobytes. Así no hace falta montar un almacén de archivos, ni
+        // pagarlo, ni escribir reglas para él, ni acordarse de borrar la foto
+        // cuando alguien borra su cuenta — se va con el perfil, porque es el
+        // perfil. El tope deja sitio de sobra para eso y muy poco para que a
+        // nadie se le ocurra usar esto como disco duro.
+        && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000));
     }
 
     // ------------------------------------------------------------- perfiles

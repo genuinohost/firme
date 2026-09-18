@@ -3,7 +3,7 @@ import { PAISES, paisDe } from "@/datos/paises";
 import {
   aceptarAmistad,
   borrarCuenta,
-  buscarPorUsuario,
+  buscarHermanos,
   comoFallo,
   entrarConGoogle,
   guardarPerfil,
@@ -49,6 +49,15 @@ export function PantallaCuenta({
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [error, setError] = useState("");
   const [editando, setEditando] = useState(false);
+  /**
+   * Sube uno cada vez que se entra, para volver a enganchar el vigilante.
+   *
+   * Hace falta por cómo se carga Firebase en diferido: el vigilante **no se
+   * engancha si en este móvil nunca se había entrado**, que es justo el caso de
+   * quien se registra por primera vez. Sin esto, la sesión se creaba de verdad
+   * pero nadie se lo contaba a la pantalla.
+   */
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     let soltar: (() => void) | null = null;
@@ -65,7 +74,7 @@ export function PantallaCuenta({
       vivo = false;
       soltar?.();
     };
-  }, []);
+  }, [intento]);
 
   // El perfil se lee cuando hay sesión, y se vuelve a leer si cambia de cuenta.
   useEffect(() => {
@@ -86,10 +95,29 @@ export function PantallaCuenta({
     };
   }, [sesion]);
 
+  /**
+   * Entrar, y **enseñarlo en el momento**.
+   *
+   * Aquí sólo se llamaba a `entrarConGoogle()` y se confiaba en que el
+   * vigilante avisara. Para quien ya había entrado alguna vez en ese móvil
+   * funcionaba; **para quien se registraba por primera vez, no**: el vigilante
+   * ni siquiera estaba enganchado, porque no se engancha hasta que consta que
+   * hubo una sesión.
+   *
+   * El resultado era desconcertante: la cuenta se creaba de verdad, pero la
+   * pantalla seguía pidiendo entrar. Había que dar atrás y volver — y entonces
+   * aparecía el perfil ya hecho. Le pasó a Alex y le pasó a José, el primer
+   * amigo que probó la app.
+   *
+   * Ahora se usa lo que devuelve la propia llamada, y además se vuelve a
+   * enganchar el vigilante para que la salida siga avisando.
+   */
   const entrar = async () => {
     setError("");
     try {
-      await entrarConGoogle();
+      const nueva = await entrarConGoogle();
+      setSesion(nueva);
+      setIntento((n) => n + 1);
     } catch (e) {
       const m = comoFallo(e);
       if (m) setError(m);
@@ -240,6 +268,7 @@ function EditorDePerfil({
   const [usuario, setUsuario] = useState(
     perfil?.usuario ?? limpiarUsuario(sesion.nombre ?? sesion.correo?.split("@")[0] ?? ""),
   );
+  const [foto, setFoto] = useState(perfil?.foto ?? sesion.foto ?? "");
   const [ciudad, setCiudad] = useState(perfil?.ciudad ?? "");
   const [pais, setPais] = useState(perfil?.pais ?? "Venezuela");
   const [versiculo, setVersiculo] = useState(perfil?.versiculo ?? "");
@@ -257,7 +286,7 @@ function EditorDePerfil({
       uid: sesion.uid,
       nombre: nombre.trim(),
       usuario,
-      foto: perfil?.foto ?? sesion.foto ?? undefined,
+      foto: foto || undefined,
       ciudad,
       pais,
       versiculo,
@@ -279,6 +308,8 @@ function EditorDePerfil({
       <Etiqueta>{perfil ? "tu perfil" : "completa tu perfil"}</Etiqueta>
 
       <div className="mt-3 flex flex-col gap-3">
+        <ElegirFoto foto={foto} nombre={nombre} onFoto={setFoto} />
+
         {/*
           Los ejemplos **describen** lo que va en el campo. No inventan a una
           persona, y mucho menos nombran a una real.
@@ -483,7 +514,7 @@ function Cifra({
 function Amigos({ yo }: { yo: Perfil }) {
   const [lista, setLista] = useState<Amigo[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
-  const [hallado, setHallado] = useState<Perfil | null | "nada">(null);
+  const [hallados, setHallados] = useState<Perfil[] | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState("");
 
@@ -513,10 +544,9 @@ function Amigos({ yo }: { yo: Perfil }) {
   const buscar = async () => {
     setBuscando(true);
     setError("");
-    setHallado(null);
+    setHallados(null);
     try {
-      const p = await buscarPorUsuario(busqueda);
-      setHallado(p ?? "nada");
+      setHallados(await buscarHermanos(busqueda));
     } catch (e) {
       setError(comoFallo(e));
     } finally {
@@ -528,7 +558,7 @@ function Amigos({ yo }: { yo: Perfil }) {
     setError("");
     try {
       await pedirAmistad(yo, otro);
-      setHallado(null);
+      setHallados(null);
       setBusqueda("");
       await refrescar();
     } catch (e) {
@@ -544,39 +574,56 @@ function Amigos({ yo }: { yo: Perfil }) {
         <div className="flex-1">
           <Entrada
             value={busqueda}
-            onChange={(e) => setBusqueda(limpiarUsuario(e.target.value))}
-            placeholder="Su nombre de usuario"
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Su nombre o su usuario"
             onKeyDown={(e) => {
               if (e.key === "Enter") void buscar();
             }}
           />
         </div>
-        <Boton deshabilitado={!usuarioValido(busqueda) || buscando} onClick={() => void buscar()}>
+        <Boton deshabilitado={busqueda.trim().length < 3 || buscando} onClick={() => void buscar()}>
           {buscando ? "…" : "Buscar"}
         </Boton>
       </div>
 
-      {hallado === "nada" ? (
+      {hallados?.length === 0 ? (
         <p className="mt-2 text-xs leading-relaxed text-tenue">
-          No hay nadie con ese nombre. Compruébalo con él: se escribe igual que aparece
-          en su perfil, con el @ por delante.
+          No hay nadie con ese nombre. Prueba con su nombre de usuario — el que
+          empieza por @ y le sale a él en su perfil.
         </p>
       ) : null}
 
-      {hallado && hallado !== "nada" ? (
-        <div className="mt-3 flex items-center gap-3 rounded-xl border border-acento/40 bg-acento/5 p-3">
-          <Retrato nombre={hallado.nombre} foto={hallado.foto} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{hallado.nombre}</p>
-            <p className="cifras truncate text-xs text-tenue">@{hallado.usuario}</p>
-          </div>
-          {hallado.uid === yo.uid ? (
-            <span className="shrink-0 text-xs text-tenue">eres tú</span>
-          ) : (
-            <Boton variante="fuerte" onClick={() => void pedir(hallado)}>
-              Agregar
-            </Boton>
-          )}
+      {/*
+        Varios resultados, no uno.
+
+        Antes esto sólo encontraba por el nombre de usuario exacto, y eso es un
+        muro: nadie se sabe de memoria el usuario de otro. Alex intentó agregar
+        a un amigo, no le salió nadie, y dio por hecho que la función estaba
+        rota — cuando lo que pasaba es que había buscado por el nombre.
+      */}
+      {hallados && hallados.length > 0 ? (
+        <div className="mt-3 flex flex-col gap-2">
+          {hallados.map((h) => (
+            <div
+              key={h.uid}
+              className="flex items-center gap-3 rounded-xl border border-acento/40 bg-acento/5 p-3"
+            >
+              <RetratoPequeno nombre={h.nombre} foto={h.foto} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{h.nombre}</p>
+                <p className="cifras truncate text-xs text-tenue">
+                  {"@" + h.usuario + (h.ciudad ? " · " + h.ciudad : "")}
+                </p>
+              </div>
+              {h.uid === yo.uid ? (
+                <span className="shrink-0 text-xs text-tenue">eres tú</span>
+              ) : (
+                <Boton variante="fuerte" onClick={() => void pedir(h)}>
+                  Agregar
+                </Boton>
+              )}
+            </div>
+          ))}
         </div>
       ) : null}
 
@@ -772,4 +819,125 @@ function Cierre({ perfil, onFuera }: { perfil: Perfil; onFuera: () => void }) {
       </div>
     </Tarjeta>
   );
+}
+
+/**
+ * Elegir la foto del perfil desde el propio teléfono.
+ *
+ * Alex: «agregar opción de foto de perfil, que se pueda subir desde el cell».
+ * Hasta ahora sólo se traía el avatar de Google, y quien no tiene foto ahí se
+ * quedaba con una letra.
+ *
+ * ── Por qué no hace falta un servidor de archivos ─────────────────────────
+ *
+ * La foto se **encoge aquí mismo** a 192 píxeles y se guarda con el perfil. Un
+ * retrato de 192 píxeles pesa unos diez kilobytes, que caben de sobra en el
+ * perfil: no hace falta montar un almacén de archivos, ni pagarlo, ni escribir
+ * reglas nuevas para él, ni preocuparse de borrar la foto cuando alguien borra
+ * su cuenta — se va con el perfil, porque es el perfil.
+ *
+ * Se recorta cuadrada por el centro antes de encoger. Si no, una foto vertical
+ * del móvil sale aplastada, y nadie se pone una foto para verse deformado.
+ */
+function ElegirFoto({
+  foto,
+  nombre,
+  onFoto,
+}: {
+  foto: string;
+  nombre: string;
+  onFoto: (dato: string) => void;
+}) {
+  const [trabajando, setTrabajando] = useState(false);
+  const [error, setError] = useState("");
+
+  const elegir = async (archivo: File) => {
+    setTrabajando(true);
+    setError("");
+    try {
+      onFoto(await encoger(archivo));
+    } catch {
+      setError("No se pudo usar esa imagen. Prueba con otra.");
+    } finally {
+      setTrabajando(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3.5">
+      <Retrato nombre={nombre || "·"} foto={foto || undefined} />
+      <div className="min-w-0 flex-1">
+        <label className="block">
+          <span
+            className={`inline-block cursor-pointer rounded-xl border px-3 py-2 text-sm transition ${
+              trabajando
+                ? "border-borde text-tenue"
+                : "border-borde text-tenue hover:border-acento hover:text-acento"
+            }`}
+          >
+            {trabajando ? "Preparando…" : foto ? "Cambiar la foto" : "Poner una foto"}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              // Se limpia el input para que elegir el mismo archivo otra vez
+              // vuelva a disparar el cambio.
+              e.target.value = "";
+              if (f) void elegir(f);
+            }}
+          />
+        </label>
+        {foto ? (
+          <button
+            onClick={() => onFoto("")}
+            className="ml-2 rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-fallo"
+          >
+            quitar
+          </button>
+        ) : null}
+        <p className="mt-1.5 text-xs leading-relaxed text-tenue">
+          Se guarda pequeña, dentro de tu perfil. La ven los hermanos que te busquen.
+        </p>
+        {error ? <p className="mt-1 text-xs text-fallo">{error}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+/** Lado del retrato, en píxeles. Diez kilobytes y se ve bien en cualquier móvil. */
+const LADO_FOTO = 192;
+
+/**
+ * Recorta cuadrado por el centro y encoge, sin salir del teléfono.
+ *
+ * `createImageBitmap` no existe en todos los navegadores viejos, así que se cae
+ * a una imagen normal: lo que no puede pasar es que el botón no haga nada.
+ */
+async function encoger(archivo: File): Promise<string> {
+  const imagen = await cargarImagen(archivo);
+  const lado = Math.min(imagen.width, imagen.height);
+  const x = (imagen.width - lado) / 2;
+  const y = (imagen.height - lado) / 2;
+
+  const lienzo = document.createElement("canvas");
+  lienzo.width = LADO_FOTO;
+  lienzo.height = LADO_FOTO;
+  const pincel = lienzo.getContext("2d");
+  if (!pincel) throw new Error("sin-lienzo");
+  pincel.drawImage(imagen, x, y, lado, lado, 0, 0, LADO_FOTO, LADO_FOTO);
+
+  return lienzo.toDataURL("image/jpeg", 0.75);
+}
+
+function cargarImagen(archivo: File): Promise<HTMLImageElement | ImageBitmap> {
+  if (typeof createImageBitmap === "function") return createImageBitmap(archivo);
+  return new Promise((bien, mal) => {
+    const img = new Image();
+    img.onload = () => bien(img);
+    img.onerror = () => mal(new Error("no-se-pudo-leer"));
+    img.src = URL.createObjectURL(archivo);
+  });
 }
