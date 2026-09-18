@@ -123,7 +123,7 @@ Genuino es de la comunidad cristiana Genuino Love.
 |---|---|
 | Icono 512×512 | `docs/tienda/icono-play-512.png` |
 | Gráfico destacado 1024×500 | `docs/tienda/destacado-1024x500.png` |
-| Capturas de teléfono | **pendientes** — mínimo 2, hasta 8 |
+| Capturas de teléfono | `docs/tienda/capturas/` — **5 de 7**, faltan dos |
 | Página de borrado de cuenta | `https://genuino-pro.web.app/borrar-cuenta.html` ✅ |
 
 **Las capturas las hace Alex desde su móvil**, no desde el ordenador. No es
