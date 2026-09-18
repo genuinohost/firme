@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PAISES, paisDe } from "@/datos/paises";
+import { abrirEnlace } from "@/logica/enlaces";
 import {
   aceptarAmistad,
   borrarCuenta,
@@ -14,6 +15,10 @@ import {
   quitarAmistad,
   salir,
   usuarioValido,
+  leerWhatsapp,
+  guardarWhatsapp,
+  enlaceWhatsapp,
+  publicarCifras,
   vigilarSesion,
   type Amigo,
   type Perfil,
@@ -112,6 +117,41 @@ export function PantallaCuenta({
    * Ahora se usa lo que devuelve la propia llamada, y además se vuelve a
    * enganchar el vigilante para que la salida siga avisando.
    */
+  /**
+   * Sube las cifras del teléfono, o las retira si ya no se quieren enseñar.
+   *
+   * **Las cifras viven en el teléfono**; esto sólo publica una copia para que
+   * un hermano pueda animarte. Se hace al abrir la pantalla de la cuenta y no
+   * a cada cambio: escribir en el servidor cada vez que se marca un bloque
+   * sería gastar la cuota de todos para que nadie lo note.
+   */
+  useEffect(() => {
+    if (!perfil) return;
+    let vivo = true;
+    const mostrar = perfil.muestraRachas !== false;
+    const cambiaron =
+      perfil.racha !== racha ||
+      perfil.diasEnPie !== diasEnPie ||
+      perfil.cumplidos !== totalCumplidos;
+    // Si están apagadas y ya no hay nada publicado, no hay nada que hacer.
+    if (!cambiaron && (mostrar || perfil.racha === undefined)) return;
+    void publicarCifras(perfil.uid, { racha, diasEnPie, cumplidos: totalCumplidos }, mostrar)
+      .then(() => {
+        if (vivo && mostrar) {
+          setPerfil((p) =>
+            p ? { ...p, racha, diasEnPie, cumplidos: totalCumplidos } : p,
+          );
+        }
+      })
+      .catch(() => {
+        // Que no se puedan publicar no debe romper la pantalla: son un adorno
+        // para otros, no algo que el dueño necesite.
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [perfil, racha, diasEnPie, totalCumplidos]);
+
   const entrar = async () => {
     setError("");
     try {
@@ -273,8 +313,21 @@ function EditorDePerfil({
   const [pais, setPais] = useState(perfil?.pais ?? "Venezuela");
   const [versiculo, setVersiculo] = useState(perfil?.versiculo ?? "");
   const [cita, setCita] = useState(perfil?.cita ?? "");
+  const [muestraRachas, setMuestraRachas] = useState(perfil?.muestraRachas !== false);
+  const [whatsapp, setWhatsapp] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+
+  // El WhatsApp vive aparte del perfil, así que se pide por su cuenta.
+  useEffect(() => {
+    let vivo = true;
+    void leerWhatsapp(sesion.uid).then((w) => {
+      if (vivo && w) setWhatsapp(w);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [sesion.uid]);
 
   const usuarioBien = usuarioValido(usuario);
   const puede = nombre.trim().length >= 2 && usuarioBien && !guardando;
@@ -292,9 +345,11 @@ function EditorDePerfil({
       versiculo,
       cita,
       desde: perfil?.desde ?? Date.now(),
+      muestraRachas,
     };
     try {
       await guardarPerfil(nuevo, perfil?.usuario);
+      await guardarWhatsapp(sesion.uid, whatsapp);
       onGuardado(nuevo);
     } catch (e) {
       setError(comoFallo(e));
@@ -389,6 +444,54 @@ function EditorDePerfil({
             maxLength={60}
           />
         </Campo>
+
+        {/*
+          El WhatsApp **no va en el perfil**, va aparte.
+
+          El perfil lo puede leer cualquiera que haya entrado — hace falta para
+          buscar a un hermano por su nombre —, y un número de teléfono ahí lo
+          recoge cualquiera con una cuenta y un rato libre. Vive en otro sitio,
+          y las reglas del servidor comprueban que quien lo pide sea un hermano
+          ya aceptado.
+        */}
+        <Campo etiqueta="Tu WhatsApp (sólo lo ven tus hermanos)">
+          <Entrada
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="+58 412 000 0000"
+            maxLength={40}
+          />
+          <p className="mt-1.5 text-xs leading-relaxed text-tenue">
+            Para que puedan escribirte cuando haga falta. Puedes pegar el número o
+            el enlace. <strong>No lo ve quien sólo te busca</strong>: sólo los
+            hermanos que ya aceptaste.
+          </p>
+        </Campo>
+
+        {/*
+          Las cifras, y quién decide.
+
+          Alex lo planteó así y es lo correcto: «cada quien decide si las
+          oculta». Enseñar rachas ajenas puede volver esto un escaparate;
+          esconderlas siempre le quita a un hermano la forma más sencilla de
+          animar a otro. La decisión es de quien se juega la suya.
+        */}
+        <label className="flex items-start justify-between gap-3 rounded-xl border border-borde px-3 py-3">
+          <span className="min-w-0">
+            <span className="block text-sm">Que mis hermanos vean mis cifras</span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-tenue">
+              Tu racha, tus días en pie y lo cumplido. Si lo apagas, se borran del
+              servidor — no se quedan escondidas ahí.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={muestraRachas}
+            onChange={(e) => setMuestraRachas(e.target.checked)}
+            className="mt-0.5 size-5 shrink-0 accent-[var(--color-acento)]"
+          />
+        </label>
+
 
         {error ? <Aviso>{error}</Aviso> : null}
 
@@ -512,6 +615,7 @@ function Cifra({
 // ------------------------------------------------------------------ los amigos
 
 function Amigos({ yo }: { yo: Perfil }) {
+  const [abierto, setAbierto] = useState<string | null>(null);
   const [lista, setLista] = useState<Amigo[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [hallados, setHallados] = useState<Perfil[] | null>(null);
@@ -565,6 +669,14 @@ function Amigos({ yo }: { yo: Perfil }) {
       setError(comoFallo(e));
     }
   };
+
+  if (abierto) {
+    return (
+      <div className="flex flex-col gap-4">
+        <FichaDeHermano uid={abierto} onVolver={() => setAbierto(null)} />
+      </div>
+    );
+  }
 
   return (
     <Tarjeta>
@@ -660,7 +772,7 @@ function Amigos({ yo }: { yo: Perfil }) {
           <Etiqueta>tus hermanos</Etiqueta>
           <div className="mt-2 flex flex-col gap-2">
             {aceptadas.map((a) => (
-              <FilaAmigo key={a.uid} amigo={a}>
+              <FilaAmigo key={a.uid} amigo={a} onAbrir={() => setAbierto(a.uid)}>
                 <button
                   onClick={async () => {
                     await quitarAmistad(yo.uid, a.uid);
@@ -708,14 +820,41 @@ function Amigos({ yo }: { yo: Perfil }) {
   );
 }
 
-function FilaAmigo({ amigo, children }: { amigo: Amigo; children: React.ReactNode }) {
+/**
+ * Una fila de hermano. **Se toca y se abre su ficha.**
+ *
+ * Alex: «toco su nombre y no pasa nada. Debería poder ver su perfil, sus
+ * rachas, frases favoritas». Tenía razón — agregar a alguien y que no se pueda
+ * ver nada de él es agregar por agregar.
+ */
+function FilaAmigo({
+  amigo,
+  onAbrir,
+  children,
+}: {
+  amigo: Amigo;
+  onAbrir?: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-borde px-3 py-2.5">
-      <RetratoPequeno nombre={amigo.nombre} foto={amigo.foto} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{amigo.nombre}</p>
-        <p className="cifras truncate text-xs text-tenue">@{amigo.usuario}</p>
-      </div>
+    <div className="flex items-center gap-1 rounded-xl border border-borde pr-2.5 transition hover:border-acento">
+      <button
+        onClick={onAbrir}
+        disabled={!onAbrir}
+        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
+        aria-label={onAbrir ? `Ver el perfil de ${amigo.nombre}` : undefined}
+      >
+        <RetratoPequeno nombre={amigo.nombre} foto={amigo.foto} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm">{amigo.nombre}</span>
+          <span className="cifras block truncate text-xs text-tenue">@{amigo.usuario}</span>
+        </span>
+        {onAbrir ? (
+          <span className="shrink-0 text-tenue" aria-hidden>
+            ›
+          </span>
+        ) : null}
+      </button>
       {children}
     </div>
   );
@@ -940,4 +1079,127 @@ function cargarImagen(archivo: File): Promise<HTMLImageElement | ImageBitmap> {
     img.onerror = () => mal(new Error("no-se-pudo-leer"));
     img.src = URL.createObjectURL(archivo);
   });
+}
+
+/**
+ * La ficha de un hermano.
+ *
+ * Alex: «toco su nombre y no pasa nada. Debería poder ver su perfil, sus
+ * rachas —cada quien decide si las oculta—, frases favoritas».
+ *
+ * Agregar a alguien y que no se pueda ver nada de él es agregar por agregar.
+ * Aquí está lo que esa persona **ha decidido** enseñar, y nada más:
+ *
+ *  - Su perfil y el versículo que lleva por delante, que es lo que eligió
+ *    poner de cara a los demás.
+ *  - Sus cifras, **sólo si las tiene abiertas**. Es su decisión, no la nuestra:
+ *    enseñar rachas ajenas puede volver esto un escaparate, y esconderlas
+ *    siempre le quita a un hermano la forma más sencilla de animar a otro.
+ *  - Su WhatsApp, **sólo si lo puso** — y sólo llega aquí porque ya sois
+ *    hermanos aceptados; las reglas del servidor lo comprueban.
+ *
+ * Lo que no está, y no va a estar: nada de lo que escribe. Ni su diario, ni sus
+ * notas, ni sus repasos.
+ */
+function FichaDeHermano({
+  uid,
+  onVolver,
+}: {
+  uid: string;
+  onVolver: () => void;
+}) {
+  const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let vivo = true;
+    void (async () => {
+      const [p, w] = await Promise.all([leerPerfil(uid), leerWhatsapp(uid)]);
+      if (!vivo) return;
+      setPerfil(p);
+      setWhatsapp(w);
+      setCargando(false);
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [uid]);
+
+  if (cargando) return <Vacio>Un momento…</Vacio>;
+  if (!perfil) return <Vacio>Ese hermano ya no tiene perfil.</Vacio>;
+
+  const bandera = paisDe(perfil.pais)?.bandera ?? "";
+  const desde = perfil.desde
+    ? new Date(perfil.desde).toLocaleDateString("es", { month: "long", year: "numeric" })
+    : null;
+  const enlace = whatsapp ? enlaceWhatsapp(whatsapp) : null;
+
+  return (
+    <>
+      <button
+        onClick={onVolver}
+        className="-ml-2 self-start rounded-lg px-3 py-2 text-sm text-tenue transition hover:text-texto"
+      >
+        ‹ Mis hermanos
+      </button>
+
+      <Tarjeta>
+        <div className="flex items-start gap-3.5">
+          <Retrato nombre={perfil.nombre} foto={perfil.foto} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-lg leading-tight font-semibold">{perfil.nombre}</p>
+            <p className="cifras truncate text-sm text-acento">@{perfil.usuario}</p>
+            {perfil.ciudad || perfil.pais ? (
+              <p className="mt-1 truncate text-xs text-tenue">
+                {bandera ? bandera + " " : ""}
+                {[perfil.ciudad, perfil.pais].filter(Boolean).join(", ")}
+              </p>
+            ) : null}
+            {desde ? <p className="text-xs text-tenue">en Genuino desde {desde}</p> : null}
+          </div>
+        </div>
+
+        {perfil.versiculo ? (
+          <blockquote className="mt-4 border-l-2 border-acento/60 pl-3">
+            <p className="font-cita text-[15px] leading-relaxed italic">
+              «{perfil.versiculo}»
+            </p>
+            {perfil.cita ? <p className="mt-1 text-xs text-tenue">— {perfil.cita}</p> : null}
+          </blockquote>
+        ) : null}
+
+        {perfil.muestraRachas !== false && perfil.racha !== undefined ? (
+          <>
+            <div className="mt-4 grid grid-cols-3 gap-2.5">
+              <Cifra valor={perfil.racha ?? 0} etiqueta="racha" acento />
+              <Cifra valor={perfil.diasEnPie ?? 0} etiqueta="días en pie" />
+              <Cifra valor={perfil.cumplidos ?? 0} etiqueta="cumplidos" />
+            </div>
+            <p className="mt-2 text-center text-[11px] text-tenue">
+              Las comparte para que le animes, no para medirse contigo.
+            </p>
+          </>
+        ) : (
+          <p className="mt-4 text-center text-xs leading-relaxed text-tenue">
+            Prefiere no enseñar sus cifras, y está bien: la carrera es suya y de Dios.
+          </p>
+        )}
+      </Tarjeta>
+
+      {enlace ? (
+        <Tarjeta>
+          <Etiqueta>escríbele</Etiqueta>
+          <p className="mt-2 text-sm leading-relaxed">
+            Una palabra a tiempo sostiene más que diez consejos tarde.
+          </p>
+          <div className="mt-3">
+            <Boton variante="fuerte" ancho onClick={() => void abrirEnlace(enlace)}>
+              Escribirle por WhatsApp
+            </Boton>
+          </div>
+        </Tarjeta>
+      ) : null}
+    </>
+  );
 }

@@ -47,7 +47,17 @@ service cloud.firestore {
         // cuando alguien borra su cuenta — se va con el perfil, porque es el
         // perfil. El tope deja sitio de sobra para eso y muy poco para que a
         // nadie se le ocurra usar esto como disco duro.
-        && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000));
+        && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000))
+        // Las cifras que cada uno decide enseñar a sus hermanos. Se validan
+        // como números y con un techo: no para desconfiar de la app, sino
+        // porque **estas reglas son lo único que sigue en pie si alguien no
+        // usa la app** y escribe contra la base directamente.
+        && (!('muestraRachas' in d) || d.muestraRachas is bool)
+        && (!('racha' in d) || (d.racha is int && d.racha >= 0 && d.racha <= 100000))
+        && (!('diasEnPie' in d) || (d.diasEnPie is int && d.diasEnPie >= 0 && d.diasEnPie <= 100000))
+        && (!('cumplidos' in d) || (d.cumplidos is int && d.cumplidos >= 0 && d.cumplidos <= 10000000))
+        // El nombre en minúsculas, sólo para poder buscar.
+        && (!('busca' in d) || (d.busca is string && d.busca.size() <= 60));
     }
 
     // ------------------------------------------------------------- perfiles
@@ -60,6 +70,30 @@ service cloud.firestore {
       allow read: if haEntrado();
       allow create, update: if esElMismo(uid) && perfilRazonable(request.resource.data);
       allow delete: if esElMismo(uid);
+
+      // ------------------------------------------------- lo que sólo ven los suyos
+      //
+      // **El WhatsApp no va en el perfil.** El perfil lo puede leer cualquiera
+      // que haya entrado —hace falta para poder buscar a un hermano por su
+      // nombre—, y un número de teléfono ahí lo recoge cualquiera con una
+      // cuenta y un rato libre.
+      //
+      // Así que vive aparte, y aquí se comprueba de verdad que quien lo pide es
+      // un hermano **ya aceptado**: se mira en la lista de amigos del dueño si
+      // existe el documento de quien pregunta y si está en «aceptada». Cuesta
+      // una lectura más, y es exactamente lo que hay que pagar por esto.
+      match /privado/{cual} {
+        allow read: if esElMismo(uid)
+          || (
+            haEntrado()
+            && exists(/databases/$(database)/documents/usuarios/$(uid)/amigos/$(request.auth.uid))
+            && get(/databases/$(database)/documents/usuarios/$(uid)/amigos/$(request.auth.uid)).data.estado == 'aceptada'
+          );
+        allow write: if esElMismo(uid)
+          && (!('whatsapp' in request.resource.data)
+              || (request.resource.data.whatsapp is string
+                  && request.resource.data.whatsapp.size() <= 40));
+      }
 
       // --------------------------------------------------------- amistades
       //

@@ -115,7 +115,29 @@ export type Perfil = {
   cita?: string;
   /** Cuándo empezó. Milisegundos. */
   desde?: number;
+
+  /**
+   * Si deja que sus hermanos vean sus cifras.
+   *
+   * **La decisión es de cada uno, y por eso existe este campo.** Enseñar
+   * rachas ajenas en una app de disciplina cristiana puede volverla un
+   * escaparate — pero esconderlas siempre le quita a un hermano la forma más
+   * sencilla de animar a otro. Que lo elija quien se juega la suya.
+   *
+   * Si falta, se entiende que sí: es lo que dijo Alex — «cada quien decide si
+   * las oculta».
+   */
+  muestraRachas?: boolean;
+  /** Días seguidos. Sólo está si la persona deja verlas. */
+  racha?: number;
+  /** Días desde que empezó a usar la app. */
+  diasEnPie?: number;
+  /** Bloques cumplidos en total. */
+  cumplidos?: number;
 };
+
+/** Las cifras que se publican, y sólo si su dueño quiere. */
+export type Cifras = { racha: number; diasEnPie: number; cumplidos: number };
 
 export type Amigo = {
   uid: string;
@@ -220,7 +242,40 @@ export async function leerPerfil(uid: string): Promise<Perfil | null> {
     versiculo: x.versiculo ? String(x.versiculo) : undefined,
     cita: x.cita ? String(x.cita) : undefined,
     desde: typeof x.desde === "number" ? x.desde : undefined,
+    // Si no dice nada, se entiende que sí las enseña.
+    muestraRachas: x.muestraRachas !== false,
+    racha: typeof x.racha === "number" ? x.racha : undefined,
+    diasEnPie: typeof x.diasEnPie === "number" ? x.diasEnPie : undefined,
+    cumplidos: typeof x.cumplidos === "number" ? x.cumplidos : undefined,
   };
+}
+
+/**
+ * Publica las cifras del teléfono, o las retira.
+ *
+ * **Las cifras salen del teléfono y sólo suben si la persona lo permite.** Si
+ * lo apaga, no basta con dejar de enviarlas: hay que **borrar las que ya
+ * estaban**, o se quedarían ahí para siempre las del día que lo apagó. Apagar
+ * algo tiene que apagarlo de verdad.
+ */
+export async function publicarCifras(
+  uid: string,
+  cifras: Cifras,
+  mostrar: boolean,
+): Promise<void> {
+  const { bd } = await nube();
+  const { doc, updateDoc, deleteField } = await import("firebase/firestore");
+  await updateDoc(
+    doc(bd, "usuarios", uid),
+    mostrar
+      ? { muestraRachas: true, ...cifras }
+      : {
+          muestraRachas: false,
+          racha: deleteField(),
+          diasEnPie: deleteField(),
+          cumplidos: deleteField(),
+        },
+  );
 }
 
 /** Minúsculas y sin tildes: así «José» encuentra a «jose» y al revés. */
@@ -295,6 +350,7 @@ export async function guardarPerfil(perfil: Perfil, usuarioAnterior?: string): P
     if (perfil.pais?.trim()) datos.pais = perfil.pais.trim();
     if (perfil.versiculo?.trim()) datos.versiculo = perfil.versiculo.trim();
     if (perfil.cita?.trim()) datos.cita = perfil.cita.trim();
+    datos.muestraRachas = perfil.muestraRachas !== false;
 
     t.set(doc(bd, "usuarios", perfil.uid), datos);
   });
@@ -557,4 +613,53 @@ export function comoFallo(e: unknown): string {
   return pista
     ? `No se pudo entrar. Enséñale esto a quien lleve la app: ${pista}`
     : "No se pudo entrar, y no se pudo averiguar por qué.";
+}
+
+// ------------------------------------------------- lo que sólo ven los suyos
+
+/**
+ * El WhatsApp, que **no va en el perfil**.
+ *
+ * El perfil lo puede leer cualquiera que haya entrado —hace falta para poder
+ * buscar a un hermano por su nombre—, y un número de teléfono ahí lo recoge
+ * cualquiera con una cuenta y un rato libre. Así que vive aparte, y las reglas
+ * comprueban que quien lo pide sea un hermano **ya aceptado**.
+ */
+export async function guardarWhatsapp(uid: string, whatsapp: string): Promise<void> {
+  const { bd } = await nube();
+  const { doc, setDoc } = await import("firebase/firestore");
+  await setDoc(doc(bd, "usuarios", uid, "privado", "contacto"), {
+    whatsapp: whatsapp.trim().slice(0, 40),
+  });
+}
+
+/** Devuelve el WhatsApp si somos hermanos suyos; si no, las reglas lo niegan. */
+export async function leerWhatsapp(uid: string): Promise<string | null> {
+  const { bd } = await nube();
+  const { doc, getDoc } = await import("firebase/firestore");
+  try {
+    const d = await getDoc(doc(bd, "usuarios", uid, "privado", "contacto"));
+    const w = d.exists() ? String(d.data().whatsapp ?? "") : "";
+    return w || null;
+  } catch {
+    // Que lo niegue no es un fallo: es la regla haciendo su trabajo.
+    return null;
+  }
+}
+
+/**
+ * El enlace para escribirle, a partir de lo que haya puesto.
+ *
+ * Se acepta tanto un número como un enlace pegado entero, porque la gente pega
+ * lo que tiene a mano y no hay por qué hacerle aprender un formato. De un
+ * número se quita todo lo que no sea cifra: los espacios, los guiones y los
+ * paréntesis que trae cualquier número copiado de la agenda.
+ */
+export function enlaceWhatsapp(bruto: string): string | null {
+  const t = bruto.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) return t;
+  const cifras = t.replace(/\D/g, "");
+  if (cifras.length < 8) return null;
+  return `https://wa.me/${cifras}`;
 }
