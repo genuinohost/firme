@@ -280,15 +280,19 @@ function EditorDePerfil({
 
       <div className="mt-3 flex flex-col gap-3">
         {/*
-          Los ejemplos **describen** lo que va en el campo, no inventan a una
-          persona.
+          Los ejemplos **describen** lo que va en el campo. No inventan a una
+          persona, y mucho menos nombran a una real.
 
-          Aquí estaba escrito el nombre real de Alex, y un amigo suyo que
-          entraba por primera vez se encontró con «johnny.martinez» de ejemplo.
-          Da igual que sea sólo un texto de ayuda: quien lo ve no distingue un
-          ejemplo del dato de otro, y lo que concluye es que la app le está
-          enseñando la cuenta de alguien. Poner el nombre de una persona real
-          —aunque sea el dueño— en la pantalla de otra no se hace.
+          Aquí estuvo el nombre del dueño de la app, y alguien que entraba por
+          primera vez se lo encontró de ejemplo en su propio registro. Da igual
+          que fuera sólo un texto de ayuda: quien lo ve no distingue un ejemplo
+          del dato de otro, y lo que concluye es que la app le está enseñando
+          una cuenta ajena.
+
+          El guardián de `scripts/publicar-release.mjs` se niega a publicar si
+          esto vuelve — y la primera vez que saltó fue por **este mismo
+          comentario**, que repetía el nombre al explicarlo. Por eso ahora no
+          lo dice.
         */}
         <Campo etiqueta="Cómo te llamas">
           <Entrada
