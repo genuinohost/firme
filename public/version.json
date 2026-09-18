@@ -1,12 +1,14 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 44,
-  "nombre": "6.2",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.2.apk",
+  "codigo": 45,
+  "nombre": "6.3",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.3.apk",
   "novedades": [
-    "Toca el nombre de un hermano y se abre su ficha: su perfil, su versiculo y sus cifras.",
-    "Cada quien decide si ensena sus cifras. Si lo apagas, se borran del servidor.",
-    "Puedes poner tu WhatsApp en el perfil. Solo lo ven los hermanos que ya aceptaste."
+    "Cada nota del diario y de los repasos puede publicarse o quedarse privada. Nace privada siempre.",
+    "Lo que publicas lo puede leer cualquiera, hermano tuyo o no, y puedes retirarlo cuando quieras.",
+    "No se publica de que plan viene la nota ni como acabo tu dia.",
+    "Muro en Juntos: lo que escriben los hermanos, con denunciar y bloquear.",
+    "En la ficha de un hermano ya se ven sus notas publicadas."
   ],
   "importante": false
 }
