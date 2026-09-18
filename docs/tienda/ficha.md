@@ -29,6 +29,16 @@ palabras por las que se busca y que no caben en el título.
 
 ## Descripción larga (4.000 caracteres)
 
+> ⚠️ **Rehecha el 18-09-2026.** La versión anterior decía «Genuino no recoge
+> ningún dato. No hay cuentas, no hay registro, no hay servidor». Era cierto
+> hasta la 5.2 y dejó de serlo al abrir las cuentas. **Una promesa de
+> privacidad falsa en la ficha de Play es motivo de retirada**, y además es una
+> promesa a personas reales que la app ya no cumple.
+>
+> Decía también «quince planes» cuando son veintiuno. **Cada vez que cambie lo
+> que la app hace con los datos de alguien, este texto se revisa**: es lo
+> primero que lee quien decide instalarla.
+
 ```
 ¿Cuántas veces le prometiste a Dios que mañana te levantabas a orar?
 
@@ -53,10 +63,12 @@ alarma aparece tu porqué: la razón que escribiste tú, la que te levanta
 cuando no quieres levantarte.
 
 PLANES CON RACHA PROPIA
-Quince planes para elegir, cada uno con su cuenta aparte: madrugar,
+Veinte planes para elegir, cada uno con su cuenta aparte: madrugar,
 santidad, lectura bíblica, oración, ayuno, el trabajo como servicio a
-Dios, cuidar la lengua, la familia. Puedes llevar cuarenta días madrugando
-y estar peleando en otra área, y conviene saber las dos cosas.
+Dios, cuidar la lengua, la familia, guardar los ojos, perdonar de corazón,
+poner orden en el dinero, interceder por nombre. Puedes llevar cuarenta
+días madrugando y estar peleando en otra área, y conviene saber las dos
+cosas.
 
 EL REPASO DE LA NOCHE
 Cada noche repasas tus compromisos, punto por punto. Y en el plan de
@@ -84,13 +96,24 @@ No porcentajes vacíos. Genuino te dice dónde estás fallando de verdad:
 treinta». Eso sí sirve para pelear mejor.
 
 JUNTOS
-Enlaces a los grupos de la comunidad y a las reuniones de oración en
-directo, con la hora ya convertida a tu huso.
+El muro con lo que los hermanos han querido publicar, los enlaces a los
+grupos de la comunidad y las reuniones de oración en directo, con la hora
+ya convertida a tu huso.
 
-TUYA, Y DE NADIE MÁS
-Genuino no recoge ningún dato. No hay cuentas, no hay registro, no hay
-servidor. Tu rutina, tus razones, tus rachas y tus notas viven sólo en tu
-teléfono. Sin anuncios, sin rastreo, sin analítica. Y gratis, entera.
+TU DIARIO ES TUYO
+Tu rutina, tus razones, tus rachas, tus notas y tu diario viven sólo en tu
+teléfono. No se sincronizan en ninguna parte. Sin anuncios, sin rastreo,
+sin analítica. Y gratis, entera.
+
+La app funciona completa sin cuenta. Si quieres, puedes crear una —con tu
+cuenta de Google— para que otros hermanos te encuentren, agregarlos y
+caminar juntos. Entonces se guardan tu nombre, tu foto, tu ciudad, tu país
+y tus amistades, y nada más.
+
+Y si alguna vez quieres animar a otro con algo que escribiste, cada nota y
+cada frase guardada tienen un botón de publicar, apagado siempre. Lo que
+publiques lo podrá leer cualquiera, y podrás retirarlo cuando quieras. Lo
+que no publiques no sale de tu teléfono.
 
 Genuino es de la comunidad cristiana Genuino Love.
 
