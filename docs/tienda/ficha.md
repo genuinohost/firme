@@ -204,20 +204,27 @@ declara marcando cada dato como **«opcional»**, no como obligatorio.
 | Fotos y vídeos | **Fotos** (el avatar de Google) | Sí | No | No | Foto del perfil |
 | Actividad en la app | **Otro contenido generado por el usuario** (el versículo del perfil) | Sí | No | No | Encabezar el perfil |
 | Actividad en la app | **Otras acciones** (con quién tiene amistad) | Sí | No | No | La función de amigos |
-| Mensajes | **Otros mensajes dentro de la app** (las notas que el usuario publica en el muro y las frases que lleva a su perfil) | Sí | **Sí** | No | Que otros las lean y se animen |
+| Mensajes | **Otros mensajes dentro de la app** (las notas que el usuario publica en el muro y las frases que lleva a su perfil) | Sí | No | No | Que otros las lean y se animen |
+| Archivos de audio | **Grabaciones de voz o de sonido** | Sí | No | No | Declarado por adelantado: las notas de voz vienen |
 | Información personal | **Número de teléfono** (el WhatsApp del perfil, si lo pone) | Sí | No | No | Que sus amigos aceptados puedan escribirle |
 
 **Finalidad de todo lo anterior:** *Funciones de la app* y *Gestión de la
 cuenta*. **Nunca** publicidad, marketing, analítica ni personalización.
 
-> ⚠️ **La fila de «Mensajes» lleva «Se comparte: Sí», y es la única.** Una nota
-> publicada la puede leer cualquiera, tenga cuenta o no. En el formulario de
-> Play «compartir» significa exactamente eso —que sale del control de quien lo
-> escribió—, y aquí sale. Declararla como no compartida sería justo el error
-> que retira la app.
+> ⚠️ **Nada va como «compartido», y aquí hubo que corregirse.**
 >
-> El WhatsApp **no** se comparte en el sentido de Play: sólo llega a los amigos
-> ya aceptados, y las reglas del servidor lo comprueban documento a documento.
+> Durante la primera pasada se escribió que los mensajes publicados iban como
+> «compartidos». **Es falso**, y el propio formulario lo aclara al abrir una
+> tarjeta: *«Se comparten: estos datos se transfieren **a un tercero**»*. Un
+> tercero es otra empresa u organización ajena.
+>
+> Los demás usuarios de la app **no son un tercero**, y Firebase tampoco — Play
+> excluye expresamente a los proveedores de servicio. Que una nota se lea en el
+> muro es la app funcionando, no una transferencia a nadie.
+>
+> Se declaró leyendo el título de la casilla en vez de su definición. La
+> lección es vieja y sirve para todo este formulario: **la letra pequeña de
+> Play no está de adorno; cada casilla define su propio término.**
 
 ### ⚠️ Contenido generado por usuarios: ahora SÍ hay
 
@@ -265,6 +272,18 @@ publicidad.
 | URL de borrado de cuenta | `https://genuino-pro.web.app/borrar-cuenta.html` |
 | Política de privacidad | `https://genuino-pro.web.app/privacidad.html` |
 | ¿Sigue las normas de Familias? | No aplica: público 18+ |
+
+### Tres trampas del formulario, pagadas el 18-09
+
+1. **«¿Se procesan de forma temporal?» → No.** Marcar «sí» parece inofensivo y
+   **borra el dato de la ficha**: Play lo dice en letra pequeña —*«no se
+   mostrarán a los usuarios en tu ficha de Play Store»*— y la vista previa
+   acabó diciendo «esta aplicación no recoge datos de usuario», que era falso y
+   es de las declaraciones por las que se retira una app.
+2. **Una tarjeta se marca «Completado» aunque esté mal.** Las once salían en
+   verde con la declaración vacía. **La vista previa es el único sitio donde se
+   ve la verdad**: si un dato no aparece ahí, no está declarado.
+3. **«Compartido» significa «a un tercero»**, no «visible para otros usuarios».
 
 ### Lo que NO se recoge, y hay que saber decirlo
 
@@ -347,7 +366,7 @@ todas son un «no».
 | **Salud** | **No** | No da consejo médico, no registra síntomas, no es de bienestar clínico |
 | **Público objetivo** | **18 años o más** | Nunca «niños o familias» |
 | **Clasificación de contenido** | Cuestionario IARC, categoría *Referencia / Estilo de vida* | Sin violencia, sexo, lenguaje soez, sustancias, juego ni compras. **Contenido generado por usuarios: SÍ** |
-| **Seguridad de los datos** | Ver la sección de arriba | La fila de *Mensajes* va como **compartida**. Es la única |
+| **Seguridad de los datos** | Ver la sección de arriba | Todo **recogido**, nada **compartido**, todo **opcional** |
 
 ### Instrucciones para el revisor (si las pide)
 
