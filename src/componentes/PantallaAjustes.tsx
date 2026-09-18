@@ -255,7 +255,7 @@ export function PantallaAjustes({
             <Entrada
               value={a.nombre}
               onChange={(e) => cambiar("nombre", e.target.value)}
-              placeholder="Alex"
+              placeholder="Tu nombre de pila"
             />
           </Campo>
           <div className="mt-1 flex gap-2">

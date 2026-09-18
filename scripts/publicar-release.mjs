@@ -61,31 +61,44 @@ function laWebCuadra() {
 /**
  * Que no se publique con datos personales del dueño dentro de la app.
  *
- * El 17-09-2026 un amigo de Alex entró por primera vez y **se encontró el
- * nombre real de Alex de ejemplo** en el campo del nombre de usuario. Era un
- * simple `placeholder`, pero quien lo ve no distingue un ejemplo del dato de
- * otra persona: lo que concluye es que la app le está enseñando una cuenta
- * ajena.
+ * ── Por qué mira `dist` y no `src` ────────────────────────────────────────
  *
- * Y ese mismo día hubo que limpiar otra fuga parecida —el nombre de la
- * organización en la que sirve, que sus políticas internas prohíben mencionar—.
- * Dos en un día es un patrón, no mala suerte: lo que uno escribe pensando «esto
- * es sólo un ejemplo» acaba en el teléfono de un desconocido.
+ * Al principio miraba el código fuente, y **se equivocaba en las dos
+ * direcciones**: saltaba por los comentarios —que explican de dónde salió cada
+ * decisión y nombran a quien la pidió, pero **no llegan al teléfono de nadie**,
+ * porque el compilador los tira— y podía dejar pasar algo que sí llega.
  *
- * Se mira **el código de la app**, no las páginas legales: el correo de
- * contacto sí tiene que estar en la política de privacidad y en la de borrado
- * de cuenta, porque Google lo exige.
+ * Lo que importa no es lo que está escrito, sino **lo que acaba dentro del
+ * APK**. Si un nombre aparece ahí, alguien lo va a ver.
+ *
+ * ── Y por qué con límites de palabra ──────────────────────────────────────
+ *
+ * Sin ellos, `alex` casaba dentro de `InternalException` —«Intern·alEx·ception»—
+ * en el bundle de Firebase, y el guardián se ponía rojo en cada publicación.
+ * Un aviso que salta siempre se acaba ignorando, y entonces no sirve el día que
+ * importa. Es la tercera vez en dos días que aparece esta misma lección.
+ *
+ * ── Por qué existe ────────────────────────────────────────────────────────
+ *
+ * El 17-09-2026 el nombre real del dueño se coló **tres veces en un día**, las
+ * tres como texto de ejemplo de un campo: en el nombre de usuario del registro,
+ * en el nombre del perfil y en los ajustes. Un amigo suyo entró por primera vez
+ * y se encontró el nombre de otra persona en su propia pantalla.
+ *
+ * Tres veces en un día no es mala suerte: es que «esto es sólo un ejemplo» se
+ * escribe sin pensar. Por eso lo comprueba una máquina y no la memoria.
  */
 function sinDatosPersonales() {
   const prohibido = [
-    /johnny/i,
-    /mart[ií]nez/i,
-    /16[.s]?902[.s]?126/,
-    /195950337/,
-    /guaicaipuro/i,
-    /dalpe/i,
-    /gede[oó]n/i,
-    /gideon/i,
+    /\bjohnny\b/i,
+    /\bmart[ií]nez\b/i,
+    /\balex\b/i,
+    /16[.\s]?902[.\s]?126/,
+    /\b195950337\b/,
+    /\bguaicaipuro\b/i,
+    /\bdalpe\b/i,
+    /\bgede[oó]n(es)?\b/i,
+    /\bgideons?\b/i,
   ];
 
   const encontrados = [];
@@ -94,16 +107,18 @@ function sinDatosPersonales() {
       const ruta = join(carpeta, entrada.name);
       if (entrada.isDirectory()) {
         mirar(ruta);
-      } else if (/.(tsx?|json)$/.test(entrada.name)) {
+      } else if (/\.(js|css|html|webmanifest)$/.test(entrada.name)) {
         const texto = readFileSync(ruta, "utf8");
         for (const patron of prohibido) {
-          if (patron.test(texto)) encontrados.push(`${ruta} → ${patron}`);
+          if (patron.test(texto)) encontrados.push(`${entrada.name} → ${patron}`);
         }
       }
     }
   };
-  mirar("src");
-  return encontrados;
+  // Las páginas legales llevan el correo de contacto a propósito, y Google lo
+  // exige; el guardián no busca correos, así que no estorban.
+  mirar("dist");
+  return [...new Set(encontrados)];
 }
 
 const fugas = sinDatosPersonales();
