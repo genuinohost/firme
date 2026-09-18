@@ -307,3 +307,71 @@ y es correcto que la suba — la app es 18+ de todas formas.
 
 **Adultos (18+).** No marcar nunca «niños o familias»: mete la app en el
 programa Familias, con políticas mucho más estrictas, y no se gana nada.
+
+---
+
+## ⚠️ Los permisos sensibles · lo que más rechazos provoca
+
+Genuino pide cuatro permisos que Google mira con lupa. **Los cuatro están
+justificados** —es literalmente un despertador—, pero hay que saber decirlo, y
+si el revisor pregunta, contestar lo mismo que pone aquí.
+
+| Permiso | Para qué lo usa Genuino | Cómo se justifica |
+|---|---|---|
+| `USE_EXACT_ALARM` y `SCHEDULE_EXACT_ALARM` | Programar la alarma de las 3:00 con `setAlarmClock` | **La función principal de la app es un despertador.** Google permite la alarma exacta exactamente para eso. Una alarma «aproximada» que suena veinte minutos tarde no es una alarma |
+| `USE_FULL_SCREEN_INTENT` | Encender la pantalla cuando suena, con el móvil bloqueado | Mismo motivo: apps de alarma y de llamadas. Sin esto suena pero no se ve qué es |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Que el sistema no congele la app y se coma la alarma | Está en la lista de usos aceptables de Google: **apps de alarma y recordatorios cuyo propósito se rompe si el sistema las duerme.** Ya pasó: las alarmas de madrugada no sonaron |
+| `RECORD_AUDIO` | Dictar notas y tareas | Lo transcribe **el motor de voz de Android**; la app no guarda el audio ni lo manda a ningún sitio. No se declara como recogida de datos, porque no sale nada hacia nosotros |
+
+> **Si aparece un formulario de «permiso de alarma exacta» o de permisos
+> sensibles**, la respuesta es la misma en todos: *la función principal de la
+> app es un despertador para compromisos diarios; sin alarma exacta la app no
+> cumple su propósito*. Y hay capturas que lo demuestran — la número 2 es la
+> alarma sonando en la pantalla de bloqueo.
+
+---
+
+## El resto del cuestionario · pantalla por pantalla
+
+Esto es lo que Play pide en «Política de la app». Van todas seguidas y casi
+todas son un «no».
+
+| Sección | Respuesta | Por qué |
+|---|---|---|
+| **Acceso a la aplicación** | *Toda la funcionalidad está disponible sin acceso especial* | La cuenta es **opcional** y se crea con cualquier Gmail. No hay nada detrás de credenciales nuestras. En las instrucciones para el revisor, decirle que puede entrar con su propia cuenta de Google si quiere probar los amigos y el muro |
+| **Anuncios** | **No**, la app no contiene anuncios | Y no los va a tener. Está escrito en las reglas del proyecto |
+| **App de noticias** | **No** | |
+| **COVID-19 / rastreo de contactos** | **No** | |
+| **Apps gubernamentales** | **No** | |
+| **Funciones financieras** | **No** | No hay pagos, ni préstamos, ni criptomonedas. **Ni siquiera donaciones dentro de la app** |
+| **Salud** | **No** | No da consejo médico, no registra síntomas, no es de bienestar clínico |
+| **Público objetivo** | **18 años o más** | Nunca «niños o familias» |
+| **Clasificación de contenido** | Cuestionario IARC, categoría *Referencia / Estilo de vida* | Sin violencia, sexo, lenguaje soez, sustancias, juego ni compras. **Contenido generado por usuarios: SÍ** |
+| **Seguridad de los datos** | Ver la sección de arriba | La fila de *Mensajes* va como **compartida**. Es la única |
+
+### Instrucciones para el revisor (si las pide)
+
+```
+La app funciona entera sin cuenta. No hacen falta credenciales para probarla.
+
+La cuenta es opcional y se crea con cualquier cuenta de Google: sirve solo
+para que los usuarios se encuentren entre ellos y compartan lo que decidan
+publicar.
+
+La app es un despertador: programa alarmas exactas y las hace sonar con la
+pantalla bloqueada. Por eso pide alarma exacta, intención a pantalla completa
+y exención de ahorro de energia.
+```
+
+---
+
+## Orden en que conviene rellenarlo
+
+1. **Ficha principal** — título, descripciones, icono, gráfico y capturas.
+2. **Categoría y datos de contacto.**
+3. **Política de la app** — toda la tabla de arriba, de una sentada.
+4. **Clasificación de contenido** — el cuestionario IARC.
+5. **Seguridad de los datos** — es el más largo; hazlo con la sección de arriba
+   delante.
+6. **Prueba cerrada** con los 12 probadores. Es el reloj de 14 días y **no
+   empieza hasta que estén dentro**, así que cuanto antes se abra, mejor.
