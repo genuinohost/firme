@@ -1,14 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 45,
-  "nombre": "6.3",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.3.apk",
+  "codigo": 46,
+  "nombre": "6.4",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.4.apk",
   "novedades": [
-    "Cada nota del diario y de los repasos puede publicarse o quedarse privada. Nace privada siempre.",
-    "Lo que publicas lo puede leer cualquiera, hermano tuyo o no, y puedes retirarlo cuando quieras.",
-    "No se publica de que plan viene la nota ni como acabo tu dia.",
-    "Muro en Juntos: lo que escriben los hermanos, con denunciar y bloquear.",
-    "En la ficha de un hermano ya se ven sus notas publicadas."
+    "Si bloqueaste a alguien sin querer, ya puedes soltarlo: Mi cuenta, «a quien no estas leyendo».",
+    "Por dentro: las reglas del servidor ahora se comprueban solas antes de subirse."
   ],
   "importante": false
 }
