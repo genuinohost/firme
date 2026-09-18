@@ -279,11 +279,22 @@ function EditorDePerfil({
       <Etiqueta>{perfil ? "tu perfil" : "completa tu perfil"}</Etiqueta>
 
       <div className="mt-3 flex flex-col gap-3">
+        {/*
+          Los ejemplos **describen** lo que va en el campo, no inventan a una
+          persona.
+
+          Aquí estaba escrito el nombre real de Alex, y un amigo suyo que
+          entraba por primera vez se encontró con «johnny.martinez» de ejemplo.
+          Da igual que sea sólo un texto de ayuda: quien lo ve no distingue un
+          ejemplo del dato de otro, y lo que concluye es que la app le está
+          enseñando la cuenta de alguien. Poner el nombre de una persona real
+          —aunque sea el dueño— en la pantalla de otra no se hace.
+        */}
         <Campo etiqueta="Cómo te llamas">
           <Entrada
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            placeholder="Johnny Martínez"
+            placeholder="Tu nombre y apellido"
             maxLength={40}
           />
         </Campo>
@@ -292,7 +303,7 @@ function EditorDePerfil({
           <Entrada
             value={usuario}
             onChange={(e) => setUsuario(limpiarUsuario(e.target.value))}
-            placeholder="johnny.martinez"
+            placeholder="tu.nombre"
             maxLength={20}
           />
           <p className="mt-1.5 text-xs leading-relaxed text-tenue">

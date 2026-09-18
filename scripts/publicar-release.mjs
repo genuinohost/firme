@@ -58,6 +58,64 @@ function laWebCuadra() {
   return bien;
 }
 
+/**
+ * Que no se publique con datos personales del dueño dentro de la app.
+ *
+ * El 17-09-2026 un amigo de Alex entró por primera vez y **se encontró el
+ * nombre real de Alex de ejemplo** en el campo del nombre de usuario. Era un
+ * simple `placeholder`, pero quien lo ve no distingue un ejemplo del dato de
+ * otra persona: lo que concluye es que la app le está enseñando una cuenta
+ * ajena.
+ *
+ * Y ese mismo día hubo que limpiar otra fuga parecida —el nombre de la
+ * organización en la que sirve, que sus políticas internas prohíben mencionar—.
+ * Dos en un día es un patrón, no mala suerte: lo que uno escribe pensando «esto
+ * es sólo un ejemplo» acaba en el teléfono de un desconocido.
+ *
+ * Se mira **el código de la app**, no las páginas legales: el correo de
+ * contacto sí tiene que estar en la política de privacidad y en la de borrado
+ * de cuenta, porque Google lo exige.
+ */
+function sinDatosPersonales() {
+  const prohibido = [
+    /johnny/i,
+    /mart[ií]nez/i,
+    /16[.s]?902[.s]?126/,
+    /195950337/,
+    /guaicaipuro/i,
+    /dalpe/i,
+    /gede[oó]n/i,
+    /gideon/i,
+  ];
+
+  const encontrados = [];
+  const mirar = (carpeta) => {
+    for (const entrada of readdirSync(carpeta, { withFileTypes: true })) {
+      const ruta = join(carpeta, entrada.name);
+      if (entrada.isDirectory()) {
+        mirar(ruta);
+      } else if (/.(tsx?|json)$/.test(entrada.name)) {
+        const texto = readFileSync(ruta, "utf8");
+        for (const patron of prohibido) {
+          if (patron.test(texto)) encontrados.push(`${ruta} → ${patron}`);
+        }
+      }
+    }
+  };
+  mirar("src");
+  return encontrados;
+}
+
+const fugas = sinDatosPersonales();
+if (fugas.length > 0) {
+  console.error("Hay datos personales dentro de la app:");
+  for (const f of fugas) console.error("  " + f);
+  console.error("");
+  console.error("Un ejemplo con el nombre de una persona real se lee como el dato");
+  console.error("de esa persona. Cámbialo por algo que describa el campo.");
+  process.exit(1);
+}
+
 if (!laWebCuadra()) {
   console.error(`La web de ${"dist"} no lleva la versión ${nombre}.`);
   console.error("El APK saldría con un número en el manifiesto y otro por dentro,");
