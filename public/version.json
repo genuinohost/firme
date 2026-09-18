@@ -1,11 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 46,
-  "nombre": "6.4",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.4.apk",
+  "codigo": 47,
+  "nombre": "6.5",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.5.apk",
   "novedades": [
-    "Si bloqueaste a alguien sin querer, ya puedes soltarlo: Mi cuenta, «a quien no estas leyendo».",
-    "Por dentro: las reglas del servidor ahora se comprueban solas antes de subirse."
+    "Tus frases guardadas pueden ir a tu perfil, una a una. Cada quien decide cuales ensena.",
+    "En la ficha de un hermano ya se ve «lo que le sostiene»."
   ],
   "importante": false
 }
