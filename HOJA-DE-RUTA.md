@@ -1233,6 +1233,58 @@ tener su contraria a la vista, y en la misma versión.
 
 ---
 
+## 🔮 Lo que Alex quiere que venga, y lo que traerá consigo
+
+Dicho el **18-09-2026**, mientras rellenábamos la ficha de Play. Queda escrito
+porque cada una de estas tres cosas cambia lo que hay que construir, y dos de
+ellas cambian lo que hay que declarar.
+
+### Imágenes y vídeo entre usuarios
+
+> «En un futuro próximo sí vamos a intercambiar imágenes, vídeos y audios.
+> Prefiero que pongamos sí de una vez. Eso es muy importante para mí.»
+
+Ya está **declarado en el cuestionario de clasificación**, a propósito: rehacer
+ese cuestionario obliga a empezarlo de cero, así que se adelantó. La
+clasificación salió igualmente 3+ en todos los territorios.
+
+**Lo que hay que resolver antes de construirlo:**
+
+- **Entre quién.** No es lo mismo una imagen entre hermanos ya aceptados que
+  una imagen en un muro abierto que lee cualquiera sin cuenta. Lo segundo
+  multiplica el riesgo y las obligaciones.
+- **Moderación.** Un texto ofensivo se ve leyéndolo; una imagen no se revisa
+  igual, y Google vigila esto con especial dureza. Retirar una imagen tiene
+  que ser tan fácil como retirar una nota, y probablemente haga falta algo más
+  que eso.
+- **Dónde se guardan.** Las fotos de perfil van dentro del documento, encogidas
+  a 192 píxeles. Eso no vale para imágenes compartidas: haría falta un almacén
+  de archivos, con sus reglas, su coste y su borrado al eliminar la cuenta —
+  que es justo lo que se evitó a propósito con las fotos de perfil.
+
+### Notas de voz
+
+Mismo caso, y **declarado igual** en clasificación y en seguridad de datos
+(*grabaciones de voz o de sonido*). El dictado actual **no cuenta**: lo
+transcribe el motor de Android y el audio no sale del teléfono. Esto sería
+audio de verdad viajando entre personas.
+
+### Guías de estudio y presentaciones en PDF
+
+> «Quizás en su momento subamos guías de estudios y presentaciones PDF.»
+
+**Esto es distinto a los dos anteriores y no se declara**: los sube Alex para
+que la gente los lea, así que no es dato de ningún usuario — es contenido que
+se reparte. Sólo habría que declarar *Archivos y documentos* el día que **los
+usuarios suban los suyos**.
+
+> **La regla que salió de aquí:** declarar de más cuando corregirlo sea caro
+> —el cuestionario de clasificación obliga a rehacerlo entero—, y ajustar sobre
+> la marcha cuando sea barato —el formulario de seguridad de datos se edita
+> cuando quieras—.
+
+---
+
 ## Pendiente de Alex
 
 - [x] ~~Darse de alta como moderador~~ — hecho el 18-09 con
