@@ -252,6 +252,44 @@ depurar. Cuando algo «no hace nada», sospechar primero de un `catch` silencios
 
 ---
 
+## 🌱 Lo que viene: que la app tenga cosas muy buenas
+
+Alex, la noche del 17-09: **«a la aplicación ahora es que le falta tener cosas
+muy buenas. Todo eso lo vamos a seguir mejorando, y tendremos mejores
+capturas».**
+
+Tiene razón, y conviene entender por qué. **Casi todo lo del 16 y el 17 fue
+quitar lo que estorbaba**: alarmas que no sonaban, actualizaciones que nunca
+llegaron, enlaces que no abrían, contadores que mentían. Nada de eso se ve en
+una captura de pantalla — pero sin ello no había sobre qué construir.
+
+**Ahora el cimiento aguanta.** Lo que se ponga encima a partir de aquí sí se
+nota, y las capturas mejoran solas cuando lo que enseñan es mejor.
+
+### Ideas sobre la mesa, sin comprometer ninguna todavía
+
+Están **sin priorizar a propósito**: las ordena Alex, no yo. Y antes de
+construir cualquiera, preguntarle — su lista manda sobre esta.
+
+- **Que la alarma tome la pantalla entera** con el versículo y el porqué. Ya
+  está hecho; falta el permiso de Android 14. Es la captura que vende la app.
+- **Las frases de ánimo.** 10 de 29 son de filósofos paganos. Se le planteó el
+  17-09 y **decidió no tocarlo por ahora** — no volver a sacarlo sin que él lo
+  pida.
+- **Invitar amigos por enlace**, no sólo por nombre de usuario.
+- **Qué se ve de un amigo.** Hoy: nombre, usuario y foto. Nada más, a propósito.
+- **«Juntos»**: faltan las URL reales de los grupos y las redes.
+- **La huella** para abrir la app, además del código.
+- **Más planes**, que el catálogo siempre puede crecer.
+- **Frases desde internet**, que quedó pendiente de un servidor propio.
+
+### Las capturas, cuando haya más que enseñar
+
+Seis listas en `docs/tienda/capturas/listas/`. Se rehacen con `npm run capturas`
+en cuanto haya pantallas mejores — el script ya las deja a medida de Play.
+
+---
+
 ## 🏪 Google Play: dónde está el trámite (17-09)
 
 - [x] Cuenta de desarrollador creada, **Genuino Love**, personal, ID
