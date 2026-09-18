@@ -20,23 +20,12 @@
  *   npm run desplegar
  */
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { prepararCredenciales } from "./credenciales.mjs";
 
 const PROYECTO = "genuino-host";
 const TARGET = "hosting:firme";
-const CLAVE = join(homedir(), ".firebase", "genuino-despliegue.json");
 
-if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  if (existsSync(CLAVE)) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = CLAVE;
-    console.log("Credenciales: la cuenta de servicio.");
-  } else {
-    console.log("⚠ No hay cuenta de servicio en " + CLAVE);
-    console.log("  Se intentará con la sesión del CLI, que caduca cada día.");
-  }
-}
+prepararCredenciales();
 
 const correr = (cmd, args) =>
   execFileSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32" });

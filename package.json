@@ -17,7 +17,10 @@
     "apk": "node scripts/compilar-apk.mjs",
     "revisar-planes": "vite-node scripts/revisar-planes.ts",
     "capturas": "node scripts/capturas-tienda.mjs",
-    "revisar-paises": "vite-node scripts/revisar-paises.ts"
+    "revisar-paises": "vite-node scripts/revisar-paises.ts",
+    "revisar": "npm run revisar-planes && npm run revisar-rachas && npm run revisar-areas && npm run revisar-dictado && npm run revisar-paises && npm run revisar-banco",
+    "revisar-reglas": "npx firebase emulators:exec --only firestore --project genuino-pruebas \"node scripts/revisar-reglas.mjs\"",
+    "desplegar-reglas": "node scripts/desplegar-reglas.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.1",
@@ -34,6 +37,7 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@tailwindcss/vite": "^4.1.13",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
@@ -42,6 +46,7 @@
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.5",
+    "vite-node": "^6.0.0",
     "vite-plugin-pwa": "^1.3.0"
   }
 }

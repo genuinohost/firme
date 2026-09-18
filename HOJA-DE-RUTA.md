@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 6.3).
+Última revisión: **18 de septiembre de 2026** (versión 6.4).
 
 ---
 
@@ -42,6 +42,8 @@ Hoja de ruta
 | ✅ | **Cuenta con Google**, perfil, foto, 249 países y amigos | `PantallaCuenta` |
 | ✅ | **Ficha del hermano**: su perfil, sus cifras si las abre, su WhatsApp | `PantallaCuenta` |
 | ✅ | **Muro**: las notas que cada uno decide publicar, con denuncia y bloqueo | `Muro.tsx`, `logica/muro.ts` |
+| ✅ | **Las reglas del servidor, probadas de verdad** — 31 comprobaciones | `scripts/revisar-reglas.mjs` |
+| ✅ | Desplegar **sin iniciar sesión nunca**, con la cuenta de servicio | `scripts/credenciales.mjs` |
 
 ---
 
@@ -992,6 +994,98 @@ quedaba en el servidor después de que la pantalla dijera «se va de verdad». S
 nombran ahora una por una todas las colecciones que cuelgan de una cuenta —
 amigos, privado, bloqueados y las notas publicadas—, y **cada colección nueva
 tiene que pasar por ahí**.
+
+---
+
+## 🔒 Las reglas, probadas por fin (18-09, 6.4)
+
+`firestore.rules` es lo único que separa el WhatsApp, el perfil y las notas de
+la gente de cualquiera con una conexión. **Y nunca se habían comprobado.** Se
+escribían, se desplegaban —«rules file compiled successfully»— y a otra cosa.
+Pero que compilen sólo dice que están bien escritas: una regla que por error
+deja leer el teléfono de otro compila igual de bien que la que no lo deja.
+
+Ahora hay **31 comprobaciones** contra el emulador de Firestore, hechas en
+nombre de un extraño:
+
+```bash
+npm run revisar-reglas
+```
+
+Preguntan lo incómodo: ¿lee un desconocido el WhatsApp de otro? ¿Y quien mandó
+una solicitud que nadie aceptó? ¿Se puede publicar firmando con el nombre de
+otro? ¿Se puede colar en una nota pública de qué plan viene? ¿Puede alguien
+hacerse moderador a sí mismo? ¿Se puede inventar una colección para el diario?
+
+**Y se comprobó que las comprobaciones sirven.** Se rompieron las reglas a
+propósito —el muro dejó de ser público, el WhatsApp se abrió a cualquiera con
+cuenta— y las tres pruebas que tenían que ponerse rojas se pusieron rojas. Una
+prueba que nunca ha fallado no ha demostrado nada.
+
+Desplegar las reglas pasa ahora por ahí obligatoriamente:
+
+```bash
+npm run desplegar-reglas
+```
+
+Si una comprobación falla, **no sube nada**. Un `allow read` de más no rompe
+nada, no da error y no se ve en ninguna pantalla: deja la puerta abierta y
+nadie se entera hasta que alguien pasa por ella.
+
+---
+
+## 🔑 Desplegar sin iniciar sesión, esta vez de verdad (18-09)
+
+Alex, el 16-09: «es molestoso iniciar sesión a cada rato». Se puso una cuenta
+de servicio, cuya clave no caduca… y el 18-09 volvió a fallar con **«Your
+credentials are no longer valid»**.
+
+**La clave nunca fue el problema.** El CLI de Firebase **prefiere la sesión de
+usuario guardada antes que la cuenta de servicio**, y la guardada
+(`auto@genuinohost.com`) había caducado. Con un usuario caducado delante, ni
+mira `GOOGLE_APPLICATION_CREDENTIALS`. El mensaje decía «no hay credenciales»
+teniendo la clave puesta: miraba al sitio equivocado.
+
+El arreglo (`scripts/credenciales.mjs`): los despliegues corren con **su propia
+carpeta de configuración**, vacía de usuarios. Sin sesión que estorbe, el CLI
+usa la cuenta de servicio. No se cierra la sesión de Alex, que es suya.
+
+> Y una lección repetida: la primera versión del arreglo **salía antes de
+> aislar** cuando la variable ya venía puesta en el sistema —que es el caso de
+> Alex—, así que seguía fallando igual. El arreglo tiene que pasar siempre que
+> haya clave, venga de donde venga.
+
+---
+
+## 🧰 La red de seguridad que no se estaba ejecutando (18-09)
+
+`vite-node` no estaba instalado, así que **los seis scripts de revisión
+llevaban tiempo sin poder ejecutarse**: fallaban con un «no se reconoce como un
+comando» que nadie leía, porque nadie los lanzaba. Una red de seguridad que no
+se ejecuta no es una red: es un archivo.
+
+Instalado, los seis pasan. Y ahora:
+
+- `npm run revisar` los lanza todos de un tirón.
+- `npm run apk` **los ejecuta antes de compilar**. Compilar el APK es el último
+  sitio por el que pasa todo antes de llegar a un teléfono; si algo está roto,
+  que se sepa ahí y no en el móvil de alguien.
+
+---
+
+## 🔴 Bloquear sin poder desbloquear (arreglado en la 6.4)
+
+La 6.3 dejaba bloquear a alguien desde el muro y **no tenía ninguna pantalla
+para quitarlo**. Un toque mal dado en el menú «⋯» dejaba a un hermano invisible
+para siempre, sin aviso y sin vuelta atrás.
+
+Ahora, en **Mi cuenta**, aparece «a quién no estás leyendo» con un botón para
+soltar a cada uno. La tarjeta no se enseña si no hay nadie bloqueado: una
+sección vacía titulada «bloqueados» sugiere que esto va de pelearse, y no va de
+eso.
+
+**La regla que queda escrita:** toda acción que esconde a una persona tiene que
+tener su contraria a la vista, y en la misma versión.
 
 ---
 

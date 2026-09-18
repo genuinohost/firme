@@ -14,3 +14,8 @@ public/Firme.apk
 # es una credencial con permiso de administrador sobre el proyecto entero.
 *-firebase-adminsdk-*.json
 genuino-despliegue.json
+
+# El emulador de Firestore deja estos al correr las pruebas de reglas.
+firestore-debug.log
+firebase-debug.log
+ui-debug.log

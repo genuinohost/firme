@@ -50,7 +50,19 @@ const correr = (cmd, args, opciones = {}) =>
 
 console.log(`\nCompilando Genuino ${nombre} (código ${codigo})\n`);
 
-// 1. La web PRIMERO, que es donde estaba el fallo: Vite hornea la versión
+// 0. Las comprobaciones, antes de nada.
+//
+//    Van aquí y no en la conciencia de nadie. El 18-09-2026 se descubrió que
+//    `vite-node` no estaba instalado y que **los seis scripts de revisión
+//    llevaban tiempo sin poder ejecutarse**: el comando fallaba con un «no se
+//    reconoce» que nadie leía, porque nadie los lanzaba. Una red de seguridad
+//    que no se ejecuta no es una red de seguridad, es un archivo.
+//
+//    Compilar el APK es el último sitio por el que pasa todo antes de llegar a
+//    un teléfono. Si algo está roto, que se sepa aquí.
+correr("npm", ["run", "revisar"]);
+
+// 1. La web DESPUÉS, que es donde estaba el fallo: Vite hornea la versión
 //    leyendo build.gradle, así que tiene que compilarse después de subirla.
 correr("npm", ["run", "build"]);
 

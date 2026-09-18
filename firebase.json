@@ -106,5 +106,15 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "comment": "Sólo para probar firestore.rules en local con npm run revisar-reglas. No toca nada de producción: el emulador arranca vacío y se apaga al acabar.",
+    "firestore": {
+      "port": 8199
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

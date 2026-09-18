@@ -1,4 +1,4 @@
-import { huboSesion, leerPerfil, nube } from "./nube";
+import { huboSesion, leerPerfil, nube, type Perfil } from "./nube";
 
 /**
  * El muro: las notas que alguien decide hacer públicas.
@@ -208,6 +208,29 @@ export async function bloquear(otro: string): Promise<void> {
   const { bd } = await nube();
   const { doc, setDoc } = await import("firebase/firestore");
   await setDoc(doc(bd, "usuarios", yo.uid, "bloqueados", otro), { cuando: Date.now() });
+}
+
+/**
+ * Los bloqueados, con su nombre y no sólo su identificador.
+ *
+ * Cuesta una lectura por persona, y se paga sin discutir: una lista de
+ * `kJ3x…` no le dice a nadie a quién está dejando de leer, y entonces
+ * desbloquear es un salto al vacío. Quien bloqueó a dos personas lee dos
+ * perfiles una vez, al abrir una pantalla que casi nadie abre.
+ *
+ * Si un perfil ya no existe —esa persona borró su cuenta— se devuelve igual,
+ * con el identificador por nombre, para que el bloqueo se pueda quitar. Una
+ * fila que no se puede quitar es basura permanente.
+ */
+export async function listarBloqueados(): Promise<Perfil[]> {
+  const uids = [...(await leerBloqueados())];
+  const perfiles = await Promise.all(
+    uids.map(async (uid) => {
+      const p = await leerPerfil(uid).catch(() => null);
+      return p ?? { uid, nombre: "Alguien que ya no tiene perfil", usuario: "" };
+    }),
+  );
+  return perfiles;
 }
 
 export async function desbloquear(otro: string): Promise<void> {

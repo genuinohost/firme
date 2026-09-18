@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PAISES, paisDe } from "@/datos/paises";
 import { abrirEnlace } from "@/logica/enlaces";
-import { leerMuroDe, type NotaPublica } from "@/logica/muro";
+import { desbloquear, leerMuroDe, listarBloqueados, type NotaPublica } from "@/logica/muro";
 import {
   aceptarAmistad,
   borrarCuenta,
@@ -212,9 +212,79 @@ export function PantallaCuenta({
         onEditar={() => setEditando(true)}
       />
       <Amigos yo={perfil} />
+      <Bloqueados />
       <Cierre perfil={perfil} onFuera={() => setPerfil(null)} />
       {error ? <Aviso>{error}</Aviso> : null}
     </div>
+  );
+}
+
+/**
+ * A quién has dejado de leer, y cómo deshacerlo.
+ *
+ * **Esto faltaba en la 6.3 y era un fallo, no un detalle.** Se podía bloquear
+ * a alguien desde el muro y no había ninguna pantalla para quitarlo: un toque
+ * mal dado en el menú «⋯» dejaba a un hermano invisible para siempre, sin
+ * aviso y sin vuelta atrás. Toda acción que esconde a una persona tiene que
+ * tener su contraria a la vista.
+ *
+ * La tarjeta no aparece si no hay nadie bloqueado. Una sección vacía titulada
+ * «bloqueados» sugiere que esto va de pelearse, y no va de eso.
+ */
+function Bloqueados() {
+  const [lista, setLista] = useState<Perfil[] | null>(null);
+  const [soltando, setSoltando] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    void listarBloqueados()
+      .then((l) => vivo && setLista(l))
+      .catch(() => vivo && setLista([]));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  if (!lista || lista.length === 0) return null;
+
+  return (
+    <Tarjeta>
+      <Etiqueta>a quién no estás leyendo</Etiqueta>
+      <p className="mt-2 text-xs leading-relaxed text-tenue">
+        No verás sus notas en el muro. Ellos no saben que los bloqueaste, y no
+        se van a enterar si los sueltas.
+      </p>
+      <div className="mt-3 flex flex-col gap-2">
+        {lista.map((b) => (
+          <div
+            key={b.uid}
+            className="flex items-center justify-between gap-3 rounded-xl border border-borde px-3 py-2.5"
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm">{b.nombre}</span>
+              {b.usuario ? (
+                <span className="cifras block truncate text-xs text-tenue">@{b.usuario}</span>
+              ) : null}
+            </span>
+            <button
+              disabled={soltando === b.uid}
+              onClick={async () => {
+                setSoltando(b.uid);
+                try {
+                  await desbloquear(b.uid);
+                  setLista((l) => (l ?? []).filter((x) => x.uid !== b.uid));
+                } finally {
+                  setSoltando(null);
+                }
+              }}
+              className="shrink-0 rounded-lg border border-borde px-3 py-1.5 text-xs transition hover:border-acento hover:text-acento disabled:opacity-50"
+            >
+              {soltando === b.uid ? "…" : "volver a verle"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </Tarjeta>
   );
 }
 
