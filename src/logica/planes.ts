@@ -166,10 +166,21 @@ export function rachaMaximaDelPlan(plan: Plan, datos: Datos, hoy = new Date()): 
   return mejor;
 }
 
-/** Cuántos días lleva en pie el plan, se hayan ganado o no. */
+/**
+ * Cuántos días lleva en pie el plan, se hayan ganado o no. El primer día es 1.
+ *
+ * **Se compara de medianoche a medianoche.** Antes se restaba la hora actual
+ * contra la medianoche del día que empezó, y `Math.round` hacía el resto: quien
+ * empezaba un plan **después del mediodía** veía «2 días en pie» el mismo día
+ * de empezarlo — porque 0,7 días redondea a 1, y luego se le suma otro.
+ *
+ * Le pasó a José nada más estrenar su primer plan. Una cifra que miente el día
+ * uno se lleva por delante la confianza en todas las demás.
+ */
 export function diasDesdeElComienzo(plan: Plan, hoy = new Date()): number {
   const inicio = desdeClave(plan.desde);
-  return Math.max(1, Math.round((hoy.getTime() - inicio.getTime()) / 86_400_000) + 1);
+  const ahora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  return Math.max(1, Math.round((ahora.getTime() - inicio.getTime()) / 86_400_000) + 1);
 }
 
 /** El punto de examen que más se está fallando, para poder señalarlo. */

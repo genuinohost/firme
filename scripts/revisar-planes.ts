@@ -10,6 +10,7 @@
  */
 import { PLANTILLAS } from "@/datos/planes/plantillas";
 import { CATEGORIAS, TIMBRES } from "@/datos/tipos";
+import { crearDesdePlantilla, diasDesdeElComienzo } from "@/logica/planes";
 
 let fallos = 0;
 const mal = (plan: string, queja: string) => {
@@ -89,6 +90,39 @@ if (fallos === 0) {
       `  ${p.emoji}  ${p.nombre.padEnd(26)} ${p.compromisos.length} bloque(s) · ${p.puntos.length} punto(s)` +
         (p.admiteRestauracion ? " · con restauración" : ""),
     );
+  }
+}
+
+
+// ------------------------------------------------- los dias que lleva en pie
+//
+// Se prueba **a varias horas del dia**, que es justo lo que no se comprobaba.
+// El fallo original solo aparecia despues del mediodia: quien empezaba un plan
+// por la tarde veia «2 dias en pie» el mismo dia de empezarlo.
+
+console.log("\nLOS DÍAS EN PIE, a distintas horas del día");
+{
+  const santidad = PLANTILLAS.find((p) => p.plantilla === "santidad")!;
+  const dia = (a: number, m: number, d: number, h: number) => new Date(a, m - 1, d, h, 0, 0);
+
+  for (const hora of [0, 8, 12, 13, 17, 23]) {
+    const cuando = dia(2026, 9, 17, hora);
+    const plan = crearDesdePlantilla(santidad, { hoy: cuando });
+    const dias = diasDesdeElComienzo(plan, cuando);
+    const bien = dias === 1;
+    if (!bien) fallos++;
+    console.log(
+      `${bien ? "  ok  " : "FALLA "} empezado a las ${String(hora).padStart(2, "0")}:00 → ${dias} día(s)`,
+    );
+  }
+
+  // Y que al dia siguiente sean dos, a cualquier hora.
+  const plan = crearDesdePlantilla(santidad, { hoy: dia(2026, 9, 17, 22) });
+  for (const hora of [1, 9, 20]) {
+    const dias = diasDesdeElComienzo(plan, dia(2026, 9, 18, hora));
+    const bien = dias === 2;
+    if (!bien) fallos++;
+    console.log(`${bien ? "  ok  " : "FALLA "} al dia siguiente a las ${hora}:00 → ${dias}`);
   }
 }
 
