@@ -6,6 +6,7 @@ import {
   leerBloqueados,
   leerMuro,
   miUid,
+  puedoModerar,
   type NotaPublica,
 } from "@/logica/muro";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
@@ -33,6 +34,7 @@ export function Muro() {
   const [notas, setNotas] = useState<NotaPublica[] | null>(null);
   const [bloqueados, setBloqueados] = useState<Set<string>>(new Set());
   const [yo, setYo] = useState<string | null>(null);
+  const [modero, setModero] = useState(false);
   const [fallo, setFallo] = useState("");
   const [menu, setMenu] = useState<string | null>(null);
   const [aviso, setAviso] = useState("");
@@ -42,9 +44,15 @@ export function Muro() {
     try {
       // En paralelo: la lista de bloqueados no debe retrasar el muro, y el muro
       // no debe pintarse antes de saber a quién no enseñar.
-      const [lista, míos, quien] = await Promise.all([leerMuro(), leerBloqueados(), miUid()]);
+      const [lista, míos, quien, mando] = await Promise.all([
+        leerMuro(),
+        leerBloqueados(),
+        miUid(),
+        puedoModerar(),
+      ]);
       setBloqueados(míos);
       setYo(quien);
+      setModero(mando);
       setNotas(lista);
     } catch {
       // Sin conexión, o Firestore diciendo que no. Se dice, no se esconde: una
@@ -149,6 +157,28 @@ export function Muro() {
               >
                 Denunciar esta nota
               </Boton>
+              {/*
+                Retirar lo de otro: sólo para quien modera, y nunca como primera
+                opción. El que denuncia y el que retira no son la misma persona,
+                y el botón tiene que dejarlo claro.
+              */}
+              {modero ? (
+                <Boton
+                  ancho
+                  onClick={async () => {
+                    setMenu(null);
+                    try {
+                      await despublicarNota(n.id);
+                      setNotas((v) => (v ?? []).filter((x) => x.id !== n.id));
+                      decir("Retirada del muro para todos.");
+                    } catch {
+                      decir("No se pudo retirar. Prueba otra vez.");
+                    }
+                  }}
+                >
+                  Retirar del muro (moderación)
+                </Boton>
+              ) : null}
               <Boton
                 ancho
                 onClick={async () => {

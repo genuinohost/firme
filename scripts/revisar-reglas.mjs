@@ -326,6 +326,20 @@ await debe(
   "nadie se hace moderador a sí mismo",
   assertFails(setDoc(doc(curioso, "moderadores", "curioso"), { desde: 1 })),
 );
+await debe(
+  "quien modera puede comprobar que lo es",
+  // Sin esto la app no sabe si enseñar el botón de retirar, y el permiso
+  // queda escrito en el servidor sin manera de usarlo.
+  assertSucceeds(getDoc(doc(moderador, "moderadores", "mod"))),
+);
+await debe(
+  "nadie puede mirar si OTRO modera",
+  assertFails(getDoc(doc(curioso, "moderadores", "mod"))),
+);
+await debe(
+  "nadie puede sacar la lista de moderadores",
+  assertFails(getDocs(collection(curioso, "moderadores"))),
+);
 
 await entorno.cleanup();
 

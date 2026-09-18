@@ -6,6 +6,8 @@ import {
   leerFrasesDe,
   leerMuroDe,
   listarBloqueados,
+  puedoModerar,
+  retirarFrase,
   type FrasePublica,
   type NotaPublica,
 } from "@/logica/muro";
@@ -1205,6 +1207,7 @@ function FichaDeHermano({
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [suyas, setSuyas] = useState<NotaPublica[]>([]);
   const [frases, setFrases] = useState<FrasePublica[]>([]);
+  const [modero, setModero] = useState(false);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -1214,17 +1217,19 @@ function FichaDeHermano({
       // —uno por conexión, el otro porque la amistad ya no está aceptada— y
       // ninguno de los dos debe dejar la ficha en blanco: el perfil es lo que
       // se vino a ver.
-      const [p, w, m, f] = await Promise.all([
+      const [p, w, m, f, mando] = await Promise.all([
         leerPerfil(uid),
         leerWhatsapp(uid),
         leerMuroDe(uid).catch(() => []),
         leerFrasesDe(uid).catch(() => []),
+        puedoModerar(),
       ]);
       if (!vivo) return;
       setPerfil(p);
       setWhatsapp(w);
       setSuyas(m);
       setFrases(f);
+      setModero(mando);
       setCargando(false);
     })();
     return () => {
@@ -1303,6 +1308,25 @@ function FichaDeHermano({
                   «{f.texto}»
                 </p>
                 {f.fuente ? <p className="mt-1 text-xs text-tenue">— {f.fuente}</p> : null}
+                {/*
+                  Quien modera también puede retirar una frase. Si el permiso
+                  vale para el muro y no para esto, queda media puerta abierta.
+                */}
+                {modero ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await retirarFrase(f.id);
+                        setFrases((v) => v.filter((x) => x.id !== f.id));
+                      } catch {
+                        /* si no se pudo, la frase sigue ahí y se ve */
+                      }
+                    }}
+                    className="mt-1 rounded-lg text-[11px] text-tenue transition hover:text-fallo"
+                  >
+                    retirar (moderación)
+                  </button>
+                ) : null}
               </blockquote>
             ))}
           </div>

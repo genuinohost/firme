@@ -238,9 +238,22 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // Quién modera. Se rellena desde la consola de Firebase y la app no lo ve.
+    // Quién modera.
+    //
+    // **Cada uno puede leer sólo el suyo, y nadie puede escribir ninguno.** Se
+    // dan de alta con `node scripts/moderador.mjs poner correo@…`, que va con
+    // la cuenta de servicio y se salta estas reglas.
+    //
+    // Leer el propio hace falta, y esto no estaba: sin poder preguntar «¿soy
+    // moderador?», la app no sabía si enseñar el botón de retirar, así que el
+    // permiso existía en el servidor y **no había manera de usarlo**. Un
+    // permiso sin botón es un permiso que no existe.
+    //
+    // Que sea sólo el propio importa: nadie puede sacar la lista de quién
+    // modera, ni comprobar si tal persona lo es.
     match /moderadores/{uid} {
-      allow read, write: if false;
+      allow read: if esElMismo(uid);
+      allow write: if false;
     }
 
     // ------------------------------------------------------ nombres de usuario

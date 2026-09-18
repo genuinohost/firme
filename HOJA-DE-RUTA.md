@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **18 de septiembre de 2026** (versión 6.5).
+Última revisión: **18 de septiembre de 2026** (versión 6.6).
 
 ---
 
@@ -43,7 +43,8 @@ Hoja de ruta
 | ✅ | **Ficha del hermano**: su perfil, sus cifras si las abre, su WhatsApp | `PantallaCuenta` |
 | ✅ | **Muro**: las notas que cada uno decide publicar, con denuncia y bloqueo | `Muro.tsx`, `logica/muro.ts` |
 | ✅ | **Frases favoritas en el perfil**, las que cada uno decide enseñar | `PantallaMensaje`, `logica/muro.ts` |
-| ✅ | **Las reglas del servidor, probadas de verdad** — 39 comprobaciones | `scripts/revisar-reglas.mjs` |
+| ✅ | **Moderación**: retirar del muro lo que escribió otro | `Muro.tsx`, `scripts/moderador.mjs` |
+| ✅ | **Las reglas del servidor, probadas de verdad** — 42 comprobaciones | `scripts/revisar-reglas.mjs` |
 | ✅ | Desplegar **sin iniciar sesión nunca**, con la cuenta de servicio | `scripts/credenciales.mjs` |
 
 ---
@@ -998,6 +999,74 @@ tiene que pasar por ahí**.
 
 ---
 
+## 🏪 EN GOOGLE PLAY · 18-09-2026
+
+**La app está subida.** Cuenta de desarrollador verificada, aplicación creada
+(`app.genuino.firme`), versión **47 (6.5)** publicada en **prueba interna** y
+lista de probadores con tres correos.
+
+Enlace para los probadores:
+`https://play.google.com/apps/internaltest/4701479158459093667`
+
+### Lo irreversible que salió bien: la clave de firma
+
+Play ofrece por defecto **generar una clave nueva**. Aceptarlo habría firmado
+la versión de la tienda con una clave distinta a la de los APK ya instalados, y
+**Android se niega a actualizar cuando la firma no coincide**: la única salida
+habría sido desinstalar, que borra el diario, las rachas y los planes, porque
+todo vive en el teléfono.
+
+Se subió la clave propia (`android/firme-firma.jks`, alias `firme`) con la
+herramienta PEPK. Comprobado contra el certificado que devuelve Play:
+
+```
+SHA-1    D8:51:A8:B6:D2:76:43:22:CC:85:85:8D:6B:46:F1:8B:F9:9A:75:D4
+SHA-256  63:55:90:41:46:BF:FA:AA:22:E0:7B:5C:53:A6:C1:AC:77:14:F1:0B:A1:DA:21:17:D1:C2:6A:36:3B:0F:42:00
+```
+
+Idénticos a los del almacén. La versión de Play entra encima sin desinstalar.
+
+> **El `.jks` y su contraseña son ahora lo más importante del proyecto.** Sin
+> ellos no se puede volver a publicar ninguna actualización, nunca.
+
+### Lo que falta para producción
+
+1. Completar la ficha: descripciones, gráficos, clasificación de contenido y
+   seguridad de datos. Todo preparado en `docs/tienda/ficha.md`.
+2. **Prueba cerrada: 12 probadores, 14 días seguidos.** Es el reloj largo, y no
+   empieza hasta que estén los 12 dentro.
+3. Dos respuestas que cambiaron con el muro: «¿los usuarios pueden
+   intercambiar contenido?» → **sí**, y la fila de *Mensajes* en seguridad de
+   datos va como **compartida**.
+
+---
+
+## 🛡️ El permiso que no tenía botón (6.6, 18-09)
+
+Las reglas dejaban a un moderador retirar lo que escribió otro **desde el
+17-09**, y hasta hoy eso no servía para nada por dos motivos, los dos mudos:
+
+1. **La colección `moderadores` estaba vacía.** El permiso existía y no había
+   nadie dentro.
+2. **La app no podía saber si eres moderador**, porque las reglas prohibían
+   leer esa colección entera — ni siquiera el documento propio. Sin poder
+   preguntarlo, no había forma de enseñar el botón.
+
+Un permiso sin botón es un permiso que no existe, y Google Play no mira las
+reglas: mira si en la app se puede retirar algo.
+
+Arreglado: cada uno puede leer **su propio** documento de moderador (nadie
+puede sacar la lista ni comprobar si lo es un tercero), el muro enseña
+«Retirar del muro (moderación)» a quien manda, y las frases del perfil también.
+
+Los moderadores se dan de alta con la cuenta de servicio, sin tocar la consola:
+
+```bash
+node scripts/moderador.mjs poner correo@gmail.com
+```
+
+---
+
 ## 💬 Las frases favoritas, en el perfil (6.5, 18-09)
 
 Alex, cuando le pregunté si publicarlas o dejarlas privadas: **«que se puedan
@@ -1033,7 +1102,7 @@ escribían, se desplegaban —«rules file compiled successfully»— y a otra c
 Pero que compilen sólo dice que están bien escritas: una regla que por error
 deja leer el teléfono de otro compila igual de bien que la que no lo deja.
 
-Ahora hay **39 comprobaciones** contra el emulador de Firestore, hechas en
+Ahora hay **42 comprobaciones** contra el emulador de Firestore, hechas en
 nombre de un extraño:
 
 ```bash
@@ -1119,12 +1188,10 @@ tener su contraria a la vista, y en la misma versión.
 
 ## Pendiente de Alex
 
-- [ ] 🔴 **Darse de alta como moderador** — crear a mano, en la consola de
-      Firebase, el documento `moderadores/<su uid>` (colección `moderadores`,
-      el id es su uid de Firebase Authentication; el contenido da igual).
-      **Sin eso nadie puede retirar lo que escriba otro**, y eso es justo lo
-      que Play pide demostrar para dejar publicar una app con muro.
-- [ ] **Reunir 12 probadores** — bloquea la publicación entera
+- [x] ~~Darse de alta como moderador~~ — hecho el 18-09 con
+      `node scripts/moderador.mjs poner genuino.love@gmail.com`
+- [ ] 🔴 **Reunir 12 probadores** para la prueba cerrada — 14 días seguidos, y
+      es lo que marca cuándo se puede pedir producción
 - [ ] Crear la cuenta de Play ($25)
 - [ ] Dar los enlaces reales para `public/comunidad.json`
 - [ ] **Revisar los versículos del banco** — él es Capellán y su palabra está de por medio

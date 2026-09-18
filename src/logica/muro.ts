@@ -287,6 +287,41 @@ export async function misFrasesPublicadas(): Promise<Set<string>> {
 // Y sin ella, un muro cristiano abierto es un sitio donde el primero que pase
 // puede escribir cualquier cosa delante de gente que vino a buscar ánimo.
 
+/**
+ * Si esta persona puede retirar lo que escribió otro.
+ *
+ * Se pregunta por el documento propio, que es lo único que las reglas dejan
+ * leer: nadie puede sacar la lista de quién modera ni comprobar si lo es un
+ * tercero.
+ *
+ * Falla en silencio a `false`, y está bien: no poder comprobarlo significa no
+ * enseñar el botón, que es el lado seguro del error.
+ */
+export async function puedoModerar(): Promise<boolean> {
+  const yo = await quienSoy();
+  if (!yo) return false;
+  try {
+    const { bd } = await nube();
+    const { doc, getDoc } = await import("firebase/firestore");
+    return (await getDoc(doc(bd, "moderadores", yo.uid))).exists();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retirar una frase por su identificador completo.
+ *
+ * `despublicarFrase` compone la clave con **mi** uid, que es lo correcto para
+ * lo mío y lo equivocado para lo de otro. Quien modera ya tiene delante el
+ * identificador entero, así que se borra tal cual.
+ */
+export async function retirarFrase(idCompleto: string): Promise<void> {
+  const { bd } = await nube();
+  const { doc, deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(doc(bd, "frases", idCompleto));
+}
+
 /** Dejar constancia de una nota que no debería estar. Sólo escribe. */
 export async function denunciarNota(id: string, motivo: string): Promise<void> {
   const yo = await quienSoy();
