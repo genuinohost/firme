@@ -250,6 +250,41 @@ await debe(
   assertSucceeds(deleteDoc(doc(moderador, "frases", "ana.abc123"))),
 );
 
+// --------------------------------------------------------- avisos de fallos
+console.log("\nLos avisos de fallos");
+const aviso = (extra = {}) => ({
+  texto: "Toqué el nombre de un hermano y no se abrió nada.",
+  parte: "Genuino 6.7",
+  cuando: Date.now(),
+  ...extra,
+});
+await debe(
+  "SIN CUENTA se puede avisar de un fallo",
+  // Es la comprobación que justifica toda la decisión: quien no puede entrar
+  // es justo quien más necesita poder contarlo.
+  assertSucceeds(setDoc(doc(nadie, "fallos", "f1"), aviso())),
+);
+await debe(
+  "una captura se puede adjuntar",
+  assertSucceeds(setDoc(doc(nadie, "fallos", "f1", "capturas", "0"), { imagen: "data:image/jpeg;base64,xx" })),
+);
+await debe(
+  "un aviso vacío no pasa",
+  assertFails(setDoc(doc(nadie, "fallos", "f2"), aviso({ texto: "" }))),
+);
+await debe(
+  "no se cuela un campo de más en un aviso",
+  assertFails(setDoc(doc(nadie, "fallos", "f3"), aviso({ uid: "ana" }))),
+);
+await debe(
+  "nadie lee los avisos de fallos",
+  assertFails(getDoc(doc(beto, "fallos", "f1"))),
+);
+await debe(
+  "nadie lee las capturas de nadie",
+  assertFails(getDocs(collection(beto, "fallos/f1/capturas"))),
+);
+
 // ---------------------------------------------------------------- denuncias
 console.log("\nLas denuncias");
 await debe(

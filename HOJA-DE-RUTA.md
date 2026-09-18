@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **18 de septiembre de 2026** (versión 6.6).
+Última revisión: **18 de septiembre de 2026** (versión 6.7).
 
 ---
 
@@ -43,8 +43,9 @@ Hoja de ruta
 | ✅ | **Ficha del hermano**: su perfil, sus cifras si las abre, su WhatsApp | `PantallaCuenta` |
 | ✅ | **Muro**: las notas que cada uno decide publicar, con denuncia y bloqueo | `Muro.tsx`, `logica/muro.ts` |
 | ✅ | **Frases favoritas en el perfil**, las que cada uno decide enseñar | `PantallaMensaje`, `logica/muro.ts` |
+| ✅ | **Avisar de un fallo** desde la app, con capturas | `PantallaFallo`, `scripts/fallos.mjs` |
 | ✅ | **Moderación**: retirar del muro lo que escribió otro | `Muro.tsx`, `scripts/moderador.mjs` |
-| ✅ | **Las reglas del servidor, probadas de verdad** — 42 comprobaciones | `scripts/revisar-reglas.mjs` |
+| ✅ | **Las reglas del servidor, probadas de verdad** — 48 comprobaciones | `scripts/revisar-reglas.mjs` |
 | ✅ | Desplegar **sin iniciar sesión nunca**, con la cuenta de servicio | `scripts/credenciales.mjs` |
 
 ---
@@ -1041,6 +1042,52 @@ Idénticos a los del almacén. La versión de Play entra encima sin desinstalar.
 
 ---
 
+## 🐞 Avisar de un fallo, y los cuatro que lo provocaron (6.7, 18-09)
+
+Alex: «los hermanos deberían tener un botón especial para escribir y mandar
+capturas de los errores de la app. Por ejemplo, Nazdrely me acaba de agregar
+como amigo, me agregó pero no puede entrar a mi perfil y ver mis rachas».
+
+Se miraron los datos reales en vez de adivinar, y **no era un fallo: eran
+cuatro**, los cuatro mudos.
+
+| Lo que pasaba | Por qué |
+|---|---|
+| Nazdrely no veía nada de Alex | Su solicitud seguía **sin aceptar**: «enviada» por su lado, «recibida» por el de él |
+| A Alex nada le avisó | La solicitud vivía dentro de «Mi cuenta»; quien no entra ahí no se entera |
+| Tocar su nombre no hacía nada | La ficha sólo se abría para los **ya aceptados**; las filas pendientes no respondían y no decían por qué |
+| La ficha de José dice «prefiere no enseñar sus cifras» | **Él nunca decidió eso.** Su perfil no tiene cifras publicadas, y la app le atribuía una intención |
+
+Arreglados los cuatro: las filas pendientes se tocan y la ficha explica en qué
+punto está la amistad, «Más» lleva un contador de quién te espera, y cuando no
+hay cifras se dice que no las hay en vez de inventar un motivo.
+
+> **La regla que queda:** cuando la app no sepa algo, que lo diga. Atribuirle
+> una decisión a alguien que no la tomó es peor que dejar el hueco en blanco.
+
+### Y el botón
+
+**Más → Avisar de un fallo.** Se escribe (o se dicta), se añaden hasta tres
+capturas, y va con un parte técnico automático: versión, teléfono, y
+**cuántos** planes, tareas y notas hay — los números, nunca el contenido.
+
+**No pide cuenta, y es deliberado.** Lo intuitivo sería exigirla para evitar
+basura, pero los dos peores fallos de este proyecto han sido fallos de
+*entrar*: el login que rebotaba y el registro que no terminaba. Quien más
+necesita avisar es justo el que no puede entrar; exigirle cuenta es dejarle sin
+voz cuando el fallo es grave. El ruido se borra en un minuto; un fallo que
+nadie pudo contar dura meses.
+
+Los avisos no los puede leer nadie desde la app. Se leen así:
+
+```bash
+npm run fallos
+```
+
+Las capturas se guardan en `docs/fallos/` para poder mirarlas.
+
+---
+
 ## 🛡️ El permiso que no tenía botón (6.6, 18-09)
 
 Las reglas dejaban a un moderador retirar lo que escribió otro **desde el
@@ -1102,7 +1149,7 @@ escribían, se desplegaban —«rules file compiled successfully»— y a otra c
 Pero que compilen sólo dice que están bien escritas: una regla que por error
 deja leer el teléfono de otro compila igual de bien que la que no lo deja.
 
-Ahora hay **42 comprobaciones** contra el emulador de Firestore, hechas en
+Ahora hay **48 comprobaciones** contra el emulador de Firestore, hechas en
 nombre de un extraño:
 
 ```bash

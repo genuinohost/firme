@@ -762,7 +762,11 @@ function Amigos({ yo }: { yo: Perfil }) {
   if (abierto) {
     return (
       <div className="flex flex-col gap-4">
-        <FichaDeHermano uid={abierto} onVolver={() => setAbierto(null)} />
+        <FichaDeHermano
+          uid={abierto}
+          estado={(lista ?? []).find((a) => a.uid === abierto)?.estado}
+          onVolver={() => setAbierto(null)}
+        />
       </div>
     );
   }
@@ -840,7 +844,7 @@ function Amigos({ yo }: { yo: Perfil }) {
           <Etiqueta>te han pedido</Etiqueta>
           <div className="mt-2 flex flex-col gap-2">
             {recibidas.map((a) => (
-              <FilaAmigo key={a.uid} amigo={a}>
+              <FilaAmigo key={a.uid} amigo={a} onAbrir={() => setAbierto(a.uid)}>
                 <Boton
                   variante="fuerte"
                   onClick={async () => {
@@ -882,7 +886,7 @@ function Amigos({ yo }: { yo: Perfil }) {
           <Etiqueta>esperando respuesta</Etiqueta>
           <div className="mt-2 flex flex-col gap-2">
             {enviadas.map((a) => (
-              <FilaAmigo key={a.uid} amigo={a}>
+              <FilaAmigo key={a.uid} amigo={a} onAbrir={() => setAbierto(a.uid)}>
                 <button
                   onClick={async () => {
                     await quitarAmistad(yo.uid, a.uid);
@@ -1198,9 +1202,12 @@ function cargarImagen(archivo: File): Promise<HTMLImageElement | ImageBitmap> {
  */
 function FichaDeHermano({
   uid,
+  estado,
   onVolver,
 }: {
   uid: string;
+  /** En qué punto está la amistad, para no prometer lo que no hay. */
+  estado?: Amigo["estado"];
   onVolver: () => void;
 }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -1280,6 +1287,17 @@ function FichaDeHermano({
           </blockquote>
         ) : null}
 
+        {/*
+          Tres casos, y hay que separarlos:
+
+          - Tiene cifras y las enseña → se enseñan.
+          - Las apagó a propósito → se dice, y se respeta.
+          - **No tiene cifras publicadas**, porque su app es más vieja que la
+            6.2 o no ha vuelto a abrir su cuenta desde entonces. Esto es lo que
+            estaba mal: se leía como «prefiere no enseñarlas» y le atribuía una
+            decisión que nunca tomó. Contar por qué no están es más honesto que
+            inventarle una intención.
+        */}
         {perfil.muestraRachas !== false && perfil.racha !== undefined ? (
           <>
             <div className="mt-4 grid grid-cols-3 gap-2.5">
@@ -1291,12 +1309,42 @@ function FichaDeHermano({
               Las comparte para que le animes, no para medirse contigo.
             </p>
           </>
-        ) : (
+        ) : perfil.muestraRachas === false ? (
           <p className="mt-4 text-center text-xs leading-relaxed text-tenue">
             Prefiere no enseñar sus cifras, y está bien: la carrera es suya y de Dios.
           </p>
+        ) : (
+          <p className="mt-4 text-center text-xs leading-relaxed text-tenue">
+            Todavía no ha publicado sus cifras. Le saldrán en cuanto abra su
+            cuenta con la app al día.
+          </p>
         )}
       </Tarjeta>
+
+      {/*
+        Que se vea en qué punto está.
+
+        Nazdrely agregó a Alex el 18-09 y se quedó esperando sin saber por qué
+        no veía nada: la solicitud estaba sin aceptar y **la app no lo decía en
+        ninguna parte**. Una pantalla que enseña media cosa sin explicar qué
+        falta se lee como una pantalla rota.
+      */}
+      {estado === "enviada" ? (
+        <Tarjeta>
+          <p className="text-xs leading-relaxed text-tenue">
+            Le mandaste la solicitud y todavía no la ha aceptado. Cuando lo haga
+            podréis ver el WhatsApp del otro, si lo habéis puesto.
+          </p>
+        </Tarjeta>
+      ) : null}
+      {estado === "recibida" ? (
+        <Tarjeta>
+          <p className="text-xs leading-relaxed text-tenue">
+            Te ha pedido ser tu hermano y todavía no le has contestado. Vuelve
+            atrás y toca <strong>Aceptar</strong>.
+          </p>
+        </Tarjeta>
+      ) : null}
 
       {frases.length > 0 ? (
         <Tarjeta>

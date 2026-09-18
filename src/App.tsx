@@ -36,7 +36,8 @@ import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
 import { PantallaCuenta } from "@/componentes/PantallaCuenta";
-import { publicarNota } from "@/logica/muro";
+import { PantallaFallo } from "@/componentes/PantallaFallo";
+import { contarSolicitudes, publicarNota } from "@/logica/muro";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
@@ -51,6 +52,7 @@ type Pestaña =
   | "progreso"
   | "diario"
   | "cuenta"
+  | "fallo"
   | "ajustes";
 
 /**
@@ -76,6 +78,8 @@ export default function App() {
   const [datos, setDatos] = useState<Datos>(cargar);
   const [pestaña, setPestaña] = useState<Pestaña>("hoy");
   const [avisoMuro, setAvisoMuro] = useState("");
+  /** Hermanos esperando que les contestes. Se pinta en «Más». */
+  const [solicitudes, setSolicitudes] = useState(0);
   const [desplazamiento, setDesplazamiento] = useState(0); // días respecto a hoy
   /** null = cerrado · "nueva" = creando · un id = editando esa tarea. */
   const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
@@ -262,6 +266,17 @@ export default function App() {
     return () => clearTimeout(id);
   }, [avisoMuro]);
 
+  // Quién está esperando respuesta. Se mira al arrancar y cada vez que se
+  // vuelve al menú, que es justo antes de que pueda verse el aviso.
+  useEffect(() => {
+    if (pestaña !== "mas" && pestaña !== "hoy") return;
+    let vivo = true;
+    void contarSolicitudes().then((n) => vivo && setSolicitudes(n));
+    return () => {
+      vivo = false;
+    };
+  }, [pestaña]);
+
   // El aviso de ánimo se retira solo.
   useEffect(() => {
     if (!brindis) return;
@@ -394,11 +409,24 @@ export default function App() {
                       id: "cuenta",
                       icono: "◍",
                       titulo: "Mi cuenta",
-                      detalle: "Tu perfil y los hermanos que caminan contigo",
+                      detalle:
+                        solicitudes > 0
+                          ? solicitudes === 1
+                            ? "Un hermano te está esperando"
+                            : `${solicitudes} hermanos te están esperando`
+                          : "Tu perfil y los hermanos que caminan contigo",
+                      aviso: solicitudes,
                       onIr: () => setPestaña("cuenta"),
                     },
                   ]
                 : []),
+              {
+                id: "fallo",
+                icono: "🐞",
+                titulo: "Avisar de un fallo",
+                detalle: "Si algo no funciona, cuéntalo con capturas",
+                onIr: () => setPestaña("fallo"),
+              },
               {
                 id: "porque",
                 icono: "✦",
@@ -487,6 +515,12 @@ export default function App() {
             abrir={bloqueAbierto}
             onAbierto={() => setBloqueAbierto(null)}
           />
+        ) : null}
+
+        {pestaña === "fallo" ? (
+          <ConVuelta titulo="Avisar de un fallo" onVolver={() => setPestaña("mas")}>
+            <PantallaFallo datos={datos} />
+          </ConVuelta>
         ) : null}
 
         {pestaña === "cuenta" ? (

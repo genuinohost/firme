@@ -14,7 +14,15 @@ export function PantallaMas({
 }: {
   nombre: string;
   racha: number;
-  opciones: { id: string; icono: string; titulo: string; detalle: string; onIr: () => void }[];
+  opciones: {
+    id: string;
+    icono: string;
+    titulo: string;
+    detalle: string;
+    onIr: () => void;
+    /** Un número que pide atención. Si es 0 o falta, no se pinta nada. */
+    aviso?: number;
+  }[];
 }) {
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
@@ -41,6 +49,11 @@ export function PantallaMas({
               <span className="block text-[15px]">{o.titulo}</span>
               <span className="block text-xs text-tenue">{o.detalle}</span>
             </span>
+            {o.aviso ? (
+              <span className="cifras shrink-0 rounded-full bg-acento px-2 py-0.5 text-xs font-semibold text-fondo">
+                {o.aviso}
+              </span>
+            ) : null}
             <span className="shrink-0 text-tenue">›</span>
           </button>
         ))}

@@ -20,7 +20,8 @@
     "revisar-paises": "vite-node scripts/revisar-paises.ts",
     "revisar": "npm run revisar-planes && npm run revisar-rachas && npm run revisar-areas && npm run revisar-dictado && npm run revisar-paises && npm run revisar-banco",
     "revisar-reglas": "npx firebase emulators:exec --only firestore --project genuino-pruebas \"node scripts/revisar-reglas.mjs\"",
-    "desplegar-reglas": "node scripts/desplegar-reglas.mjs"
+    "desplegar-reglas": "node scripts/desplegar-reglas.mjs",
+    "fallos": "node scripts/fallos.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.1",

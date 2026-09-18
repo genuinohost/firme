@@ -224,6 +224,40 @@ service cloud.firestore {
       allow delete: if esElMismo(resource.data.uid) || esModerador();
     }
 
+    // ------------------------------------------------- avisos de fallos
+    //
+    // Un buzón, como las denuncias: se deja algo dentro y no se vuelve a abrir
+    // desde la app. Se leen con `node scripts/fallos.mjs`.
+    //
+    // **No exige haber entrado, y es a propósito.** Lo intuitivo sería pedir
+    // cuenta para evitar basura, pero los dos peores fallos de este proyecto
+    // han sido fallos de *entrar*: el login que rebotaba y el registro que no
+    // terminaba. Quien más necesita avisar es justo el que no puede entrar, y
+    // exigirle cuenta es dejarle sin voz precisamente cuando el fallo es grave.
+    //
+    // El precio es que alguien podría dejar ruido aquí. Se paga: el ruido se
+    // borra en un minuto, y un fallo que nadie pudo contar puede durar meses.
+    match /fallos/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['texto', 'parte', 'cuando'])
+        && request.resource.data.texto is string
+        && request.resource.data.texto.size() > 0
+        && request.resource.data.texto.size() <= 2000
+        && request.resource.data.parte is string
+        && request.resource.data.parte.size() <= 4000
+        && request.resource.data.cuando is number;
+      allow read, update, delete: if false;
+
+      // Las capturas van de una en una: tres dentro del mismo documento
+      // pasarían del megabyte que admite Firestore y se perdería el aviso
+      // entero, con el texto dentro, que es lo que de verdad importa.
+      match /capturas/{cual} {
+        allow create: if request.resource.data.keys().hasOnly(['imagen'])
+          && request.resource.data.imagen is string
+          && request.resource.data.imagen.size() <= 900000;
+        allow read, update, delete: if false;
+      }
+    }
+
     // ------------------------------------------------------------ denuncias
     //
     // Un buzón de una sola dirección: se deja algo dentro y no se vuelve a

@@ -75,6 +75,39 @@ async function quienSoy(): Promise<{ uid: string } | null> {
   });
 }
 
+/**
+ * Cuántas solicitudes de amistad están esperando respuesta.
+ *
+ * ── Por qué existe ────────────────────────────────────────────────────────
+ *
+ * El 18-09-2026 una hermana agregó a Alex y se quedó esperando días sin saber
+ * por qué no pasaba nada. La solicitud estaba bien puesta en el servidor; lo
+ * que faltaba es que **a él nada se lo dijera**: vivía dentro de «Mi cuenta»,
+ * y quien no entra ahí no se entera de que alguien le está esperando.
+ *
+ * Una función social que depende de que el otro pase por una pantalla concreta
+ * no es una función social.
+ *
+ * Vive en este archivo, y no en `nube.ts` donde estaría más a mano, porque
+ * aquí está `quienSoy` — que es lo único que permite preguntarlo sin arrastrar
+ * la sesión por medio árbol de componentes.
+ */
+export async function contarSolicitudes(): Promise<number> {
+  const yo = await quienSoy();
+  if (!yo) return 0;
+  try {
+    const { bd } = await nube();
+    const { collection, getDocs, query, where } = await import("firebase/firestore");
+    const r = await getDocs(
+      query(collection(bd, "usuarios", yo.uid, "amigos"), where("estado", "==", "recibida")),
+    );
+    return r.size;
+  } catch {
+    // Sin conexión no se inventa un número: no hay aviso y ya está.
+    return 0;
+  }
+}
+
 /** Si esta persona puede publicar ahora mismo. */
 export async function puedePublicar(): Promise<boolean> {
   return (await quienSoy()) !== null;
