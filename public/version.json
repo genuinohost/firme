@@ -1,11 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 48,
-  "nombre": "6.6",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.6.apk",
+  "codigo": 49,
+  "nombre": "6.7",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.7.apk",
   "novedades": [
-    "Quien modera ya puede retirar del muro lo que no deberia estar.",
-    "Por dentro: las reglas del servidor van por 42 comprobaciones."
+    "Nuevo: Mas → Avisar de un fallo. Escribe que paso y manda hasta tres capturas.",
+    "Si alguien te pide ser tu hermano, ahora te sale un aviso en Mas.",
+    "Ya puedes tocar el nombre de quien te agrego aunque no le hayas aceptado todavia.",
+    "Cuando alguien no tiene cifras publicadas, se dice; antes parecia que las escondia."
   ],
   "importante": false
 }
