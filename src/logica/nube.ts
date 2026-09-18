@@ -6,13 +6,14 @@ import { Capacitor } from "@capacitor/core";
  * ── Lo que sube y lo que no ───────────────────────────────────────────────
  *
  * Sube el **perfil** (nombre, foto, ciudad, país, versículo) y la **amistad**.
- * Y nada más.
+ * Y, desde la 6.3, **la nota suelta en la que alguien tocó «publicar»** — eso
+ * vive en `muro.ts`, y allí está explicado por qué cambió.
  *
- * **El diario, las notas y los repasos no suben nunca.** Ni cifrados, ni «solo
- * para el dueño», ni «por si se pierde el móvil». Ahí se anota una caída y lo
- * que se le dijo a Dios por ella: eso se queda en el teléfono de quien lo
- * escribió. Esto se decide ahora, una vez, y no se toca — porque la tentación
- * de sincronizarlo «para que no se pierda» va a volver, y va a sonar razonable.
+ * **El diario no se sincroniza, y eso sigue igual.** No hay copia «solo para
+ * el dueño», ni «por si se pierde el móvil», ni cifrada. Un diario que sube
+ * entero sube también la caída que alguien anotó a las tres de la mañana, y
+ * esa no la publicó nadie. La tentación de sincronizarlo «para que no se
+ * pierda» va a volver y va a sonar razonable: la respuesta es no.
  *
  * ── Por qué todo esto se carga en diferido ────────────────────────────────
  *
@@ -528,12 +529,29 @@ export async function borrarCuenta(uid: string, usuario: string): Promise<void> 
   const { doc, writeBatch, collection, getDocs } = await import("firebase/firestore");
   const { deleteUser } = await import("firebase/auth");
 
-  const amigos = await getDocs(collection(bd, "usuarios", uid, "amigos"));
+  // Borrar el documento del perfil **no borra sus subcolecciones**: Firestore
+  // no tiene carpetas, y `usuarios/{uid}` y `usuarios/{uid}/privado/contacto`
+  // son dos documentos sin más parentesco que el nombre. Un borrado que deja
+  // atrás el WhatsApp de alguien no es un borrado, por mucho que la pantalla
+  // diga «se va de verdad». Así que aquí se nombra una por una todo lo que
+  // cuelga de una cuenta, y cada colección nueva tiene que pasar por aquí.
+  const { query, where } = await import("firebase/firestore");
+  const [amigos, privado, bloqueados, mias] = await Promise.all([
+    getDocs(collection(bd, "usuarios", uid, "amigos")),
+    getDocs(collection(bd, "usuarios", uid, "privado")),
+    getDocs(collection(bd, "usuarios", uid, "bloqueados")),
+    getDocs(query(collection(bd, "notas"), where("uid", "==", uid))),
+  ]);
+
   const lote = writeBatch(bd);
   for (const a of amigos.docs) {
     lote.delete(doc(bd, "usuarios", uid, "amigos", a.id));
     lote.delete(doc(bd, "usuarios", a.id, "amigos", uid));
   }
+  for (const d of privado.docs) lote.delete(doc(bd, "usuarios", uid, "privado", d.id));
+  for (const d of bloqueados.docs) lote.delete(doc(bd, "usuarios", uid, "bloqueados", d.id));
+  // Y lo que publicó en el muro: irse es irse.
+  for (const d of mias.docs) lote.delete(doc(bd, "notas", d.id));
   if (usuario) lote.delete(doc(bd, "handles", usuario));
   lote.delete(doc(bd, "usuarios", uid));
   await lote.commit();

@@ -36,6 +36,7 @@ import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
 import { PantallaCuenta } from "@/componentes/PantallaCuenta";
+import { publicarNota } from "@/logica/muro";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
@@ -74,6 +75,7 @@ const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
 export default function App() {
   const [datos, setDatos] = useState<Datos>(cargar);
   const [pestaña, setPestaña] = useState<Pestaña>("hoy");
+  const [avisoMuro, setAvisoMuro] = useState("");
   const [desplazamiento, setDesplazamiento] = useState(0); // días respecto a hoy
   /** null = cerrado · "nueva" = creando · un id = editando esa tarea. */
   const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
@@ -253,6 +255,13 @@ export default function App() {
     [fecha, datos.ajustes],
   );
 
+  // Lo que pasó al intentar publicar una nota. Se retira solo, como el brindis.
+  useEffect(() => {
+    if (!avisoMuro) return;
+    const id = window.setTimeout(() => setAvisoMuro(""), 5200);
+    return () => clearTimeout(id);
+  }, [avisoMuro]);
+
   // El aviso de ánimo se retira solo.
   useEffect(() => {
     if (!brindis) return;
@@ -261,6 +270,40 @@ export default function App() {
   }, [brindis]);
 
   const seleccionada: Pestaña = EN_LA_BARRA.includes(pestaña) ? pestaña : "mas";
+
+  /**
+   * Mandar al muro una nota recién escrita, desde el repaso o desde el plan.
+   *
+   * **Se marca como pública sólo si el servidor la aceptó.** La casilla del
+   * repaso dice una intención, no un hecho: la conexión puede fallar, la
+   * cuenta puede no existir todavía. Si se marcara al vuelo, alguien cerraría
+   * la app convencido de haber dado testimonio de algo que no salió del
+   * teléfono — y el fallo sería mudo, que es justo la clase de fallo que este
+   * proyecto ya ha pagado demasiadas veces.
+   *
+   * Si no sale, la nota se queda igual en el diario y desde allí se puede
+   * publicar con un toque.
+   */
+  const soltarAlMuro = (nota: { id: string; texto: string; momento: number }) => {
+    void publicarNota(nota)
+      .then(() => {
+        setDatos((d) => ({
+          ...d,
+          notas: (d.notas ?? []).map((x) => (x.id === nota.id ? { ...x, publica: true } : x)),
+        }));
+        setAvisoMuro("Publicada. Cualquiera puede leerla.");
+      })
+      .catch((e) => {
+        const motivo = e instanceof Error ? e.message : "";
+        setAvisoMuro(
+          motivo === "sin-cuenta"
+            ? "Sin cuenta no se puede publicar. Está guardada en tu diario."
+            : motivo === "sin-perfil"
+              ? "Te falta el perfil. La nota está guardada en tu diario."
+              : "No se pudo publicar. Está guardada en tu diario.",
+        );
+      });
+  };
 
   const cambiarAjustes = (ajustes: Ajustes) => setDatos((d) => ({ ...d, ajustes }));
   const cambiarRutina = (rutina: BloqueRutina[]) => setDatos((d) => ({ ...d, rutina }));
@@ -396,21 +439,17 @@ export default function App() {
               datos={datos}
               ahora={ahora}
               onRepasar={() => setExamen(plan.id)}
-              onAnotar={(texto) =>
-                setDatos((d) => ({
-                  ...d,
-                  notas: [
-                    {
-                      id: idNuevo(),
-                      fecha: fechaHoy,
-                      texto,
-                      momento: Date.now(),
-                      plan: plan.id,
-                    },
-                    ...(d.notas ?? []),
-                  ],
-                }))
-              }
+              onAnotar={(texto, publica) => {
+                const nota = {
+                  id: idNuevo(),
+                  fecha: fechaHoy,
+                  texto,
+                  momento: Date.now(),
+                  plan: plan.id,
+                };
+                setDatos((d) => ({ ...d, notas: [nota, ...(d.notas ?? [])] }));
+                if (publica) soltarAlMuro(nota);
+              }}
               onCambiar={(nuevo) =>
                 setDatos((d) => ({
                   ...d,
@@ -511,6 +550,18 @@ export default function App() {
         </div>
       ) : null}
 
+      {/* Lo que pasó con el muro. Mismo sitio y misma altura que el brindis. */}
+      {avisoMuro ? (
+        <div
+          className="entrar pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4"
+          style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <p className="pointer-events-auto max-w-md rounded-2xl border border-borde bg-superficie-alta px-4 py-3 text-xs leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+            {avisoMuro}
+          </p>
+        </div>
+      ) : null}
+
       {/* En las pantallas de dentro, «Más» queda marcada. */}
       <nav className="zona-segura-abajo fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-borde bg-fondo/95 backdrop-blur">
         <div className="flex">
@@ -573,8 +624,10 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
          * que releerla dentro de un año valga: no solo está lo que sintió,
          * está si aquel día venció o cayó.
          */
-        const anotar = (registro: RegistroPlan, nota?: string) => {
+        const anotar = (registro: RegistroPlan, nota?: string, publica?: boolean) => {
           const texto = nota?.trim();
+          const id = idNuevo();
+          const momento = Date.now();
           setDatos((d) => ({
             ...d,
             planesRegistros: {
@@ -585,10 +638,10 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
               ? {
                   notas: [
                     {
-                      id: idNuevo(),
+                      id,
                       fecha: fechaHoy,
                       texto,
-                      momento: Date.now(),
+                      momento,
                       plan: plan.id,
                       estado: estadoDelDia(plan, fechaHoy, { ...d, planesRegistros: {
                         ...d.planesRegistros,
@@ -600,6 +653,9 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
                 }
               : {}),
           }));
+          // Se manda **después** de guardar el repaso: lo que sostiene la
+          // racha se apunta primero, y publicar es lo accesorio.
+          if (texto && publica) soltarAlMuro({ id, texto, momento });
           setExamen(null);
         };
 
@@ -611,7 +667,9 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
               plan={plan}
               registro={registroDe(datos, fechaHoy, plan.id)}
               restauradosEsteMes={diasRestaurados(plan, datos, 30, ahora)}
-              onGuardar={(r, nota) => anotar({ ...r, repasado: Date.now() }, nota)}
+              onGuardar={(r, nota, publica) =>
+                anotar({ ...r, repasado: Date.now() }, nota, publica)
+              }
               onCerrar={() => setExamen(null)}
             />
           );
@@ -621,7 +679,9 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
           <ExamenDelPlan
             plan={plan}
             registro={registroDe(datos, fechaHoy, plan.id)}
-            onGuardar={(puntos, nota) => anotar({ puntos, repasado: Date.now() }, nota)}
+            onGuardar={(puntos, nota, publica) =>
+              anotar({ puntos, repasado: Date.now() }, nota, publica)
+            }
             onCerrar={() => setExamen(null)}
           />
         );

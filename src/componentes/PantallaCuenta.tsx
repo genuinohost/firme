@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PAISES, paisDe } from "@/datos/paises";
 import { abrirEnlace } from "@/logica/enlaces";
+import { leerMuroDe, type NotaPublica } from "@/logica/muro";
 import {
   aceptarAmistad,
   borrarCuenta,
@@ -277,9 +278,18 @@ function Invitacion({ onEntrar }: { onEntrar: () => void }) {
               ✕
             </span>
             <span>
-              <strong>No sube nada de lo que escribes.</strong> Ni el diario, ni las
-              notas, ni los repasos de la noche. Eso se queda en este teléfono, y no
-              hay forma de que llegue a ningún servidor nuestro.
+              <strong>Tu diario no sube.</strong> Ni las notas, ni los repasos de la
+              noche. Eso se queda en este teléfono y no se sincroniza en ningún sitio.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="shrink-0 text-acento" aria-hidden>
+              🌐
+            </span>
+            <span>
+              <strong>Salvo lo que tú publiques.</strong> Cada nota tiene un botón de
+              publicar, apagado siempre. Lo que publiques lo puede leer cualquiera,
+              sea hermano tuyo o no, y puedes retirarlo cuando quieras.
             </span>
           </li>
         </ul>
@@ -917,12 +927,13 @@ function Cierre({ perfil, onFuera }: { perfil: Perfil; onFuera: () => void }) {
         ) : (
           <div className="rounded-xl border border-fallo/40 bg-fallo/5 p-3">
             <p className="text-sm leading-relaxed">
-              Se borra tu perfil, tu nombre de usuario y tus amistades, y no se puede
-              deshacer.
+              Se borra tu perfil, tu nombre de usuario, tus amistades, tu WhatsApp y
+              todo lo que hayas publicado en el muro. No se puede deshacer.
             </p>
             <p className="mt-2 text-xs leading-relaxed text-tenue">
               <strong>Tu diario, tus notas y tus rachas se quedan</strong> — nunca
-              estuvieron en la cuenta. Siguen en este teléfono como hasta ahora.
+              estuvieron en la cuenta. Siguen en este teléfono como hasta ahora, y lo
+              que hubieras publicado sigue ahí también, sólo que ya no en el muro.
             </p>
             {error ? (
               <div className="mt-2">
@@ -1097,9 +1108,11 @@ function cargarImagen(archivo: File): Promise<HTMLImageElement | ImageBitmap> {
  *    siempre le quita a un hermano la forma más sencilla de animar a otro.
  *  - Su WhatsApp, **sólo si lo puso** — y sólo llega aquí porque ya sois
  *    hermanos aceptados; las reglas del servidor lo comprueban.
+ *  - Lo que haya publicado en el muro, que ya era público para todos: no se
+ *    enseña aquí nada que un desconocido no pudiera leer igual.
  *
- * Lo que no está, y no va a estar: nada de lo que escribe. Ni su diario, ni sus
- * notas, ni sus repasos.
+ * Lo que no está, y no va a estar: su diario, sus notas y sus repasos. De lo
+ * que escribe sólo sale lo que él sacó, nota a nota y a mano.
  */
 function FichaDeHermano({
   uid,
@@ -1110,15 +1123,25 @@ function FichaDeHermano({
 }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
+  const [suyas, setSuyas] = useState<NotaPublica[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     let vivo = true;
     void (async () => {
-      const [p, w] = await Promise.all([leerPerfil(uid), leerWhatsapp(uid)]);
+      // Las tres a la vez. El muro y el WhatsApp pueden fallar por su cuenta
+      // —uno por conexión, el otro porque la amistad ya no está aceptada— y
+      // ninguno de los dos debe dejar la ficha en blanco: el perfil es lo que
+      // se vino a ver.
+      const [p, w, m] = await Promise.all([
+        leerPerfil(uid),
+        leerWhatsapp(uid),
+        leerMuroDe(uid).catch(() => []),
+      ]);
       if (!vivo) return;
       setPerfil(p);
       setWhatsapp(w);
+      setSuyas(m);
       setCargando(false);
     })();
     return () => {
@@ -1186,6 +1209,25 @@ function FichaDeHermano({
           </p>
         )}
       </Tarjeta>
+
+      {suyas.length > 0 ? (
+        <Tarjeta>
+          <Etiqueta>lo que ha publicado</Etiqueta>
+          <div className="mt-2 flex flex-col gap-3">
+            {suyas.map((n) => (
+              <div key={n.id} className="border-l-2 border-borde pl-3">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{n.texto}</p>
+                <p className="cifras mt-1 text-[11px] text-tenue">
+                  {new Date(n.momento).toLocaleDateString("es", {
+                    day: "numeric",
+                    month: "long",
+                  })}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Tarjeta>
+      ) : null}
 
       {enlace ? (
         <Tarjeta>

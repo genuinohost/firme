@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { BotonDictar } from "./BotonDictar";
+import { CasillaPublicar } from "./CasillaPublicar";
 import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -41,6 +42,8 @@ export function ExamenDeSantidad({
     },
     /** Lo que quiso escribir sobre el día. Va al diario. */
     nota?: string,
+    /** Si además quiso sacarla al muro. */
+    publica?: boolean,
   ) => void;
   onCerrar: () => void;
 }) {
@@ -48,6 +51,7 @@ export function ExamenDeSantidad({
   const [caidas, setCaidas] = useState<string[]>(registro?.caidas ?? []);
   const [arrepentido, setArrepentido] = useState<boolean | null>(null);
   const [nota, setNota] = useState("");
+  const [publica, setPublica] = useState(false);
 
   const debilidades = plan.debilidades ?? [];
   const cayoEnSuDebilidad = caidas.some((id) => debilidades.includes(id));
@@ -64,6 +68,7 @@ export function ExamenDeSantidad({
         vencioSuDebilidad,
       },
       nota,
+      publica,
     );
   };
 
@@ -239,8 +244,14 @@ export function ExamenDeSantidad({
                 <BotonDictar valor={nota} onTexto={setNota} etiqueta="Dictar" />
               </div>
               <p className="mt-1.5 text-xs text-tenue">
-                Se guarda en tu diario. No lo ve nadie más.
+                Se guarda en tu diario. No lo ve nadie más, salvo que la
+                publiques aquí abajo.
               </p>
+              <CasillaPublicar
+                valor={publica}
+                onCambiar={setPublica}
+                hayTexto={nota.trim().length > 0}
+              />
             </div>
 
             <div className="mt-4">
@@ -343,8 +354,14 @@ export function ExamenDeSantidad({
                 <BotonDictar valor={nota} onTexto={setNota} etiqueta="Dictar" />
               </div>
               <p className="mt-1.5 text-xs text-tenue">
-                Se guarda en tu diario. No lo ve nadie más.
+                Se guarda en tu diario. No lo ve nadie más, salvo que la
+                publiques aquí abajo.
               </p>
+              <CasillaPublicar
+                valor={publica}
+                onCambiar={setPublica}
+                hayTexto={nota.trim().length > 0}
+              />
             </div>
 
             <div className="mt-4">

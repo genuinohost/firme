@@ -13,6 +13,7 @@ import {
   rachaMaximaDelPlan,
 } from "@/logica/planes";
 import { BotonDictar } from "./BotonDictar";
+import { CasillaPublicar } from "./CasillaPublicar";
 import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -37,12 +38,13 @@ export function DetallePlan({
   onRepasar: () => void;
   onCambiar: (plan: Plan) => void;
   /** Escribir una nota de este plan sin pasar por el repaso de la noche. */
-  onAnotar: (texto: string) => void;
+  onAnotar: (texto: string, publica: boolean) => void;
   onEliminar: () => void;
   onVolver: () => void;
 }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [borrador, setBorrador] = useState("");
+  const [publicarla, setPublicarla] = useState(false);
 
   const hoy = claveFecha(ahora);
   const estado = estadoDelDia(plan, hoy, datos, true);
@@ -137,17 +139,25 @@ export function DetallePlan({
             placeholder="Lo que quieras dejar anotado hoy..."
           />
         </div>
+        <CasillaPublicar
+          valor={publicarla}
+          onCambiar={setPublicarla}
+          hayTexto={borrador.trim().length > 0}
+        />
         <div className="mt-2 flex flex-col gap-2">
           <BotonDictar valor={borrador} onTexto={setBorrador} etiqueta="Dictar" />
           <Boton
             ancho
             deshabilitado={borrador.trim().length === 0}
             onClick={() => {
-              onAnotar(borrador.trim());
+              onAnotar(borrador.trim(), publicarla);
               setBorrador("");
+              // La casilla vuelve a apagarse: que quedara encendida haría que
+              // la siguiente nota saliera al muro sin que nadie lo decidiera.
+              setPublicarla(false);
             }}
           >
-            Guardar en mi diario
+            {publicarla ? "Guardar y publicar" : "Guardar en mi diario"}
           </Boton>
         </div>
 

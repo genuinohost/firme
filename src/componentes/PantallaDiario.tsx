@@ -9,6 +9,8 @@ import {
   exportarTexto,
   nombreDeArchivo,
 } from "@/logica/exportar";
+import { despublicarNota, publicarNota } from "@/logica/muro";
+import { comoFallo } from "@/logica/nube";
 import { BotonDictar } from "./BotonDictar";
 import { AreaTexto, Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
@@ -22,6 +24,14 @@ import { AreaTexto, Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
  * acabó aquel día. Esa es la diferencia con un cuaderno cualquiera: al releer
  * seis meses después no solo está lo que escribiste, sino si aquel día venciste
  * o caíste. Ahí es donde se ve el camino recorrido.
+ *
+ * ── Publicar una nota ─────────────────────────────────────────────────────
+ *
+ * Desde la 6.3 cada nota puede salir al muro, una por una y a mano. Todo nace
+ * privado y lo que ya estaba escrito sigue privado. Lo que sube es el texto y
+ * el nombre: **nunca el plan del que viene ni cómo acabó aquel día**, aunque
+ * aquí se vean. Decir «esto es del plan de los ojos» cuenta la batalla de
+ * alguien aunque su texto no la cuente.
  */
 export function PantallaDiario({
   datos,
@@ -38,6 +48,10 @@ export function PantallaDiario({
   const [editando, setEditando] = useState<string | null>(null);
   const [borrador, setBorrador] = useState("");
   const [aviso, setAviso] = useState("");
+  /** La nota que está esperando un «sí, publícala». */
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+  /** La nota que está subiendo o bajando ahora mismo. */
+  const [ocupado, setOcupado] = useState<string | null>(null);
 
   /** Un aviso corto: lo que pasó al sacar el texto del teléfono. */
   const avisar = (texto: string) => {
@@ -46,6 +60,37 @@ export function PantallaDiario({
   };
 
   const hoy = claveFecha(ahora);
+
+  /**
+   * Publicar o retirar una nota.
+   *
+   * El orden importa y no es el cómodo: **primero el servidor, y sólo si sale
+   * bien se apunta en el teléfono**. Al revés —marcarla como pública y subirla
+   * luego— la app enseñaría «pública» sobre algo que no llegó a subir, o peor,
+   * «privada» sobre algo que sí está arriba. De los dos embustes, el segundo
+   * es el que hace daño.
+   */
+  const cambiarPublicacion = async (n: Nota, quiero: boolean) => {
+    setConfirmando(null);
+    setOcupado(n.id);
+    try {
+      if (quiero) await publicarNota(n);
+      else await despublicarNota(n.id);
+      onCambiar(notas.map((x) => (x.id === n.id ? { ...x, publica: quiero } : x)));
+      avisar(quiero ? "Publicada. Cualquiera puede leerla." : "Retirada del muro.");
+    } catch (e) {
+      const motivo = e instanceof Error ? e.message : "";
+      avisar(
+        motivo === "sin-cuenta"
+          ? "Para publicar hace falta entrar: Más → Mi cuenta."
+          : motivo === "sin-perfil"
+            ? "Primero completa tu perfil en Más → Mi cuenta."
+            : comoFallo(e),
+      );
+    } finally {
+      setOcupado(null);
+    }
+  };
 
   const guardar = () => {
     const texto = escribiendo.trim();
@@ -83,8 +128,9 @@ export function PantallaDiario({
       <header className="pt-2">
         <h1 className="text-xl font-semibold">Mi diario</h1>
         <p className="mt-1 text-sm leading-relaxed text-tenue">
-          Tuyo y de nadie más. No sale de este teléfono, y aquí no hay nada que
-          hacer bien: escribe lo que sea, cuando sea.
+          Tuyo y de nadie más. No sale de este teléfono salvo la nota que tú
+          publiques a propósito, y aquí no hay nada que hacer bien: escribe lo
+          que sea, cuando sea.
         </p>
       </header>
 
@@ -187,6 +233,19 @@ export function PantallaDiario({
                                 : notas.filter((x) => x.id !== n.id),
                             );
                             setEditando(null);
+                            // Si estaba publicada, la copia de arriba tiene que
+                            // seguir a ésta. Si no, el muro enseñaría para
+                            // siempre una frase que su dueño ya cambió o
+                            // borró, y él la vería corregida en su teléfono
+                            // creyendo que lo está en el de los demás.
+                            if (n.publica) {
+                              const arriba = texto
+                                ? publicarNota({ ...n, texto })
+                                : despublicarNota(n.id);
+                              void arriba.catch(() =>
+                                avisar("No se pudo actualizar la copia del muro. Prueba luego."),
+                              );
+                            }
                           }}
                         >
                           {borrador.trim() ? "Guardar" : "Borrar"}
@@ -206,7 +265,56 @@ export function PantallaDiario({
                     >
                       {n.texto}
                     </button>
-                    <div className="mt-2 flex justify-end">
+                    {confirmando === n.id ? (
+                      <div className="mt-3 rounded-xl border border-acento/50 bg-acento/5 p-3">
+                        <p className="text-xs leading-relaxed">
+                          Al publicarla, <strong>cualquiera puede leerla</strong>:
+                          hermanos y desconocidos, dentro y fuera de la app. Irá
+                          con tu nombre. Puedes retirarla cuando quieras, pero lo
+                          que ya se leyó, leído está.
+                        </p>
+                        <p className="mt-2 text-xs leading-relaxed text-tenue">
+                          No se publica de qué plan viene ni cómo acabó aquel día.
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <div className="flex-1">
+                            <Boton
+                              variante="fuerte"
+                              ancho
+                              onClick={() => void cambiarPublicacion(n, true)}
+                            >
+                              Publicarla
+                            </Boton>
+                          </div>
+                          <Boton onClick={() => setConfirmando(null)}>Dejarlo</Boton>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      {/*
+                        Publicar pregunta; retirar, no. Poner algo delante de
+                        todo el mundo merece un segundo de freno; quitarlo de
+                        ahí no debe tener ni uno.
+                      */}
+                      <button
+                        disabled={ocupado === n.id}
+                        onClick={() =>
+                          n.publica
+                            ? void cambiarPublicacion(n, false)
+                            : setConfirmando(confirmando === n.id ? null : n.id)
+                        }
+                        className={
+                          "rounded-lg px-2 py-1 text-xs transition disabled:opacity-50 " +
+                          (n.publica ? "text-acento" : "text-tenue hover:text-acento")
+                        }
+                      >
+                        {ocupado === n.id
+                          ? "un momento…"
+                          : n.publica
+                            ? "🌐 pública · retirar"
+                            : "publicar"}
+                      </button>
                       <button
                         onClick={async () => avisar(comoFue(await compartirNota(n, datos)))}
                         className="rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-acento"

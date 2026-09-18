@@ -144,6 +144,18 @@ export type Nota = {
   plan?: string;
   /** Cómo quedó ese día en ese plan. */
   estado?: "ganado" | "restaurado" | "fallado";
+  /**
+   * Si su dueño la publicó en el muro.
+   *
+   * Opcional y, cuando falta, **privada**. Es lo que hace que actualizar la
+   * app no publique nada de lo ya escrito: no existe nota vieja con esto
+   * puesto, y no existe por diseño.
+   *
+   * De lo que sube al muro quedan fuera `plan` y `estado`. Decir de qué plan
+   * viene una nota cuenta la batalla de quien la escribió aunque su texto no
+   * la cuente.
+   */
+  publica?: boolean;
 };
 
 /** Lo que se pinta en la línea del día: bloque de rutina o tarea, ya resuelto. */

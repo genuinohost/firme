@@ -8,16 +8,26 @@ rules_version = '2';
 // puede desmontar y reescribir en una tarde; estas reglas no. Todo lo que aquí
 // no se prohíba, está permitido para todo el mundo.
 //
-// ── La línea que no se cruza ──────────────────────────────────────────────
+// ── La línea, y dónde se movió ────────────────────────────────────────────
 //
-// **El diario, las notas y los repasos NO suben nunca a Firestore.** Ni
-// cifrados, ni "solo para el dueño", ni "por si acaso se pierde el móvil". Ahí
-// se anota una caída y lo que se le dijo a Dios por ella, y eso se queda en el
-// teléfono de quien lo escribió. Aquí solo vive lo que hace falta para que dos
-// hermanos se reconozcan y se animen: el perfil y la amistad.
+// Hasta el 17 de septiembre de 2026 aquí ponía que **el diario, las notas y
+// los repasos no subían nunca**, y pedía que quien lo cambiara viniera a
+// borrar el párrafo a mano. Esto es esa mano.
 //
-// Si algún día alguien añade una colección para sincronizar el diario, que
-// tenga que venir a borrar este párrafo a mano.
+// Lo cambió Alex, el dueño de la app, con estas palabras: «las notas en el
+// diario y exámenes deben tener la opción de pública o privada. Lo público lo
+// puede ver todo el mundo, amigos o no». Queda escrito aquí, y no sólo en un
+// registro de cambios, para que dentro de un año se sepa quién lo pidió.
+//
+// **La regla nueva:** nada de lo que se escribe llega a este servidor salvo la
+// nota concreta en la que su dueño tocó «publicar». Todo nace privado, lo que
+// ya estaba escrito sigue privado, y despublicar borra el documento — no lo
+// esconde. Ni el plan del que viene una nota ni cómo acabó aquel día se
+// publican jamás: eso cuenta la batalla de alguien aunque su texto no la
+// cuente.
+//
+// El diario entero, los repasos de la noche y las rachas del día a día siguen
+// sin tener colección aquí, y siguen sin poder tenerla.
 // ============================================================================
 
 service cloud.firestore {
@@ -29,6 +39,19 @@ service cloud.firestore {
 
     function esElMismo(uid) {
       return haEntrado() && request.auth.uid == uid;
+    }
+
+    // Quién puede retirar lo que escribió otro.
+    //
+    // La lista vive en `moderadores/{uid}` y **no se puede leer ni escribir
+    // desde la app**: se pone a mano desde la consola de Firebase. `exists()`
+    // funciona igual, porque las reglas no se aplican a sí mismas.
+    //
+    // Existe porque Google Play no deja publicar una app donde unos usuarios
+    // leen lo que escriben otros si nadie puede quitar lo que esté mal.
+    function esModerador() {
+      return haEntrado()
+        && exists(/databases/$(database)/documents/moderadores/$(request.auth.uid));
     }
 
     // Un perfil que no cabe en esto es un perfil que trae basura o un intento
@@ -71,7 +94,7 @@ service cloud.firestore {
       allow create, update: if esElMismo(uid) && perfilRazonable(request.resource.data);
       allow delete: if esElMismo(uid);
 
-      // ------------------------------------------------- lo que sólo ven los suyos
+      // ------------------------------------------- lo que sólo ven los suyos
       //
       // **El WhatsApp no va en el perfil.** El perfil lo puede leer cualquiera
       // que haya entrado —hace falta para poder buscar a un hermano por su
@@ -93,6 +116,15 @@ service cloud.firestore {
           && (!('whatsapp' in request.resource.data)
               || (request.resource.data.whatsapp is string
                   && request.resource.data.whatsapp.size() <= 40));
+      }
+
+      // --------------------------------------------------------- bloqueados
+      //
+      // A quién no quiero volver a leer. Es asunto de uno y de nadie más: ni
+      // siquiera el bloqueado puede saber que lo está, que es justo lo que
+      // hace que bloquear no dé miedo.
+      match /bloqueados/{otro} {
+        allow read, write: if esElMismo(uid);
       }
 
       // --------------------------------------------------------- amistades
@@ -123,6 +155,59 @@ service cloud.firestore {
         // quien uno ya no quiere tener. Siempre sobre el documento de uno.
         allow delete: if esElMismo(otro);
       }
+    }
+
+    // --------------------------------------------------------------- el muro
+    //
+    // Las notas que alguien decidió publicar. **Nada llega aquí sin que su
+    // dueño lo mande**: la app las escribe de una en una y sólo al tocar
+    // «publicar».
+    //
+    // Se leen sin haber entrado, y es a propósito: Alex lo pidió así —«lo
+    // público lo puede ver todo el mundo, amigos o no»— y la app entera
+    // funciona sin cuenta. Exigir cuenta para leer dejaría el muro en blanco
+    // justo para quien abre la app por primera vez, que es precisamente a
+    // quien hay que animar.
+    //
+    // Escribir sí exige cuenta, y sólo a nombre propio: el `uid` del documento
+    // tiene que ser el de quien lo manda, y no puede cambiar después. Sin eso,
+    // cualquiera podría publicar firmando con el nombre de otro.
+    match /notas/{id} {
+      function notaRazonable(d) {
+        return d.keys().hasOnly(['uid', 'nombre', 'usuario', 'texto', 'momento'])
+          && d.texto is string && d.texto.size() > 0 && d.texto.size() <= 2000
+          && d.nombre is string && d.nombre.size() <= 40
+          && d.usuario is string && d.usuario.size() <= 20
+          && d.momento is number;
+      }
+
+      allow read: if true;
+      allow create: if esElMismo(request.resource.data.uid)
+        && notaRazonable(request.resource.data);
+      allow update: if esElMismo(resource.data.uid)
+        && request.resource.data.uid == resource.data.uid
+        && notaRazonable(request.resource.data);
+      // Retirar lo propio, siempre. Lo ajeno, sólo quien modera.
+      allow delete: if esElMismo(resource.data.uid) || esModerador();
+    }
+
+    // ------------------------------------------------------------ denuncias
+    //
+    // Un buzón de una sola dirección: se deja algo dentro y no se vuelve a
+    // abrir desde la app. Nadie puede leer las denuncias de nadie —ni las
+    // suyas—, ni cambiarlas, ni borrarlas. Se leen desde la consola.
+    match /denuncias/{id} {
+      allow create: if haEntrado()
+        && request.resource.data.de == request.auth.uid
+        && request.resource.data.nota is string
+        && request.resource.data.motivo is string
+        && request.resource.data.motivo.size() <= 200;
+      allow read, update, delete: if false;
+    }
+
+    // Quién modera. Se rellena desde la consola de Firebase y la app no lo ve.
+    match /moderadores/{uid} {
+      allow read, write: if false;
     }
 
     // ------------------------------------------------------ nombres de usuario

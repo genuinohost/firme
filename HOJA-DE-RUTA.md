@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **17 de septiembre de 2026** (versión 5.7).
+Última revisión: **17 de septiembre de 2026** (versión 6.3).
 
 ---
 
@@ -39,6 +39,9 @@ Hoja de ruta
 | ✅ | Firma **@GenuinoLove** y enlace de descarga al compartir | `logica/compartir.ts` |
 | ✅ | **Aviso de versión nueva** dentro de la app | `AvisoActualizacion` |
 | ✅ | Código en GitHub y APK en Releases | `scripts/publicar-release.mjs` |
+| ✅ | **Cuenta con Google**, perfil, foto, 249 países y amigos | `PantallaCuenta` |
+| ✅ | **Ficha del hermano**: su perfil, sus cifras si las abre, su WhatsApp | `PantallaCuenta` |
+| ✅ | **Muro**: las notas que cada uno decide publicar, con denuncia y bloqueo | `Muro.tsx`, `logica/muro.ts` |
 
 ---
 
@@ -941,8 +944,64 @@ Cosas que no ha pedido y que esta app necesita para estar a la altura.
 
 ---
 
+## 🌐 El muro: notas públicas o privadas (6.3, 17-09)
+
+Alex: «las notas en el diario y exámenes deben tener la opción de pública o
+privada. **Lo público lo puede ver todo el mundo, amigos o no**».
+
+**Esto cambió una promesa que estaba escrita en tres sitios.** Hasta hoy la app
+decía, en la pantalla de la cuenta, en la política de privacidad y en la
+cabecera de `firestore.rules`, que el diario **no subía nunca**. La promesa se
+ha reescrito en los tres, no se ha borrado sin más: quien instaló la app con la
+promesa vieja tiene derecho a leer la nueva.
+
+**La regla que la sustituye:** nada de lo que se escribe sale del teléfono salvo
+la nota concreta en la que su dueño tocó «publicar». Todo nace privado, lo que
+ya estaba escrito sigue privado —ninguna nota vieja tiene la marca—, y retirar
+una la borra del servidor de verdad.
+
+### Lo que **no** viaja, aunque la nota sea pública
+
+Sube el texto, el nombre y el nombre de usuario. **No sube de qué plan viene la
+nota ni cómo acabó aquel día**, aunque dentro de la app se vean juntos. Decir
+«esto es del plan de los ojos» o «aquel día fallé» cuenta la batalla de alguien
+aunque su texto no la cuente. Es la misma familia de la decisión del diario, y
+se resuelve igual: lo delicado sólo sale si lo escribe él.
+
+### Denunciar, bloquear y moderar no son un extra
+
+En cuanto una app enseña a unos usuarios lo que escriben otros, **la política de
+contenido generado de Google Play exige** poder denunciar, poder bloquear y que
+alguien pueda retirar. Sin las tres, la app no entra en la tienda — y la tienda
+es lo que Alex más quiere. Están las tres:
+
+| Lo que exige Play | Dónde está |
+|---|---|
+| Denunciar | Menú «⋯» de cada nota → *Denunciar esta nota* (colección `denuncias`) |
+| Bloquear | Mismo menú → *No ver nada de …* (`usuarios/{uid}/bloqueados`) |
+| Retirar lo ajeno | `moderadores/{uid}`; quien esté ahí puede borrar cualquier nota |
+
+También hay que **cambiar la respuesta del cuestionario de clasificación**: la
+app ya no es «sin contenido generado por usuarios».
+
+### Y un fallo de la 6.2 corregido de paso
+
+Al borrar la cuenta se borraba `usuarios/{uid}`, pero **Firestore no borra las
+subcolecciones con el padre**: el WhatsApp guardado en `privado/contacto` se
+quedaba en el servidor después de que la pantalla dijera «se va de verdad». Se
+nombran ahora una por una todas las colecciones que cuelgan de una cuenta —
+amigos, privado, bloqueados y las notas publicadas—, y **cada colección nueva
+tiene que pasar por ahí**.
+
+---
+
 ## Pendiente de Alex
 
+- [ ] 🔴 **Darse de alta como moderador** — crear a mano, en la consola de
+      Firebase, el documento `moderadores/<su uid>` (colección `moderadores`,
+      el id es su uid de Firebase Authentication; el contenido da igual).
+      **Sin eso nadie puede retirar lo que escriba otro**, y eso es justo lo
+      que Play pide demostrar para dejar publicar una app con muro.
 - [ ] **Reunir 12 probadores** — bloquea la publicación entera
 - [ ] Crear la cuenta de Play ($25)
 - [ ] Dar los enlaces reales para `public/comunidad.json`

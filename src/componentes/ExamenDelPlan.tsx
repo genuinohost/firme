@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { BotonDictar } from "./BotonDictar";
+import { CasillaPublicar } from "./CasillaPublicar";
 import { AreaTexto, Boton, Cita, Etiqueta, Tarjeta } from "./piezas";
 
 /**
@@ -26,6 +27,8 @@ export function ExamenDelPlan({
     puntos: Record<string, boolean>,
     /** Lo que quiso escribir sobre el día. Va al diario. */
     nota?: string,
+    /** Si además quiso sacarla al muro. */
+    publica?: boolean,
   ) => void;
   onCerrar: () => void;
 }) {
@@ -34,6 +37,7 @@ export function ExamenDelPlan({
   );
   const [verVersiculo, setVerVersiculo] = useState<string | null>(null);
   const [nota, setNota] = useState("");
+  const [publica, setPublica] = useState(false);
 
   const contestados = plan.puntos.filter((p) => respuestas[p.id] !== undefined).length;
   const todos = contestados === plan.puntos.length;
@@ -175,8 +179,14 @@ export function ExamenDelPlan({
             <BotonDictar valor={nota} onTexto={setNota} etiqueta="Dictar" />
           </div>
           <p className="mt-1.5 text-xs text-tenue">
-            Se guarda en tu diario, junto a si hoy venciste o caíste. No lo ve nadie más.
+            Se guarda en tu diario, junto a si hoy venciste o caíste. No lo ve
+            nadie más, salvo que la publiques aquí abajo.
           </p>
+          <CasillaPublicar
+            valor={publica}
+            onCambiar={setPublica}
+            hayTexto={nota.trim().length > 0}
+          />
         </div>
 
         <div className="mt-3 flex flex-col gap-2">
@@ -184,7 +194,7 @@ export function ExamenDelPlan({
             variante="fuerte"
             ancho
             deshabilitado={!todos}
-            onClick={() => onGuardar(respuestas as Record<string, boolean>, nota)}
+            onClick={() => onGuardar(respuestas as Record<string, boolean>, nota, publica)}
           >
             {todos
               ? "Cerrar el día"

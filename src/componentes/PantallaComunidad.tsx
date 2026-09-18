@@ -10,6 +10,7 @@ import {
 } from "@/logica/comunidad";
 import { abrirEnlace } from "@/logica/enlaces";
 import { copiar } from "@/logica/compartir";
+import { Muro } from "./Muro";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
 /**
@@ -109,6 +110,15 @@ export function PantallaComunidad() {
           {comunidad.bienvenida ?? "Nadie persevera solo. Únete y anima a otro."}
         </p>
       </header>
+
+      {/*
+        El muro va arriba del todo, y no al final con los enlaces.
+
+        Los grupos y las reuniones dependen de que alguien los rellene; el muro
+        lo llena la propia gente que usa la app. Ponerlo abajo sería enterrar lo
+        único que siempre tiene algo debajo de lo que casi nunca lo tiene.
+      */}
+      <Muro />
 
       {vacia ? (
         <Vacio>

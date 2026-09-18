@@ -181,9 +181,41 @@ declara marcando cada dato como **«opcional»**, no como obligatorio.
 | Fotos y vídeos | **Fotos** (el avatar de Google) | Sí | No | No | Foto del perfil |
 | Actividad en la app | **Otro contenido generado por el usuario** (el versículo del perfil) | Sí | No | No | Encabezar el perfil |
 | Actividad en la app | **Otras acciones** (con quién tiene amistad) | Sí | No | No | La función de amigos |
+| Mensajes | **Otros mensajes dentro de la app** (las notas que el usuario publica en el muro) | Sí | **Sí** | No | Que otros las lean y se animen |
+| Información personal | **Número de teléfono** (el WhatsApp del perfil, si lo pone) | Sí | No | No | Que sus amigos aceptados puedan escribirle |
 
 **Finalidad de todo lo anterior:** *Funciones de la app* y *Gestión de la
 cuenta*. **Nunca** publicidad, marketing, analítica ni personalización.
+
+> ⚠️ **La fila de «Mensajes» lleva «Se comparte: Sí», y es la única.** Una nota
+> publicada la puede leer cualquiera, tenga cuenta o no. En el formulario de
+> Play «compartir» significa exactamente eso —que sale del control de quien lo
+> escribió—, y aquí sale. Declararla como no compartida sería justo el error
+> que retira la app.
+>
+> El WhatsApp **no** se comparte en el sentido de Play: sólo llega a los amigos
+> ya aceptados, y las reglas del servidor lo comprueban documento a documento.
+
+### ⚠️ Contenido generado por usuarios: ahora SÍ hay
+
+**Desde la 6.3 la app muestra a unos usuarios lo que escriben otros** (el muro).
+Eso activa la política de *Contenido generado por el usuario* de Play, que exige
+tres cosas. Las tres están hechas, y conviene saber dónde:
+
+| Lo que exige Play | Dónde está |
+|---|---|
+| Poder **denunciar** contenido | Menú «⋯» de cada nota del muro → *Denunciar esta nota*. Se escribe en la colección `denuncias` |
+| Poder **bloquear** a otro usuario | Mismo menú → *No ver nada de …*. Lista en `usuarios/{uid}/bloqueados` |
+| Que alguien pueda **retirarlo** | `moderadores/{uid}` en Firestore. Quien esté ahí puede borrar cualquier nota |
+
+**Pendiente de Alex, y bloquea la publicación:** darse de alta como moderador
+creando a mano el documento `moderadores/<su uid>` en la consola de Firebase.
+Sin eso, nadie puede retirar lo que escriba otro — que es justo lo que Play pide
+demostrar.
+
+Además, en el **cuestionario de clasificación de contenido** hay que responder
+**que sí** a «¿los usuarios pueden interactuar o intercambiar contenido?». Antes
+era que no.
 
 ### ⚠️ La pregunta delicada: creencias religiosas
 
@@ -215,9 +247,14 @@ publicidad.
 Esto no es una promesa de intención: **la app no tiene el código para enviarlo**,
 y las reglas de Firestore no aceptarían recibirlo.
 
-- El **diario** y las **notas personales**
-- Los **repasos de la noche**, incluido el de santidad — donde se anota una
-  caída y lo que se le dijo a Dios por ella
+- El **diario** y las **notas personales** — con una excepción, la única: la
+  nota suelta que el propio usuario decide publicar en el muro. Todo nace
+  privado, la casilla está apagada siempre, y retirar una nota la borra del
+  servidor
+- Los **repasos de la noche**, incluido el de santidad — dónde falló, si se
+  arrepintió y cómo quedó el día. **Eso no sube nunca**, ni siquiera cuando
+  publica la nota que escribió esa misma noche: del repaso sólo puede salir el
+  texto que él escribió, sin el plan del que viene ni el resultado del día
 - La rutina, las tareas, las horas de las alarmas
 - Las rachas, el historial y los favoritos
 - El código de seguridad de la app (sólo se guarda una huella, en el teléfono)
@@ -235,8 +272,12 @@ hacia nosotros — pero sí está explicado en la política de privacidad.
 ## Clasificación de contenido
 
 Sin violencia, sin sexo, sin lenguaje soez, sin sustancias, sin juego, sin
-compras, sin contenido generado por usuarios, sin ubicación. Contenido
-religioso de referencia. Debería salir apta para todos los públicos.
+compras, sin ubicación. Contenido religioso de referencia.
+
+**Sí hay contenido generado por usuarios** desde la 6.3 (el muro), y hay que
+declararlo: los usuarios publican texto que otros leen, con denuncia, bloqueo y
+moderación. Eso puede subir la edad recomendada respecto a «todos los públicos»,
+y es correcto que la suba — la app es 18+ de todas formas.
 
 ## Público objetivo
 
