@@ -123,8 +123,18 @@ Genuino es de la comunidad cristiana Genuino Love.
 |---|---|
 | Icono 512×512 | `docs/tienda/icono-play-512.png` |
 | Gráfico destacado 1024×500 | `docs/tienda/destacado-1024x500.png` |
-| Capturas de teléfono | `docs/tienda/capturas/` — **5 de 7**, faltan dos |
+| Capturas de teléfono | `docs/tienda/capturas/listas/` — **6 listas**, falta la de la alarma |
 | Página de borrado de cuenta | `https://genuino-pro.web.app/borrar-cuenta.html` ✅ |
+
+⚠️ **Las capturas del móvil NO valen tal cual.** Play exige que el lado largo
+no pase del doble del corto, y las del Xiaomi salen a 1220×2712 — es 1:2,22 y
+las rechaza. Eso se descubriría al subirlas, que es el peor momento.
+
+`npm run capturas` lo arregla quitando **lo que además sobraba**: la barra de
+estado —con su reloj, su batería, sus notificaciones y la píldora de proyectar
+pantalla— y los botones de Android. Nada de eso es la app. Al quitarlo, la
+proporción cae sola en 1:2,00 y quedan en PNG de 24 bits, que es lo que pide.
+Las listas para subir están en `capturas/listas/`.
 
 **Las capturas las hace Alex desde su móvil**, no desde el ordenador. No es
 pereza: las del emulador se notan, y la que más vende —la alarma sonando con el
