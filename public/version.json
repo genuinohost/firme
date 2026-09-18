@@ -1,10 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 42,
-  "nombre": "6.0",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.0.apk",
+  "codigo": 43,
+  "nombre": "6.1",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.1.apk",
   "novedades": [
-    "Quitado el nombre de ejemplo que salia en Ajustes"
+    "Arreglado: al empezar un plan por la tarde salian 2 dias en pie en vez de 1"
   ],
   "importante": false
 }
