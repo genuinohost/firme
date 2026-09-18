@@ -317,8 +317,8 @@ no montar nada.** Si falla de verdad con el móvil en el bolsillo, es gratis arr
    (levantarse 5:30, oración, ejercicio…). Hay que poner la suya y, sobre todo, **escribir su
    porqué** — ahora mismo tiene el texto de relleno.
 
-4. **Revisar las citas bíblicas.** Van en Reina-Valera 1909 (dominio público). Él es Capellán
-   Nacional de los Gedeones: que las repase antes de fiarse.
+4. **Revisar las citas bíblicas.** Van en Reina-Valera 1909 (dominio público). Alex tiene
+   formación y responsabilidad ministerial: que las repase antes de fiarse.
 
 5. **Copia de seguridad.** Hoy es manual, Ajustes → *Exportar*. Si se borran los datos del
    navegador, se pierde el historial.
