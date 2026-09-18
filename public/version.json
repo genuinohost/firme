@@ -1,10 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 40,
-  "nombre": "5.8",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.8.apk",
+  "codigo": 41,
+  "nombre": "5.9",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-5.9.apk",
   "novedades": [
-    "Quitado el nombre de ejemplo del registro: ahora dice solo lo que va en cada campo"
+    "Ya puedes buscar a un hermano por su NOMBRE, no solo por su usuario",
+    "Foto de perfil desde tu telefono",
+    "Estan los 249 paises",
+    "Arreglado: al registrarse por primera vez la pantalla no avanzaba"
   ],
   "importante": false
 }
