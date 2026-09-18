@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { PAISES, paisDe } from "@/datos/paises";
 import { abrirEnlace } from "@/logica/enlaces";
-import { desbloquear, leerMuroDe, listarBloqueados, type NotaPublica } from "@/logica/muro";
+import {
+  desbloquear,
+  leerFrasesDe,
+  leerMuroDe,
+  listarBloqueados,
+  type FrasePublica,
+  type NotaPublica,
+} from "@/logica/muro";
 import {
   aceptarAmistad,
   borrarCuenta,
@@ -1180,6 +1187,9 @@ function cargarImagen(archivo: File): Promise<HTMLImageElement | ImageBitmap> {
  *    hermanos aceptados; las reglas del servidor lo comprueban.
  *  - Lo que haya publicado en el muro, que ya era público para todos: no se
  *    enseña aquí nada que un desconocido no pudiera leer igual.
+ *  - Las frases que haya querido enseñar. Alex: «que se puedan publicar
+ *    también, cada quien decide». Enseña las que él movió a su perfil, una a
+ *    una; las demás no salen de su teléfono.
  *
  * Lo que no está, y no va a estar: su diario, sus notas y sus repasos. De lo
  * que escribe sólo sale lo que él sacó, nota a nota y a mano.
@@ -1194,6 +1204,7 @@ function FichaDeHermano({
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [suyas, setSuyas] = useState<NotaPublica[]>([]);
+  const [frases, setFrases] = useState<FrasePublica[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
@@ -1203,15 +1214,17 @@ function FichaDeHermano({
       // —uno por conexión, el otro porque la amistad ya no está aceptada— y
       // ninguno de los dos debe dejar la ficha en blanco: el perfil es lo que
       // se vino a ver.
-      const [p, w, m] = await Promise.all([
+      const [p, w, m, f] = await Promise.all([
         leerPerfil(uid),
         leerWhatsapp(uid),
         leerMuroDe(uid).catch(() => []),
+        leerFrasesDe(uid).catch(() => []),
       ]);
       if (!vivo) return;
       setPerfil(p);
       setWhatsapp(w);
       setSuyas(m);
+      setFrases(f);
       setCargando(false);
     })();
     return () => {
@@ -1279,6 +1292,22 @@ function FichaDeHermano({
           </p>
         )}
       </Tarjeta>
+
+      {frases.length > 0 ? (
+        <Tarjeta>
+          <Etiqueta>lo que le sostiene</Etiqueta>
+          <div className="mt-2 flex flex-col gap-3">
+            {frases.map((f) => (
+              <blockquote key={f.id} className="border-l-2 border-acento/60 pl-3">
+                <p className="font-cita text-[15px] leading-relaxed italic whitespace-pre-wrap">
+                  «{f.texto}»
+                </p>
+                {f.fuente ? <p className="mt-1 text-xs text-tenue">— {f.fuente}</p> : null}
+              </blockquote>
+            ))}
+          </div>
+        </Tarjeta>
+      ) : null}
 
       {suyas.length > 0 ? (
         <Tarjeta>

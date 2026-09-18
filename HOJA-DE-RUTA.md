@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **18 de septiembre de 2026** (versión 6.4).
+Última revisión: **18 de septiembre de 2026** (versión 6.5).
 
 ---
 
@@ -42,7 +42,8 @@ Hoja de ruta
 | ✅ | **Cuenta con Google**, perfil, foto, 249 países y amigos | `PantallaCuenta` |
 | ✅ | **Ficha del hermano**: su perfil, sus cifras si las abre, su WhatsApp | `PantallaCuenta` |
 | ✅ | **Muro**: las notas que cada uno decide publicar, con denuncia y bloqueo | `Muro.tsx`, `logica/muro.ts` |
-| ✅ | **Las reglas del servidor, probadas de verdad** — 31 comprobaciones | `scripts/revisar-reglas.mjs` |
+| ✅ | **Frases favoritas en el perfil**, las que cada uno decide enseñar | `PantallaMensaje`, `logica/muro.ts` |
+| ✅ | **Las reglas del servidor, probadas de verdad** — 39 comprobaciones | `scripts/revisar-reglas.mjs` |
 | ✅ | Desplegar **sin iniciar sesión nunca**, con la cuenta de servicio | `scripts/credenciales.mjs` |
 
 ---
@@ -997,6 +998,33 @@ tiene que pasar por ahí**.
 
 ---
 
+## 💬 Las frases favoritas, en el perfil (6.5, 18-09)
+
+Alex, cuando le pregunté si publicarlas o dejarlas privadas: **«que se puedan
+publicar también, cada quien decide»**.
+
+Cada frase guardada tiene ahora un botón **«a mi perfil»**, apagado siempre.
+Las que lleves las ve cualquiera, con tu nombre; las que no, no salen del
+teléfono. Aparecen en la ficha de un hermano bajo **«lo que le sostiene»**.
+
+Van **aparte del muro**, no mezcladas con él, y es una decisión: una nota es lo
+que alguien vivió ese día, una frase guardada es algo que le sostuvo. Juntarlas
+en el mismo hilo convertiría el muro en una cadena de versículos reenviados,
+que es justo lo que no hace falta.
+
+### La trampa del identificador
+
+El id de una frase guardada es **la huella de su texto**. Dos hermanos que
+guarden el mismo versículo —salen del mismo banco, va a pasar a diario—
+tendrían exactamente el mismo id. Con el texto por clave, **el segundo en
+publicar chocaría contra el documento del primero**: las reglas se lo negarían
+y él sólo vería «no se pudo», sin manera de entender por qué ni de arreglarlo.
+
+La clave del documento lleva el uid delante (`uid.huella`). Hay una prueba que
+lo comprueba: *«DOS personas pueden publicar la MISMA frase»*.
+
+---
+
 ## 🔒 Las reglas, probadas por fin (18-09, 6.4)
 
 `firestore.rules` es lo único que separa el WhatsApp, el perfil y las notas de
@@ -1005,7 +1033,7 @@ escribían, se desplegaban —«rules file compiled successfully»— y a otra c
 Pero que compilen sólo dice que están bien escritas: una regla que por error
 deja leer el teléfono de otro compila igual de bien que la que no lo deja.
 
-Ahora hay **31 comprobaciones** contra el emulador de Firestore, hechas en
+Ahora hay **39 comprobaciones** contra el emulador de Firestore, hechas en
 nombre de un extraño:
 
 ```bash

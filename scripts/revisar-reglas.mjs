@@ -104,6 +104,14 @@ await entorno.withSecurityRulesDisabled(async (libre) => {
     texto: "Hoy me costó, pero Dios sostuvo.",
     momento: Date.now(),
   });
+  await setDoc(doc(bd, "frases", "ana.abc123"), {
+    uid: "ana",
+    nombre: "Ana",
+    usuario: "ana",
+    texto: "Esfuérzate y sé valiente.",
+    fuente: "Josué 1:9",
+    cuando: Date.now(),
+  });
   await setDoc(doc(bd, "moderadores", "mod"), { desde: Date.now() });
   await setDoc(doc(bd, "denuncias", "d1"), { nota: "n-de-ana", de: "beto", motivo: "x" });
   await setDoc(doc(bd, "usuarios", "ana", "bloqueados", "curioso"), { cuando: 1 });
@@ -192,6 +200,54 @@ await debe(
   "quien modera SÍ puede retirar una nota ajena",
   // Sin esto, Google Play no deja publicar la app.
   assertSucceeds(deleteDoc(doc(moderador, "notas", "n-de-ana"))),
+);
+
+// --------------------------------------------------------- frases favoritas
+console.log("\nLas frases favoritas");
+const frase = (uid, extra = {}) => ({
+  uid,
+  nombre: "Quien sea",
+  usuario: uid,
+  texto: "Esfuérzate y sé valiente.",
+  cuando: Date.now(),
+  ...extra,
+});
+await debe(
+  "sin cuenta se leen las frases de un perfil",
+  assertSucceeds(getDocs(collection(nadie, "frases"))),
+);
+await debe(
+  "cada uno publica las suyas",
+  assertSucceeds(setDoc(doc(beto, "frases", "beto.abc123"), frase("beto"))),
+);
+await debe(
+  "DOS personas pueden publicar la MISMA frase",
+  // El id de una frase es la huella de su texto: si la clave fuera sólo eso,
+  // el segundo chocaría con el documento del primero. Por eso lleva el uid
+  // delante, y esto lo comprueba.
+  assertSucceeds(setDoc(doc(curioso, "frases", "curioso.abc123"), frase("curioso"))),
+);
+await debe(
+  "una frase con cita también pasa",
+  assertSucceeds(
+    setDoc(doc(beto, "frases", "beto.def456"), frase("beto", { fuente: "Josué 1:9" })),
+  ),
+);
+await debe(
+  "no se publica una frase firmando con el uid de otro",
+  assertFails(setDoc(doc(beto, "frases", "beto.zzz"), frase("ana"))),
+);
+await debe(
+  "nadie borra la frase de otro",
+  assertFails(deleteDoc(doc(curioso, "frases", "ana.abc123"))),
+);
+await debe(
+  "no se cuela un campo de más en una frase",
+  assertFails(setDoc(doc(beto, "frases", "beto.extra"), frase("beto", { plan: "ojos" }))),
+);
+await debe(
+  "quien modera puede retirar una frase ajena",
+  assertSucceeds(deleteDoc(doc(moderador, "frases", "ana.abc123"))),
 );
 
 // ---------------------------------------------------------------- denuncias

@@ -191,6 +191,39 @@ service cloud.firestore {
       allow delete: if esElMismo(resource.data.uid) || esModerador();
     }
 
+    // ------------------------------------------------------- frases favoritas
+    //
+    // Las frases que cada uno enseña en su perfil. Alex: «que se puedan
+    // publicar también, cada quien decide».
+    //
+    // **La clave del documento lleva el uid delante** (`uid.huella`) y por eso
+    // no se valida aquí como se valida el resto: el id de una frase guardada
+    // es la huella de su texto, y dos hermanos que guarden el mismo versículo
+    // —salen del mismo banco, va a pasar a diario— tendrían el mismo id. Con
+    // el texto por clave, el segundo en publicar chocaría con el documento del
+    // primero y estas reglas se lo negarían sin que él pudiera entenderlo.
+    //
+    // Lo que autoriza es el campo `uid`, como en el muro. La clave sólo separa.
+    match /frases/{id} {
+      function fraseRazonable(d) {
+        return d.keys().hasAll(['uid', 'nombre', 'usuario', 'texto', 'cuando'])
+          && d.keys().hasOnly(['uid', 'nombre', 'usuario', 'texto', 'fuente', 'cuando'])
+          && d.texto is string && d.texto.size() > 0 && d.texto.size() <= 2000
+          && d.nombre is string && d.nombre.size() <= 40
+          && d.usuario is string && d.usuario.size() <= 20
+          && (!('fuente' in d) || (d.fuente is string && d.fuente.size() <= 80))
+          && d.cuando is number;
+      }
+
+      allow read: if true;
+      allow create: if esElMismo(request.resource.data.uid)
+        && fraseRazonable(request.resource.data);
+      allow update: if esElMismo(resource.data.uid)
+        && request.resource.data.uid == resource.data.uid
+        && fraseRazonable(request.resource.data);
+      allow delete: if esElMismo(resource.data.uid) || esModerador();
+    }
+
     // ------------------------------------------------------------ denuncias
     //
     // Un buzón de una sola dirección: se deja algo dentro y no se vuelve a

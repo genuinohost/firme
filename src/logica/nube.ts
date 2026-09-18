@@ -536,11 +536,12 @@ export async function borrarCuenta(uid: string, usuario: string): Promise<void> 
   // diga «se va de verdad». Así que aquí se nombra una por una todo lo que
   // cuelga de una cuenta, y cada colección nueva tiene que pasar por aquí.
   const { query, where } = await import("firebase/firestore");
-  const [amigos, privado, bloqueados, mias] = await Promise.all([
+  const [amigos, privado, bloqueados, mias, misFrases] = await Promise.all([
     getDocs(collection(bd, "usuarios", uid, "amigos")),
     getDocs(collection(bd, "usuarios", uid, "privado")),
     getDocs(collection(bd, "usuarios", uid, "bloqueados")),
     getDocs(query(collection(bd, "notas"), where("uid", "==", uid))),
+    getDocs(query(collection(bd, "frases"), where("uid", "==", uid))),
   ]);
 
   const lote = writeBatch(bd);
@@ -550,8 +551,9 @@ export async function borrarCuenta(uid: string, usuario: string): Promise<void> 
   }
   for (const d of privado.docs) lote.delete(doc(bd, "usuarios", uid, "privado", d.id));
   for (const d of bloqueados.docs) lote.delete(doc(bd, "usuarios", uid, "bloqueados", d.id));
-  // Y lo que publicó en el muro: irse es irse.
+  // Y lo que publicó: el muro y las frases de su perfil. Irse es irse.
   for (const d of mias.docs) lote.delete(doc(bd, "notas", d.id));
+  for (const d of misFrases.docs) lote.delete(doc(bd, "frases", d.id));
   if (usuario) lote.delete(doc(bd, "handles", usuario));
   lote.delete(doc(bd, "usuarios", uid));
   await lote.commit();

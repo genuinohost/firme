@@ -181,7 +181,7 @@ declara marcando cada dato como **«opcional»**, no como obligatorio.
 | Fotos y vídeos | **Fotos** (el avatar de Google) | Sí | No | No | Foto del perfil |
 | Actividad en la app | **Otro contenido generado por el usuario** (el versículo del perfil) | Sí | No | No | Encabezar el perfil |
 | Actividad en la app | **Otras acciones** (con quién tiene amistad) | Sí | No | No | La función de amigos |
-| Mensajes | **Otros mensajes dentro de la app** (las notas que el usuario publica en el muro) | Sí | **Sí** | No | Que otros las lean y se animen |
+| Mensajes | **Otros mensajes dentro de la app** (las notas que el usuario publica en el muro y las frases que lleva a su perfil) | Sí | **Sí** | No | Que otros las lean y se animen |
 | Información personal | **Número de teléfono** (el WhatsApp del perfil, si lo pone) | Sí | No | No | Que sus amigos aceptados puedan escribirle |
 
 **Finalidad de todo lo anterior:** *Funciones de la app* y *Gestión de la
@@ -205,6 +205,7 @@ tres cosas. Las tres están hechas, y conviene saber dónde:
 | Lo que exige Play | Dónde está |
 |---|---|
 | Poder **denunciar** contenido | Menú «⋯» de cada nota del muro → *Denunciar esta nota*. Se escribe en la colección `denuncias` |
+| Retirar una **frase** ajena | Misma lista de moderadores; las frases viven en `frases` |
 | Poder **bloquear** a otro usuario | Mismo menú → *No ver nada de …*. Lista en `usuarios/{uid}/bloqueados` |
 | Que alguien pueda **retirarlo** | `moderadores/{uid}` en Firestore. Quien esté ahí puede borrar cualquier nota |
 

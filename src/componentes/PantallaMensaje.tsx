@@ -18,6 +18,7 @@ import {
   quitar,
   type Favorita,
 } from "@/logica/favoritas";
+import { despublicarFrase, misFrasesPublicadas, publicarFrase } from "@/logica/muro";
 import { Boton, Entrada, Etiqueta, Tarjeta } from "./piezas";
 
 /** El corazón que guarda un mensaje entero para volver a él. */
@@ -99,9 +100,71 @@ export function PantallaMensaje() {
   const [verGuardadas, setVerGuardadas] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [guardadas, setGuardadas] = useState<Favorita[]>(() => listar());
+  /**
+   * Cuáles de las guardadas están en el perfil.
+   *
+   * La verdad de esto vive **en el servidor**, no aquí: si se guardara en el
+   * teléfono, desinstalar y volver a instalar dejaría frases colgadas en el
+   * perfil que la app juraría que no están. Se pregunta una vez al abrir.
+   */
+  const [enElPerfil, setEnElPerfil] = useState<Set<string>>(new Set());
+  /** Lo que pasó al mover una frase al perfil. Corto, y se retira solo. */
+  const [avisoFrase, setAvisoFrase] = useState("");
+  const [preguntando, setPreguntando] = useState<string | null>(null);
+  const [subiendo, setSubiendo] = useState<string | null>(null);
 
   const delDia = useMemo(() => mensajeDelDia(), []);
   const coincidencias = useMemo(() => buscarMensajes(tema), [tema]);
+
+  useEffect(() => {
+    if (!avisoFrase) return;
+    const id = window.setTimeout(() => setAvisoFrase(""), 4000);
+    return () => clearTimeout(id);
+  }, [avisoFrase]);
+
+  useEffect(() => {
+    let vivo = true;
+    void misFrasesPublicadas().then((p) => vivo && setEnElPerfil(p));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  /**
+   * Sacar una frase al perfil, o retirarla.
+   *
+   * Primero el servidor y sólo después la pantalla, como con las notas del
+   * diario: enseñar «en mi perfil» sobre algo que no llegó a subir —o al
+   * revés— es peor que no enseñar nada.
+   */
+  const cambiarEnElPerfil = async (f: Favorita, quiero: boolean) => {
+    setPreguntando(null);
+    setSubiendo(f.id);
+    try {
+      if (quiero) await publicarFrase(f);
+      else await despublicarFrase(f.id);
+      setEnElPerfil((antes) => {
+        const ahora = new Set(antes);
+        if (quiero) ahora.add(f.id);
+        else ahora.delete(f.id);
+        return ahora;
+      });
+      setAvisoFrase(
+        quiero ? "En tu perfil. Cualquiera puede leerla." : "Quitada de tu perfil.",
+      );
+    } catch (e) {
+      const motivo = e instanceof Error ? e.message : "";
+      setAvisoFrase(
+        motivo === "sin-cuenta"
+          ? "Para enseñarla hace falta entrar: Más → Mi cuenta."
+          : motivo === "sin-perfil"
+            ? "Primero completa tu perfil en Más → Mi cuenta."
+            : "No se pudo. Prueba otra vez.",
+      );
+    } finally {
+      setSubiendo(null);
+    }
+  };
 
   const refrescarGuardadas = () => setGuardadas(listar());
 
@@ -286,6 +349,11 @@ export function PantallaMensaje() {
                 placeholder="Buscar entre las guardadas…"
                 className="w-full"
               />
+              {avisoFrase ? (
+                <p className="rounded-xl border border-borde px-3 py-2 text-xs leading-relaxed">
+                  {avisoFrase}
+                </p>
+              ) : null}
               {buscarGuardadas(busqueda).map((f) => (
                 <div key={f.id} className="rounded-xl border border-borde bg-superficie-alta p-3">
                   <pre className="font-sans text-[14px] leading-relaxed whitespace-pre-wrap">
@@ -312,7 +380,31 @@ export function PantallaMensaje() {
                         compartir
                       </button>
                       <button
+                        disabled={subiendo === f.id}
+                        onClick={() =>
+                          enElPerfil.has(f.id)
+                            ? void cambiarEnElPerfil(f, false)
+                            : setPreguntando(preguntando === f.id ? null : f.id)
+                        }
+                        className={
+                          "rounded-lg px-2 py-1 text-xs transition disabled:opacity-50 " +
+                          (enElPerfil.has(f.id)
+                            ? "text-acento"
+                            : "text-tenue hover:text-acento")
+                        }
+                      >
+                        {subiendo === f.id
+                          ? "…"
+                          : enElPerfil.has(f.id)
+                            ? "🌐 en mi perfil"
+                            : "a mi perfil"}
+                      </button>
+                      <button
                         onClick={() => {
+                          // Quitar una frase guardada la quita también del
+                          // perfil. Dejarla arriba después de borrarla aquí
+                          // sería enseñar algo que su dueño ya descartó.
+                          if (enElPerfil.has(f.id)) void despublicarFrase(f.id).catch(() => {});
                           quitar(f.id);
                           refrescarGuardadas();
                         }}
@@ -322,6 +414,28 @@ export function PantallaMensaje() {
                       </button>
                     </div>
                   </div>
+
+                  {preguntando === f.id ? (
+                    <div className="mt-2 rounded-xl border border-acento/50 bg-acento/5 p-3">
+                      <p className="text-xs leading-relaxed">
+                        Aparecerá en tu perfil con tu nombre, y{" "}
+                        <strong>lo puede leer cualquiera</strong>. Puedes quitarla
+                        cuando quieras.
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <div className="flex-1">
+                          <Boton
+                            variante="fuerte"
+                            ancho
+                            onClick={() => void cambiarEnElPerfil(f, true)}
+                          >
+                            Ponerla en mi perfil
+                          </Boton>
+                        </div>
+                        <Boton onClick={() => setPreguntando(null)}>Dejarlo</Boton>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

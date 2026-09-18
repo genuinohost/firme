@@ -170,6 +170,113 @@ export async function leerMuroDe(uid: string, cuantas = 30): Promise<NotaPublica
   return r.docs.map((d) => aNota(d.id, d.data())).sort((a, b) => b.momento - a.momento);
 }
 
+// ------------------------------------------------------- las frases favoritas
+//
+// Alex, sobre enseñarlas en el perfil de un hermano: «que se puedan publicar
+// también, cada quien decide».
+//
+// Van aparte del muro y no mezcladas con él. Una nota es lo que alguien vivió
+// ese día; una frase guardada es algo que le sostuvo. Juntarlas en el mismo
+// hilo convertiría el muro en una cadena de versículos reenviados, que es
+// justo lo que no hace falta. Las frases viven en el perfil de cada uno.
+
+/** Una frase que alguien decidió enseñar en su perfil. */
+export type FrasePublica = {
+  id: string;
+  uid: string;
+  nombre: string;
+  usuario: string;
+  texto: string;
+  fuente?: string;
+  cuando: number;
+};
+
+/**
+ * El identificador del documento de una frase.
+ *
+ * **Lleva el uid dentro, y esto no es un adorno.** El id de una frase guardada
+ * es la huella de su texto, así que dos hermanos que guarden el mismo
+ * versículo —cosa que va a pasar todos los días, porque salen del mismo
+ * banco— tendrían exactamente el mismo id. Con el texto por clave, el segundo
+ * en publicar chocaría contra el documento del primero: las reglas lo
+ * rechazarían, y él sólo vería «no se pudo publicar» sin entender por qué.
+ */
+const claveFrase = (uid: string, id: string) => `${uid}.${id}`;
+
+/** Sacar una frase al perfil. */
+export async function publicarFrase(frase: {
+  id: string;
+  texto: string;
+  fuente?: string;
+}): Promise<void> {
+  const yo = await quienSoy();
+  if (!yo) throw new Error("sin-cuenta");
+  const perfil = await leerPerfil(yo.uid);
+  if (!perfil) throw new Error("sin-perfil");
+  const { bd } = await nube();
+  const { doc, setDoc } = await import("firebase/firestore");
+  await setDoc(doc(bd, "frases", claveFrase(yo.uid, frase.id)), {
+    uid: yo.uid,
+    nombre: perfil.nombre.slice(0, 40),
+    usuario: perfil.usuario.slice(0, 20),
+    texto: frase.texto.trim().slice(0, TOPE_TEXTO),
+    // Sin `fuente: undefined`: Firestore no acepta undefined, y meterlo
+    // reventaría al publicar una frase que no trae cita.
+    ...(frase.fuente ? { fuente: frase.fuente.slice(0, 80) } : {}),
+    cuando: Date.now(),
+  });
+}
+
+/** Retirarla del perfil. Borra el documento, no lo esconde. */
+export async function despublicarFrase(id: string): Promise<void> {
+  const yo = await quienSoy();
+  if (!yo) return;
+  const { bd } = await nube();
+  const { doc, deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(doc(bd, "frases", claveFrase(yo.uid, id)));
+}
+
+/**
+ * Las frases que esa persona enseña.
+ *
+ * Como en el muro, se piden por `uid` y se ordenan aquí: pedirlas ordenadas al
+ * servidor obligaría a un índice compuesto, y un índice que falta no da error
+ * al compilar — da una pantalla vacía el día que alguien la abre.
+ */
+export async function leerFrasesDe(uid: string, cuantas = 20): Promise<FrasePublica[]> {
+  const { bd } = await nube();
+  const { collection, getDocs, limit, query, where } = await import("firebase/firestore");
+  const r = await getDocs(query(collection(bd, "frases"), where("uid", "==", uid), limit(cuantas)));
+  return r.docs
+    .map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        uid: String(x.uid ?? ""),
+        nombre: String(x.nombre ?? ""),
+        usuario: String(x.usuario ?? ""),
+        texto: String(x.texto ?? ""),
+        fuente: x.fuente ? String(x.fuente) : undefined,
+        cuando: Number(x.cuando ?? 0),
+      };
+    })
+    .sort((a, b) => b.cuando - a.cuando);
+}
+
+/** Cuáles de mis frases están publicadas, por su id local. */
+export async function misFrasesPublicadas(): Promise<Set<string>> {
+  const yo = await quienSoy();
+  if (!yo) return new Set();
+  try {
+    const suyas = await leerFrasesDe(yo.uid, 100);
+    // El documento se llama «uid.idLocal»; aquí interesa sólo el id local,
+    // que es por el que pregunta la pantalla de guardadas.
+    return new Set(suyas.map((f) => f.id.slice(yo.uid.length + 1)));
+  } catch {
+    return new Set();
+  }
+}
+
 // ------------------------------------------------- denunciar, bloquear, esconder
 //
 // Esto no es celo de más: **Google Play lo exige**. En cuanto una app enseña
