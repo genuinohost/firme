@@ -128,7 +128,7 @@ node scripts/video/montar-pro.mjs      # el bueno
 node scripts/video/montar.mjs          # el simple, sin música ni subtítulos
 ```
 
-### 7. La copia ligera
+### 9. La copia ligera
 
 El vídeo bueno pesa unos 35 MB y **no se puede mandar por el chat** (tope de
 30 MB). Se hace una copia a 720×1280 con `-crf 28` — unos 5 MB — sólo para que
