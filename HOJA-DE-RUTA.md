@@ -8,7 +8,7 @@ Hoja de ruta
 > La app es de la comunidad cristiana **Genuino Love**, la identidad de Alex
 > desde 2014. Eso debe verse en la app y en la ficha de Play Store.
 
-Última revisión: **18 de septiembre de 2026** (versión 6.7).
+Última revisión: **19 de septiembre de 2026** (versión 6.7).
 
 ---
 
@@ -1233,6 +1233,52 @@ tener su contraria a la vista, y en la misma versión.
 
 ---
 
+## 🎬 El vídeo, y el skill que lo repite (18/19-09)
+
+Alex grabó once clips en su casa —viendo la tele, comiendo, al teléfono,
+trabajando— más dos tomas largas hablando a cámara. De ahí salió una pieza
+vertical de **52 segundos** para WhatsApp, Instagram y TikTok.
+
+### Lo que hizo la diferencia: oírle
+
+Al principio no se podía. Se veía **dónde** hablaba —midiendo niveles de
+audio— pero no **qué** decía, así que los planos de la app acababan
+amontonados al final del vídeo.
+
+Se instaló **Whisper en local** (Python 3.12 + faster-whisper). Gratis, sin
+clave de API y, lo que más importa aquí, **su voz no sale de su máquina**: son
+grabaciones suyas hablando de su fe.
+
+Con la transcripción llegaron los segundos exactos de cada frase, y con ellos
+el montaje bueno: la alarma entra cuando dice «es un despertador para el
+momento de orar», los mensajes cuando dice «una preciosa comunidad con tus
+hermanos», los planes cuando dice «creciendo cada día más disciplinado».
+
+### Todo guardado como skill
+
+`.claude/skills/video/` y `scripts/video/`. El próximo vídeo es un comando,
+no una tarde. Dentro quedan las **seis trampas** que costaron esta —todas
+mudas, ninguna daba error— y la identidad visual de la app para que los
+rótulos no desentonen.
+
+### Lo que se midió y no se hizo
+
+Cortar silencios es lo que recomienda todo el mundo. Se midió: **cuarenta
+segundos hablando con dos pausas de 0,25 s**. Quitarlas habría ahorrado dos
+segundos a cambio de ocho saltos de imagen y de dejarle hablando sin respirar.
+
+> **La regla:** medir antes de cortar. Si las pausas internas suman menos de
+> dos segundos, la grasa está en la apertura, no en su voz.
+
+### Pendiente del vídeo
+
+- [ ] Elegir la **música** entre las tres opciones de Pixabay (uso comercial,
+      sin atribución). Está esperando su decisión.
+- [ ] El **vídeo del permiso** de servicio en primer plano, subido a YouTube
+      como «No listado», para la declaración de Play.
+
+---
+
 ## 🔮 Lo que Alex quiere que venga, y lo que traerá consigo
 
 Dicho el **18-09-2026**, mientras rellenábamos la ficha de Play. Queda escrito
@@ -1291,7 +1337,7 @@ usuarios suban los suyos**.
       `node scripts/moderador.mjs poner genuino.love@gmail.com`
 - [ ] 🔴 **Reunir 12 probadores** para la prueba cerrada — 14 días seguidos, y
       es lo que marca cuándo se puede pedir producción
-- [ ] Crear la cuenta de Play ($25)
+- [x] ~~Crear la cuenta de Play~~ — hecha y verificada el 18-09
 - [ ] Dar los enlaces reales para `public/comunidad.json`
 - [ ] **Revisar los versículos del banco** — él es Capellán y su palabra está de por medio
 - [ ] Decidir si pedir permiso a Sociedades Bíblicas Unidas para usar la RV1960
