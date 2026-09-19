@@ -215,8 +215,8 @@ const palabras = JSON.parse(readFileSync(FUENTE_PALABRAS, "utf8"));
  * ningún tiempo; una cadena vacía hace que no se pinte.
  */
 const ARREGLOS = [
-  // Los dos modelos oyen «fallar en». Suena a «fallarle a», que es lo que la
-  // frase pide; si algún día se comprueba que dijo «fallar en», se quita.
+  // Los dos modelos oyen «fallar en». Alex confirmó el 19-09-2026 que dijo
+  // «fallarle a», así que esto no es una conjetura: es su frase.
   { mal: ["fallar", "en"], bien: ["fallarle", "a"] },
   // Aquí acaba una oración y empieza otra, y ningún modelo pone el punto. Sin
   // él, el agrupador junta «DIOS» con «Y ES QUE EL PADRE»: dos frases en un

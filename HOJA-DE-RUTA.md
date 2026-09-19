@@ -1335,9 +1335,9 @@ faltan no son de edición, son de metraje**, y sólo los puede dar Alex:
       (136 pulsaciones por minuto) y todos los cortes van sobre el pulso
 - [ ] El **vídeo del permiso** de servicio en primer plano, subido a YouTube
       como «No listado», para la declaración de Play.
-- [ ] Confirmar si dijo **«dejar de fallar en»** o **«fallarle a»** nuestro
-      perfecto Dios. Los dos modelos oyen «fallar en»; el rótulo pone
-      «fallarle a». Es el único sitio donde se le corrige sin comprobarlo.
+- [x] ~~Confirmar si dijo «fallar en» o «fallarle a»~~ — **«fallarle a»**,
+      confirmado por Alex el 19-09. Los dos modelos de Whisper oyen «fallar
+      en»; el rótulo se queda como está.
 
 ---
 

@@ -360,8 +360,13 @@ vídeo sobre su fe, una palabra que él no dijo — puesta por mí y firmada con
 cara.
 
 > **La regla que sale de aquí:** para los rótulos, modelo grande siempre. Y lo
-> que yo «arreglo» a mano de su voz se marca como conjetura hasta que él lo
-> confirme. Queda uno pendiente: «dejar de fallar en» o «fallarle a».
+> que yo «arreglo» a mano de su voz se marca como conjetura **hasta que él lo
+> confirme**.
+
+Y funcionó a la primera: el único que quedaba marcado —«dejar de fallar en» o
+«fallarle a»— se lo pregunté y contestó el mismo día. **Dijo «fallarle a».** Los
+dos modelos de Whisper se equivocaban; el rótulo estaba bien. No hay ninguna
+palabra suya sin confirmar en el vídeo.
 
 ## Y una cosa que no era del vídeo
 
