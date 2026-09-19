@@ -1270,12 +1270,74 @@ segundos a cambio de ocho saltos de imagen y de dejarle hablando sin respirar.
 > **La regla:** medir antes de cortar. Si las pausas internas suman menos de
 > dos segundos, la grasa está en la apertura, no en su voz.
 
+### La segunda vuelta (19-09): los rótulos
+
+Alex vio el vídeo y puso el dedo donde había que ponerlo:
+
+> «Es imperdonable que pongas subtítulos donde las frases queden a la mitad.
+> Debe poder leerse bien fácilmente.»
+
+Tenía razón, y el fallo era **más grande de lo que se veía**. Hay tres formas
+de partir una frase y sólo estaba tapada una:
+
+| Falta | Cómo se veía |
+|---|---|
+| Cerrar colgando | `HA PERMITIDO QUE` |
+| Abrir colgando | `DE CUMPLIR` · `A AUMENTAR` |
+| Tragarse un punto | `DIOS / Y ES QUE EL PADRE` — dos oraciones |
+
+Las dos últimas **aparecieron al arreglar la primera**: al arrastrar palabras
+para no cerrar mal, el corte se va al otro lado. Por eso el agrupador ya no
+decide rótulo a rótulo — puntúa todos los repartos posibles del texto entero y
+se queda con el mejor del conjunto.
+
+**Y se mide en píxeles, no en letras.** `CONSTANTEMENTE A CUMPLIR` y
+`A NUESTRO PERFECTO DIOS.` tienen las mismas 24 letras y ocupan **1103 y 1006
+píxeles** en un cuadro de 1080. El reparto prefería el que se salía porque
+quedaba «más equilibrado». `scripts/video/anchos.json` guarda el ancho real de
+cada letra de Segoe UI Bold; calculado contra real, **un píxel de diferencia**.
+
+### El modelo pequeño casi le pone palabras en la boca
+
+`small` escribe bien las palabras y **puntúa mal**, y la puntuación es lo único
+que marca el final de una frase cuando el orador no respira — y Alex no respira:
+entre palabra y palabra hay `0,000` segundos casi siempre.
+
+Peor aún: oyó «teciendo» donde el grande oye **«siendo»**, y «descarga la goza»
+donde dijo **«descárgala, gózate»**. Se había parcheado a mano como «creciendo».
+Los rótulos van grabados en la imagen: habría quedado ahí para siempre una
+palabra que Alex no dijo.
+
+> **La regla:** para los rótulos, `large-v3`. Tarda unos minutos y se descarga
+> una vez. Cuesta menos que revisar los rótulos a mano, y muchísimo menos que
+> publicar una palabra inventada.
+
+### Dos cosas más que no se veían en el monitor
+
+- **Una banda oscura detrás del texto.** El borde y la sombra no bastaban sobre
+  las capturas claras de la app: el dorado sobre blanco no se leía.
+- **Los rótulos suben de `h*0,826` a `h*0,771`.** Por debajo de eso los tapan el
+  texto del post y los botones de Instagram y TikTok. Se leían en el ordenador y
+  no en el móvil, que es donde los va a ver todo el mundo.
+
+### Dónde quedó: 7,5 sobre 10
+
+Lo que subió de 6 a 7,5 fue quitar fallos, no añadir virtudes. **Los 2,5 que
+faltan no son de edición, son de metraje**, y sólo los puede dar Alex:
+
+- otro lugar y otra ropa — todo es el mismo salón, el mismo día
+- un **segundo ángulo real**; los tres encuadres salen de recortar la misma toma
+- la **app grabada en movimiento**, con su dedo tocándola, no capturas quietas
+
 ### Pendiente del vídeo
 
-- [ ] Elegir la **música** entre las tres opciones de Pixabay (uso comercial,
-      sin atribución). Está esperando su decisión.
+- [x] ~~Elegir la **música**~~ — elegida la 4 de Pixabay, medida con librosa
+      (136 pulsaciones por minuto) y todos los cortes van sobre el pulso
 - [ ] El **vídeo del permiso** de servicio en primer plano, subido a YouTube
       como «No listado», para la declaración de Play.
+- [ ] Confirmar si dijo **«dejar de fallar en»** o **«fallarle a»** nuestro
+      perfecto Dios. Los dos modelos oyen «fallar en»; el rótulo pone
+      «fallarle a». Es el único sitio donde se le corrige sin comprobarlo.
 
 ---
 

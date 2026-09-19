@@ -330,3 +330,45 @@ no montar nada.** Si falla de verdad con el móvil en el bolsillo, es gratis arr
   Confirmadas allí junto con su entrada de bitácora.
 - Este proyecto tiene su propio `.claude/launch.json` con la entrada `firme`, por si algún
   día el panel aprende a leerlo.
+
+---
+
+# 19 de septiembre · los rótulos, y una palabra que él no dijo
+
+Alex vio el vídeo del día anterior y dijo la frase que ordenó toda la jornada:
+
+> «Es imperdonable que pongas subtítulos donde las frases queden a la mitad.
+> Debe poder leerse bien fácilmente.»
+
+Lo que encontré al revisar los 41 rótulos uno por uno fue peor que lo que él
+vio. Había **tres** formas de partir una frase y sólo estaba tapada una. Las
+otras dos aparecieron justamente **al arreglar la primera**: al arrastrar
+palabras para no cerrar en «que», el corte se va al otro lado y sale
+`DE CUMPLIR`. El detalle técnico está en la hoja de ruta; lo que importa aquí
+es el patrón, que ya se repitió toda la semana pasada: **cada fallo de este
+proyecto ha sido mudo**. Nada dio error. Sólo salió algo de aspecto normal.
+
+## Lo que casi se publica
+
+La transcripción con el modelo pequeño de Whisper oyó «teciendo». Yo lo parcheé
+a mano como «creciendo» y lo di por bueno. El modelo grande, cuando por fin
+terminó de bajar, oyó lo que de verdad dijo: **«gózate siendo cada día más
+disciplinado»**.
+
+Los rótulos van grabados en la imagen. Habría quedado ahí para siempre, en un
+vídeo sobre su fe, una palabra que él no dijo — puesta por mí y firmada con su
+cara.
+
+> **La regla que sale de aquí:** para los rótulos, modelo grande siempre. Y lo
+> que yo «arreglo» a mano de su voz se marca como conjetura hasta que él lo
+> confirme. Queda uno pendiente: «dejar de fallar en» o «fallarle a».
+
+## Y una cosa que no era del vídeo
+
+Pidió que **suene una alarma en el PC y le llegue un aviso al móvil** cada vez
+que termino y me quedo esperando. Montado con un gancho `Stop` en
+`~/.claude/settings.json` que lanza `~/.claude/alarma.ps1`, para que no dependa
+de que yo me acuerde.
+
+Es coherente con el resto: trabaja con esto de fondo mientras hace otras cosas,
+y sale de casa a seguir desde el móvil.
