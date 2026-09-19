@@ -276,6 +276,47 @@ el medio geométrico, el primer plano corta la frente.
 **Tope 1,45.** La fuente es 1080×1920: a 1,7 se muestrean 635 píxeles de ancho
 y se ve blando.
 
+## El B-roll y el zoom: dos frenadas de más
+
+Las dos veces el error fue **corregir de más**, y las dos se vieron sólo
+mirando el vídeo montado.
+
+**El B-roll.** Se quitó el amanecer que abría flojo y con él se quitó B-roll de
+todas partes: quedaron 2 planos de 1,3 s sobre 17. Quitar una cosa de la
+apertura no es razón para quitarla del resto. Lo sano son **5 o 6 planos de
+B-roll** en un vídeo de 45 s, repartidos donde las palabras los piden.
+
+**Y el B-roll bueno es el suyo.** Alex tenía grabada la app funcionando en su
+teléfono, sobre su mesa (`6.1-celular-y-la-alarma`), mientras yo le decía que
+eso era justo lo que faltaba. **Antes de bajar nada de un banco, mirar lo que
+él grabó.**
+
+> ⚠️ **Las Biblias de los bancos de vídeo no están en español.** Las tres que se
+> bajaron eran alemana, inglesa y portuguesa, y el texto se lee. En un vídeo de
+> un Capellán venezolano eso lo nota cualquiera. Si hay que poner un plano de
+> una Biblia, o es la suya o no hay plano.
+
+**El zoom.** La deriva estaba al 4 %: técnicamente existía, prácticamente no se
+veía. Los números que funcionan:
+
+| Qué | Deriva |
+|---|---|
+| Sus planos hablando | 7–9 % |
+| B-roll | 15–17 % |
+| Capturas de la app | 18 %, **saliendo** |
+
+Y **alternando**: unos planos entran y otros salen. Si todos empujan hacia
+dentro, a los diez segundos el ojo deja de registrarlo.
+
+Las capturas de la app **salen** del zoom, no entran. Entrando, el fotograma
+más recortado es el último y lo que queda en el ojo es la interfaz cortada — en
+este vídeo cortaba por la mitad los números de la racha, que es lo mejor que
+tiene la app.
+
+> Una deriva negativa que baje de 1,0 hace que `zoompan` pida más imagen de la
+> que hay y se vea el borde. El montaje **se detiene** si eso pasa, en vez de
+> sacar un vídeo con un marco raro.
+
 ## El gancho: los tres primeros segundos
 
 El mismo vídeo con aperturas distintas mueve el coste por instalación **de dos

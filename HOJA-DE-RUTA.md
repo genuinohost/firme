@@ -1320,14 +1320,67 @@ palabra que Alex no dijo.
   texto del post y los botones de Instagram y TikTok. Se leían en el ordenador y
   no en el móvil, que es donde los va a ver todo el mundo.
 
-### Dónde quedó: 7,5 sobre 10
+### La tercera vuelta (19-09): el B-roll y el zoom
 
-Lo que subió de 6 a 7,5 fue quitar fallos, no añadir virtudes. **Los 2,5 que
-faltan no son de edición, son de metraje**, y sólo los puede dar Alex:
+Alex, mirando el montaje:
 
-- otro lugar y otra ropa — todo es el mismo salón, el mismo día
+> «Veo que no agregaste B-roll adicional al de la app. ¿Por qué? Me gustan los
+> efectos de zoom.»
+
+Tenía razón en las dos cosas, y las dos eran culpa de haber corregido de más:
+
+- **El B-roll estaba al mínimo** —2 planos de 1,3 s sobre 17— porque al quitar
+  el amanecer que abría flojo se quitó B-roll de todas partes, no sólo de la
+  apertura.
+- **El zoom derivaba un 4 %.** Técnicamente estaba. Prácticamente no se veía.
+
+Ahora son **20 planos con 5 de B-roll, cuatro de ellos suyos**, y la deriva va
+al 7–9 % en sus planos y al 15–17 % en el B-roll, **alternando**: unos entran y
+otros salen. Si todos empujan hacia dentro, a los diez segundos el ojo deja de
+verlo.
+
+| Cuando dice | Qué se ve |
+|---|---|
+| «es un despertador» | su teléfono con la app abierta, sobre su mesa |
+| «de leer tu palabra» | el amanecer por la ventana |
+| «de cumplir» | él trabajando |
+| «con todo lo que el Padre te ha entregado» | él comiendo en su casa |
+| «constantemente a cumplir» | él al teléfono |
+
+### Tres cosas que salieron de mirar fotogramas, no código
+
+1. **`6.1-celular-y-la-alarma` es la app funcionando de verdad**, en su teléfono
+   y sobre su mesa. Se le había dicho que eso era lo que faltaba para subir la
+   nota, y lo tenía grabado desde el primer día. No se estaba usando.
+2. **Las tres Biblias del banco de vídeos no están en español:** alemana
+   (`biblia-paginas`, se lee «GÖTZENDIENST HEUTE»), inglesa (`biblia-cerca`,
+   «ROMANS») y portuguesa (`leyendo-biblia`, «O viver em Cristo»). En un vídeo
+   en español de un Capellán eso lo nota cualquiera. Fuera las tres.
+3. **La racha se cortaba por la mitad.** Las capturas de la app *entraban* en
+   zoom, así que el fotograma más recortado era el último — y lo último que
+   quedaba en el ojo era el número de la racha cortado. Ahora **salen** del
+   zoom: la imagen final es la pantalla entera.
+
+> Y la misma trampa de `zoompan` otra vez: `zoom` siempre arranca en 1,0, así
+> que `max(zoom-paso, 1.0)` se queda clavado y no hace nada. Todo movimiento se
+> calcula desde `on`, el número de cuadro.
+
+### Lo que falta y sólo puede dar Alex
+
+- [ ] **Cinco segundos de su Biblia abierta**, sus manos pasando una página.
+      Con eso se va el amanecer prestado y entra lo suyo.
+- [ ] **Un segundo ángulo** hablando a cámara. Los tres encuadres siguen
+      saliendo de recortar la misma toma: cambia el tamaño, no el punto de vista.
+
+### Dónde quedó: 8 sobre 10
+
+De 6 a 7,5 fue quitar fallos. De 7,5 a 8, meter su propio metraje y darle
+movimiento de verdad. **Los 2 que faltan no son de edición, son de metraje**, y
+sólo los puede dar él:
+
+- otro lugar y otra ropa — casi todo es el mismo salón, el mismo día
 - un **segundo ángulo real**; los tres encuadres salen de recortar la misma toma
-- la **app grabada en movimiento**, con su dedo tocándola, no capturas quietas
+- su **Biblia**, para no tener que pedirla prestada a un banco de vídeos
 
 ### Pendiente del vídeo
 

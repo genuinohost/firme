@@ -69,6 +69,10 @@ const ENCUADRES = {
   abierto: { zoom: 1.0, cy: 0.5, nitidez: 0.4 },
   medio: { zoom: 1.22, cy: 0.42, nitidez: 0.7 },
   cerca: { zoom: 1.45, cy: 0.36, nitidez: 1.0 },
+  // El B-roll se encuadra al centro, no a la altura de una cara que no está.
+  // Parte ya con algo de zoom para que quepa una salida —una deriva negativa
+  // desde 1,0 se metería por debajo del cuadro.
+  broll: { zoom: 1.18, cy: 0.5, nitidez: 0.5 },
 };
 
 /**
@@ -78,9 +82,19 @@ const ENCUADRES = {
  * genera esa cantidad de cuadros por cada cuadro de entrada, y con `fps`
  * detrás el filtro siguiente se queda rellenando huecos para siempre.
  */
-function plano(dur, enc, deriva = 0.04) {
+function plano(dur, enc, deriva = 0.06) {
   const e = ENCUADRES[enc] ?? ENCUADRES.abierto;
   const cuadros = Math.max(1, Math.round(dur * 30));
+  // Una deriva negativa —salir en vez de entrar— es la mitad del truco: si
+  // todos los planos empujan hacia dentro, el ojo deja de notarlo. Pero por
+  // debajo de 1,0 `zoompan` pide más imagen de la que hay y se ve el borde.
+  if (e.zoom + Math.min(0, deriva) < 1.0) {
+    console.error(
+      `El plano "${enc}" con deriva ${deriva} bajaría a ` +
+      `${(e.zoom + deriva).toFixed(2)}, por debajo de 1,0.`
+    );
+    process.exit(1);
+  }
   // El zoom se calcula desde el número de cuadro, **no acumulando `zoom`**.
   //
   // En `zoompan` la variable `zoom` empieza siempre en 1,0 y va sumando lo que
@@ -111,7 +125,12 @@ for (const p of [
   const cuadros = Math.round(p.seg * 30);
   ff(["-loop", "1", "-i", join(CAPTURAS, p.img), "-t", String(p.seg),
     "-vf", `scale=1350:2400:force_original_aspect_ratio=decrease,pad=1350:2400:(ow-iw)/2:(oh-ih)/2:${FONDO},` +
-      `zoompan=z='min(zoom+${(0.1 / cuadros).toFixed(6)},1.10)':d=${cuadros}` +
+      // **Sale** del zoom, no entra. Entrando, el último fotograma era el más
+      // recortado y cortaba por la mitad los números de la racha. Saliendo, la
+      // imagen que queda en el ojo es la pantalla entera.
+      // Se calcula con `on` y no con `zoom`: `zoom` siempre arranca en 1,0, así
+      // que un `max(zoom-paso, 1.0)` se queda clavado en 1,0 y no hace nada.
+      `zoompan=z='1.18-0.18*on/${cuadros}':d=${cuadros}` +
       `:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30,vignette=PI/6`,
     "-r", "30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p",
     join(T, p.n + ".mp4")]);
@@ -135,24 +154,48 @@ ff(["-ss", String(VOZ_DESDE), "-i", CENTRAL, "-t", String(VOZ_DUR),
 // en «es un despertador», la Biblia en «leer tu Palabra», la vida diaria en
 // «cumplir con todo lo que el Padre te ha entregado», los mensajes en «una
 // preciosa comunidad», la racha en «creciendo cada día más disciplinado».
+//
+// **La deriva es el zoom**, y va alternando: unos planos entran y otros salen.
+// Si todos empujan hacia dentro el ojo deja de verlo a los diez segundos.
+//
+// El B-roll sale de **sus propias grabaciones** siempre que existe. Un plano
+// suyo comiendo en su casa dice más que el mejor amanecer de un banco, y el
+// 6.1 es la app abierta de verdad sobre su mesa: eso no se compra.
 const GUION = [
-  { pulsos: 6, enc: "cerca" },
-  { pulsos: 6, enc: "medio" },
-  { pulsos: 5, enc: "abierto" },
-  { pulsos: 6, enc: "cerca" },
-  { pulsos: 5, inserto: "s-alarma" },
-  { pulsos: 3, broll: join(BROLL, "biblia-paginas.mp4"), desde: 6.0, enc: "abierto" },
-  { pulsos: 3, broll: join(LISTOS, "4.1-trabajo.mp4"), desde: 3.0, enc: "medio" },
-  { pulsos: 6, enc: "medio" },
-  { pulsos: 6, enc: "cerca" },
-  { pulsos: 6, enc: "abierto" },
-  { pulsos: 5, inserto: "s-mensaje" },
-  { pulsos: 6, enc: "cerca" },
-  { pulsos: 5, enc: "abierto" },
-  { pulsos: 5, enc: "medio" },
-  { pulsos: 5, inserto: "s-racha" },
-  { pulsos: 6, enc: "cerca" },
-  { pulsos: null, enc: "medio" }, // el último absorbe lo que quede
+  { pulsos: 6, enc: "cerca", deriva: 0.08 },   // ¡Hey! Al fin vas a dejar
+  { pulsos: 6, enc: "medio", deriva: -0.08 },  // de fallarle a nuestro perfecto Dios.
+  { pulsos: 5, enc: "abierto", deriva: 0.09 }, // Y es que el Padre
+  { pulsos: 3, enc: "cerca", deriva: 0.07 },   // ha permitido que diseñemos
+  // La app sonando de verdad, justo cuando dice «es un despertador».
+  { pulsos: 3, broll: join(LISTOS, "6.1-celular-y-la-alarma.mp4"), desde: 5.5,
+    enc: "broll", deriva: 0.17 },
+  { pulsos: 5, inserto: "s-alarma" },          // para el momento de orar,
+  // ⚠️ Aquí iba una Biblia del banco de vídeos, y se leía «GÖTZENDIENST
+  // HEUTE»: está en alemán. Las tres que hay son alemana, inglesa y
+  // portuguesa. En un vídeo en español, de un Capellán, eso lo nota
+  // cualquiera. Hasta que Alex grabe la suya, va el amanecer, que no tiene
+  // texto y dice lo mismo: es de madrugada.
+  { pulsos: 3, broll: join(BROLL, "amanecer-ventana.mp4"), desde: 2.5,
+    enc: "broll", deriva: 0.17 },              // de leer tu palabra,
+  { pulsos: 3, broll: join(LISTOS, "4.1-trabajo.mp4"), desde: 3.0,
+    enc: "broll", deriva: -0.15 },             // de cumplir
+  // «todo lo que el Padre te ha entregado» — su casa, su mesa, su vida.
+  { pulsos: 3, broll: join(LISTOS, "2.1-comiendo.mp4"), desde: 7.5,
+    enc: "broll", deriva: 0.17 },              // con todo lo que el Padre
+  { pulsos: 3, enc: "medio", deriva: 0.07 },   // te ha entregado. Una aplicación
+  { pulsos: 6, enc: "cerca", deriva: -0.08 },  // sin igual que te ayudará
+  { pulsos: 6, enc: "abierto", deriva: 0.09 }, // en cada detalle. Tú solamente
+  { pulsos: 5, inserto: "s-mensaje" },         // configurar y disfrutar
+  { pulsos: 6, enc: "cerca", deriva: 0.08 },   // de una preciosa comunidad
+  { pulsos: 5, enc: "medio", deriva: -0.07 },  // donde con tus hermanos
+  // La otra Biblia del banco, en portugués. Se cambia por él al teléfono:
+  // animarse unos a otros es exactamente lo que se ve ahí.
+  { pulsos: 3, broll: join(LISTOS, "3.1-hablando-por-celular.mp4"), desde: 2.0,
+    enc: "broll", deriva: 0.16 },              // se animarán juntamente,
+  { pulsos: 2, enc: "cerca", deriva: 0.06 },   // constantemente a cumplir
+  { pulsos: 5, inserto: "s-racha" },           // la voluntad de Dios.
+  { pulsos: 6, enc: "medio", deriva: 0.08 },   // Así que descárgala, gózate
+  { pulsos: null, enc: "cerca", deriva: 0.09 }, // el último absorbe lo que quede
 ];
 
 // Se reparte el tiempo y se comprueba al milisegundo: si no cuadra, la voz
@@ -184,7 +227,7 @@ GUION.forEach((b, i) => {
     const origen = b.broll ?? CENTRAL;
     const desde = b.broll ? b.desde : reloj;
     ff(["-ss", String(desde), "-i", origen, "-an",
-      "-vf", plano(b.dur, b.enc), "-t", String(b.dur), "-r", "30",
+      "-vf", plano(b.dur, b.enc, b.deriva), "-t", String(b.dur), "-r", "30",
       "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", salida]);
     console.log(`  ok  ${(b.broll ? "broll" : b.enc).padEnd(8)} ${b.dur}s`);
   }
