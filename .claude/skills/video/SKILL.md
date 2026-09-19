@@ -93,10 +93,39 @@ blanca, segunda en el dorado `#c9a227`, sin barra de fondo. La sombra lo hace
 legible sin oscurecer la imagen, y su metraje tiene buena luz que no conviene
 tapar.
 
-### 6. Montar
+### 6. La música, elegida midiendo
 
 ```bash
-node scripts/video/montar.mjs
+python scripts/video/musica.py <carpeta-musica> 55
+```
+
+Saca el tempo, los golpes y **la curva de energía**. Un vídeo que abre con una
+pregunta incómoda y cierra llamando a descargar necesita una pista que empiece
+baja y suba; eso se ve en la curva, no hay que adivinarlo:
+
+```
+                     arco     forma
+piano emotivo       +0,14     ▇▃▅▆▆▃▄▄██▄   descartada
+trailer inspirador  +0,38     ▅▅▅▅▅▅█████   descartada
+triunfal            +0,76     ▂▂▂▄▃▃▄▇███   ← la elegida
+```
+
+Guarda también los golpes en un `.txt`, para cortar encima de ellos.
+
+### 7. Las palabras, una a una
+
+```bash
+python scripts/video/palabras.py <clip> <salida.json>
+```
+
+Whisper con `word_timestamps=True`. Es lo que permite los subtítulos que se
+encienden al hablar — **lo que más retiene de todo lo que se hace aquí**.
+
+### 8. Montar
+
+```bash
+node scripts/video/montar-pro.mjs      # el bueno
+node scripts/video/montar.mjs          # el simple, sin música ni subtítulos
 ```
 
 ### 7. La copia ligera
@@ -120,6 +149,48 @@ el trozo de cara que sustituye. Al juntarlos, la voz no se mueve ni un cuadro:
 se le sigue oyendo mientras se ve la app.
 
 `montar.mjs` comprueba esa suma y **se niega a montar si no cuadra**.
+
+## Lo que hace que un vídeo enganche
+
+Por orden de cuánto cambia el resultado. Si hay que recortar, se recorta de
+abajo hacia arriba.
+
+1. **Subtítulos que se encienden al hablar.** Grupos de dos o tres palabras,
+   cada uno en su segundo. Sin esto lo demás sobra.
+2. **Cortes sobre el golpe.** Un corte medio segundo antes del pulso se siente
+   flojo y nadie sabe decir por qué.
+3. **Corrección de color.** El metraje de móvil sale plano; con curva en S,
+   sombras frías y luces cálidas parece rodado.
+4. **Que nada esté quieto.** Zoom del 4 al 7 % en cada plano, alternando
+   dirección para que los cortes no se sientan repetidos.
+5. **La música apartándose de la voz** con `sidechaincompress`. Sin eso hay que
+   elegir entre no oír la música o no entenderle a él.
+6. **B-roll, poco.** Dos o tres segundos donde las palabras lo pidan. Más
+   convierte un testimonio propio en un anuncio genérico, y lo que vende aquí
+   es que es él.
+
+## Los subtítulos van grabados: revisarlos SIEMPRE
+
+Whisper oye mal, y lo que escribe se queda en la imagen para siempre. En el
+primer vídeo falló cuatro veces:
+
+```
+"fallar en nuestro perfecto"  ->  "fallarle a nuestro perfecto"
+"cumplir con todos los que"   ->  "cumplir con todo lo que"
+"descarga la goza"            ->  "descárgala, goza"
+"teciendo cada día"           ->  "creciendo cada día"
+```
+
+En un vídeo sobre fidelidad a Dios, un «teciendo» resta más de lo que suma
+cualquier efecto. En `montar-pro.mjs` hay una lista `ARREGLOS` para esto: las
+sustituciones respetan el número de palabras para no mover ni un tiempo.
+
+**Y mirar fotogramas del resultado antes de entregarlo.** Así se vieron los
+rótulos pisándose y un «DESCARGALA» sin tilde, que ningún script iba a avisar:
+
+```bash
+ffmpeg -i final.mp4 -vf "select='eq(n\,180)+eq(n\,900)',scale=270:-2,tile=4x1" -frames:v 1 vistazo.png
+```
 
 ## Las trampas, todas pagadas ya
 
@@ -151,6 +222,33 @@ tienda.
 
 **La consola de Windows va en cp1252** y revienta al imprimir una flecha. De ahí
 el `sys.stdout.reconfigure(encoding="utf-8")`.
+
+**`zoompan`: `d` es cuántos cuadros saca por CADA cuadro de entrada**, no la
+duración del plano. Con `d=53` sobre un vídeo de 53 cuadros ffmpeg genera
+2.809. Con vídeo va siempre **`d=1`**; el `d` grande sólo vale con imagen fija.
+
+**`fps=30` va ANTES de `zoompan`, jamás después.** Detrás, si la fuente va a 25,
+las marcas de tiempo se descuadran y el filtro siguiente se queda rellenando
+huecos **para siempre**: sin error, comiéndose la memoria. Llegó a 30 GB.
+
+**Al matar una tarea, el ffmpeg hijo sobrevive.** Hay que comprobarlo aparte o
+se queda ahogando la máquina en silencio:
+
+```bash
+powershell -NoProfile -Command "Get-Process ffmpeg | Stop-Process -Force"
+```
+
+**`-filter_complex_script` desapareció en ffmpeg 9.** La cadena se pasa tal
+cual en `-vf`; `execFileSync` la entrega sin pasar por el intérprete de
+órdenes, así que no hay límite de longitud.
+
+**El recorte (`-t`) va como opción de SALIDA**, después de los filtros. Como
+opción de entrada, con `fps` de por medio, la duración sale distinta de la
+pedida y descuadra los cortes sobre el golpe.
+
+**Un rótulo debe acabar exactamente donde empieza el siguiente.** Alargarlo con
+`Math.max` tapa el parpadeo y crea algo peor: cuando alguien habla rápido, dos
+rótulos se dibujan encima y sale un amasijo ilegible.
 
 ## Sobre cortar silencios
 
