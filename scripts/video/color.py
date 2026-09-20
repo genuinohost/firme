@@ -1,27 +1,34 @@
 """
-El color de Alex: balance automatico + un punto de luz + un punto de frio.
+El color de Alex: balance de blancos MEDIDO, un punto de frio, un punto de luz.
 
     python color.py <clip.mp4> [--frio=0|1|2] [cuantos-fotogramas]
 
-El 20-09-2026 vio cinco correcciones del mismo fotograma y eligio el balance
-automatico de ffmpeg (`colorcorrect=analyze=median`): pared neutra, piel
-natural, un punto frio. Y dijo la regla general: «siempre me gustan los tonos
-frios que tienden a un poco azulado». Nunca calido: su salon ya lo es, y la
-correccion antigua (curvas + colorbalance calentando altas luces) lo dejaba
-amarillo.
+Lo que eligio Alex el 20-09-2026 viendo cinco correcciones del mismo
+fotograma fue el balance automatico de ffmpeg (`colorcorrect=analyze=median`):
+pared neutra, piel natural, un punto frio. Y la regla general: «siempre me
+gustan los tonos frios que tienden a un poco azulado».
 
-**La receta**, en este orden:
-1. `colorcorrect=analyze=median` — balance de blancos por la mediana de la
-   imagen: quita el amarillo de la luz LED.
-2. `colorbalance` — el punto de frio (sombras y medios hacia azul, rojo
-   fuera). --frio=0 no lo aplica; 1 suave (lo normal); 2 marcado.
-3. `eq` — un poco de gamma y brillo para «clara», saturacion casi intacta.
+Pero `analyze=median` se recalcula EN CADA FOTOGRAMA con la mediana de toda
+la imagen (investigado el mismo dia en el codigo fuente del filtro): si la
+cara domina el cuadro la vuelve gris, y puede parpadear entre planos. Medido
+en el clip del «Trabajo»: estable (±0,016 en la pared), pero depende del
+contenido. Aqui se hace lo mismo con NUMEROS FIJOS: se mide una vez lo mas
+claro y neutro del clip (la pared) y se aplica el mismo balance a todo. Mismo
+aspecto, ningun parpadeo, y vale igual para el B-roll.
 
-Ademas mide cuanto de calido venia el clip (ganancia de azul que haria falta
-para neutralizar la pared), para dejarlo anotado; y deja
-`color-antes-despues.png` junto al clip.
+**La receta**, en este orden (el orden importa, es el de un colorista):
+1. Balance: `colorcorrect=rl:rh:bl:bh` con los valores medidos en YUV. No toca
+   la luma. (Formula del filtro: nu = u + y*(bh-bl) + bl; nv = v + y*(rh-rl) + rl.)
+2. El punto de frio que eligio: `colorbalance` con `pl=1` (preserva la luz).
+   --frio=0 nada; 1 suave (por defecto); 2 marcado.
+3. Luz: `curves` con una subida suave de medios. NO `eq=brightness`: es un
+   desplazamiento aditivo que saca los blancos de rango (Y>235, superblancos
+   ilegales); `curves` mantiene 0/0 y 1/1 y protege negros y blancos.
+4. Saturacion apenas (`vibrance` ligero): una vez quitado el amarillo la piel
+   ya tiene su color.
 
-Imprime la linea `color: "..."` lista para `proyecto.mjs`.
+Deja `color-antes-despues.png` junto al clip e imprime `color: "..."` para
+`proyecto.mjs`.
 """
 import subprocess
 import sys
@@ -36,7 +43,7 @@ from PIL import Image
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 opciones = [a for a in sys.argv[1:] if a.startswith("--")]
 clip = args[0]
-cuantos = int(args[1]) if len(args) > 1 else 10
+cuantos = int(args[1]) if len(args) > 1 else 12
 frio = 1
 for o in opciones:
     if o.startswith("--frio="):
@@ -44,36 +51,56 @@ for o in opciones:
 
 FRIO = {
     0: "",
-    1: "colorbalance=bs=0.03:bm=0.02:bh=0.02:rs=-0.02,",
-    2: "colorbalance=bs=0.06:bm=0.04:bh=0.04:rs=-0.04:rm=-0.02,",
+    1: "colorbalance=bs=0.03:bm=0.02:bh=0.02:rs=-0.02:pl=1,",
+    2: "colorbalance=bs=0.06:bm=0.04:bh=0.04:rs=-0.04:rm=-0.02:pl=1,",
 }
-
-filtro = (f"colorcorrect=analyze=median,{FRIO[frio]}"
-          f"eq=gamma=1.04:brightness=0.015:saturation=1.03")
+LUZ = "curves=all='0/0 0.25/0.27 0.5/0.54 0.75/0.78 1/1',vibrance=intensity=0.04"
 
 dur = float(subprocess.run(
     ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", clip],
     capture_output=True, text=True, check=True).stdout.strip())
 
-# Cuanto de calido venia: ganancia de azul que dejaria gris lo mas claro.
+# Medir lo mas claro y neutro de cada fotograma: entre el percentil 90 y el
+# 99,5 de luminancia (la pared, la mesa, una camisa clara), sin lo quemado.
 carpeta = tempfile.mkdtemp(prefix="color-")
 paso = dur / (cuantos + 1)
-azules = []
+medidas = []
 for i in range(cuantos):
     ruta = os.path.join(carpeta, f"{i:02d}.png")
     subprocess.run(["ffmpeg", "-v", "error", "-ss", str(paso * (i + 1)), "-i", clip,
                     "-frames:v", "1", "-vf", "scale=270:480", "-y", ruta], check=True)
-    img = np.asarray(Image.open(ruta).convert("RGB"), dtype=np.float64).reshape(-1, 3)
+    img = np.asarray(Image.open(ruta).convert("RGB"), dtype=np.float64).reshape(-1, 3) / 255
     lum = img.mean(axis=1)
     lo, hi = np.percentile(lum, 90), np.percentile(lum, 99.5)
     claros = img[(lum >= lo) & (lum <= hi)]
-    if len(claros) >= 50:
-        b = claros.mean(axis=0)
-        azules.append(b.mean() / b[2])
-calidez = float(np.median(azules)) if azules else 1.0
+    if len(claros) < 50:
+        continue
+    R, G, B = claros.mean(axis=0)
+    Y = 0.2126 * R + 0.7152 * G + 0.0722 * B
+    U = (B - Y) / 1.8556
+    V = (R - Y) / 1.5748
+    medidas.append((U, V))
 
-print(f"clip de {dur:.1f}s · frío {frio}")
-print(f"  venía cálido: haría falta ×{calidez:.2f} de azul para dejar gris la pared")
+if not medidas:
+    print("No se pudo medir. Mirar el clip a mano.")
+    sys.exit(1)
+
+U, V = np.median(np.array(medidas), axis=0)
+# La pared esta en las luces: ahi va la correccion entera (rh/bh). En las
+# sombras solo una parte: con el valor entero, la camisa negra de Alex se
+# llenaba de manchas azules (visto en el fotograma, 20-09-2026). El filtro
+# interpola entre lows y highs segun la luma, asi que los medios quedan
+# corregidos y los negros casi intactos.
+bh = float(-U)
+rh = float(-V)
+bl = 0.35 * bh
+rl = 0.35 * rh
+balance = f"colorcorrect=rl={rl:.3f}:rh={rh:.3f}:bl={bl:.3f}:bh={bh:.3f}"
+filtro = f"{balance},{FRIO[frio]}{LUZ}"
+
+print(f"clip de {dur:.1f}s · medido en {len(medidas)} fotogramas · frío {frio}")
+print(f"  lo neutro medía U={U:+.3f} V={V:+.3f}  (U<0 y V>0 = cálido, amarillo-naranja)")
+print(f"  balance fijo: {balance}")
 print(f"\n  color: \"{filtro}\",\n")
 
 salida = os.path.join(os.path.dirname(os.path.abspath(clip)), "color-antes-despues.png")

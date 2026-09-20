@@ -210,6 +210,119 @@ Las que no dependen del estilo elegido. Ninguna se negocia.
     se le cortan silencios (no los tiene: dos pausas de 0,25 s en cuarenta
     segundos), y sus palabras no se cambian sin decírselo.
 
+## Lo aprendido de los mejores skills de edición (20-09-2026)
+
+Se investigaron los skills de edición de vídeo para Claude que existen
+(video-use, claude-remotion-skill, tiktok-video-skills, los de Tella —cut-video,
+add-zooms, b-roll-finder—, chrislema/videoeditor, claude-youtube-editor,
+video-editor-agent, HyperFrames, Remotion, color-grade-ai…) y el vídeo de
+Santiago Muñoz al detalle. Los informes enteros, con fuentes, están en
+`investigacion/` dentro de esta carpeta. Lo que vale para nosotros, en
+números:
+
+**Corte.** Cortar sólo en límites de palabra, con 50 ms de aire antes de la
+primera palabra y 80 ms después de la última (el ASR deriva 50–100 ms).
+Silencios de ≥ 400 ms son cortes limpios; 150–400 ms sólo con comprobación
+visual; < 150 ms nunca. Antes de quitar un silencio, medir su amplitud: si hay
+una risa o una reacción, se queda. Cada segmento se re-codifica (nunca
+`-c copy` en el corte: deja cuadros congelados) con `afade` de 30 ms en cada
+extremo. Si un corte quitó más del 70 % del clip, el umbral está roto.
+
+**Ritmo.** El texto del gancho en pantalla desde el cuadro 1, sin fundido
+desde negro. Una interrupción visual cada 2–4 s con intervalos deliberadamente
+**irregulares** («un metrónomo se lee como aburrimiento»). Nunca más de 90
+cuadros sin un elemento nuevo, pero tras cada golpe un *hold* de 15–20 cuadros
+quietos, y al menos tres momentos de quietud por pieza: «el movimiento
+constante se lee amateur; el contraste se lee caro». Denso en el gancho,
+escaso y preciso en el cuerpo.
+
+**Zoom.** Tres tipos con números: *punch* (corte seco dentro, hold 0,35 s,
+corte seco fuera) sobre una palabra enfatizada, pico 1,18–1,30; *ratchet* en
+listas, +0,04 por ítem; *Ken Burns* ≤ 1,14, «el único movimiento suave».
+Tope 1,35 en 1080p. Nunca empezar el vídeo acercado. Máximo dos planos
+seguidos al mismo nivel.
+
+**Rótulos.** 1–3 palabras por golpe (2–3 en frases), rompiendo en pausas
+> 0,2 s y sin separar artículo de sustantivo. Tamaño 56–80 px (≈ 8 % del alto)
+en registro normal, 80–120 en registro «Hormozi». Contorno negro 5–8 px y
+sombra. Banda al 62–70 % del alto y dentro del 80 % central. **Una sola
+palabra en color por frase**, o una cada 3–5 frases; varias «destruyen el
+efecto». Los rótulos van los **últimos** en la cadena de filtros, después de
+cualquier overlay. Cada rótulo ≥ 0,5 s en pantalla; la cara ≥ 30 % descubierta
+en toda ventana de 0,3 s.
+
+**Sonido.** Un efecto de sonido llega 2–3 cuadros **antes** de que aterrice
+el visual («pronto se siente sincronizado; tarde se siente roto»). 8–12 por
+minuto como máximo. Whoosh en movimiento, *riser* en tensión, *impact* en
+énfasis, *click* en cambio. Música elegida **primero** y −18 dB bajo la voz.
+El sonido es la mitad de la calidad percibida.
+
+**B-roll.** Antes de buscar, enunciar la tesis del vídeo y una frase por
+idea («¿de qué va realmente esta línea?»). Cada idea va por una de cuatro
+rutas: *recibo* (titular, captura, dato), *entidad* (persona, lugar, objeto →
+la fuente real), *concepto* (idea abstracta → gráfico propio) o *memoria*
+(librería propia). El inserto se ancla **0,2–0,5 s después** de la palabra
+clave: tarde se lee intencional, pronto se lee error. Mejor una idea sin
+inserto que rellena. El inserto lleva la misma corrección de color que la cara
+y el mismo tipo de movimiento (fijo con fijo, mano con mano). Verificación: un
+fotograma a mitad de cada inserto y en cada unión, en cuadrícula.
+
+**Anti-«hecho con IA».** Cero interpolación lineal; las entradas animan 2–3
+propiedades a la vez, escalonadas 3–6 cuadros; las salidas más rápidas que las
+entradas; un solo color héroe por cuadro; Ken Burns en toda imagen fija; sin
+emojis; sin cierre de plantilla.
+
+**Verificación.** Re-transcribir el máster y comparar con lo que debía
+quedar: palabras de más = fantasmas de un falso arranque; palabras de menos =
+cortadas. Duración de vídeo y audio iguales al milisegundo. Fotogramas a
+**escala de móvil** (no a resolución de exportación), en cada corte ± 1,5 s,
+primeros 2 s, últimos 2 s y tres puntos medios. Tope de tres pasadas de
+autocorrección; después, avisar a Alex.
+
+**Para copiar un estilo (Samuel Adrián o quien sea): medirlo antes.** Tres a
+cinco vídeos suyos, fotogramas a 2 fps en hojas de 5×4, cortes con
+`select='gt(scene,0.25)'`, cortes por minuto por tramo (gancho, cuerpo,
+cierre), mediana de duración de plano, % de cara frente a inserto, registro
+de rótulos (posición, tamaño, mayúsculas, color) y del audio (tempo, arco).
+Sale una **guía de estilo** de siete secciones —ritmo, rótulos, lenguaje
+gráfico, gramática del B-roll, color, sonido, directrices de montaje— y de
+ahí un plan por línea del guion. Sin medirlo, «estilo de X» es una opinión.
+
+**Los motores.** Lo que hacemos con ffmpeg tiene techo en la animación de
+texto. Los skills profesionales usan **HyperFrames** (HTML → vídeo, de HeyGen;
+`npx hyperframes render`, con `lint` y `check` que detectan desbordes,
+colisiones y contraste) o **Remotion** (React; `createTikTokStyleCaptions` a
+1200 ms para 2–4 palabras por página). Es el siguiente escalón si Alex pide
+rótulos con rebote, resaltado animado o mockups: se decide cuando llegue su
+vídeo de ejemplo.
+
+### El color, medido (y por qué no el automático)
+
+Alex eligió el balance automático (`colorcorrect=analyze=median`) sobre un
+fotograma. Investigado en el código del filtro: `analyze` recalcula **en cada
+fotograma** la mediana de toda la imagen; si la cara domina el cuadro la
+vuelve gris, y puede parpadear entre planos. `color.py` hace lo mismo con
+**números fijos**: mide lo más claro y neutro del clip (la pared) en YUV y
+aplica `colorcorrect=rl:rh:bl:bh` constante a todo el vídeo — mismo aspecto,
+sin parpadeo, y el mismo balance vale para el B-roll. Después el punto de
+frío (`colorbalance … pl=1`), la luz con **`curves`** (no con `eq=brightness`,
+que saca los blancos de rango: superblancos ilegales por encima de 235) y
+`vibrance` apenas. En el «Trabajo»: pared U = −0,089 / V = +0,057 →
+`rl=rh=−0,057, bl=bh=+0,089`.
+
+### El B-roll, con herramienta
+
+`python scripts/video/broll.py "<tema>" --ingles="<topic>"` busca en Pexels
+(primero: rechaza contenido de IA), Pixabay (descarta la etiqueta «ai
+generated») y Coverr; sólo vertical de verdad (ancho < alto, ≥ 1080×1920,
+elegido por medidas y no por la etiqueta «quality», que miente), ≥ 8 s, sin
+logos ni texto; y deja `broll-candidatos.png` numerado **para que Alex
+apruebe antes de descargar**. Las claves son suyas y van en variables de
+entorno: `PEXELS_KEY`, `PIXABAY_KEY`, `COVERR_KEY`. Fuera Videvo/Freepik y
+Vecteezy (exigen crédito) y Mixkit por script (lo prohíben sus términos).
+Las Biblias de los bancos están en inglés, alemán y portugués: sólo valen los
+planos donde el texto no se lee.
+
 ## Herramientas, y qué mide cada una
 
 | Script | Para qué |
