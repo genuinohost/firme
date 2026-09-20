@@ -125,6 +125,17 @@ método de Santiago Muñoz para editar con IA, adaptado a lo que ya tenemos:
 Si el vídeo es uno de una serie que ya tiene estilo elegido, se salta al
 paso 5 y se dice.
 
+**Estilos con nombre que ya existen** (`scripts/video/estilos/`):
+
+- `samuel-adrian.md` — el estilo «recibos», **medido** de tres shorts de
+  Samuel Adrián el 20-09-2026: lienzo con bandas negras y vídeo casi
+  cuadrado, titular de dos líneas (dorada + blanca) desde el cuadro 1, rótulos
+  de 1–3 palabras en minúsculas blancas sin resalte, gancho de cinco planos
+  en siete segundos, **punch-in por corte y sin deriva** (justo lo que Alex
+  pidió), insertos de archivo y «recibos» compuestos, whoosh en cada corte,
+  coletilla pregrabada a pantalla completa. Lo único que no se copia es su
+  color cálido: Alex va en frío.
+
 ## Parte 3 · Montar y comprobar
 
 ```bash
