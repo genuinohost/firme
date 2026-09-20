@@ -412,3 +412,23 @@ código. Sigue siendo la lección de la semana.
 
 Y la cuota de agentes del plan se acabó a media tarde: la revisión adversaria
 no llegó a correr. El jurado vale lo que cuesta, pero cuesta.
+
+
+---
+
+# 20 de septiembre, madrugada · los otros tres
+
+Alex dijo «haz todo» y salieron los tres que quedaban de la carpeta, con la
+plantilla de Filipenses: preparar, transcribir con el modelo grande, medir la
+cara, plan, montar, comprobar, mirar fotogramas, mandar. La «Oración» a la
+primera; el «Trabajo» a la tercera (una bajada de música en un solo tramo, y
+un plano donde la cara ya venía cortada en la grabación); «¿Hasta cuándo?» a
+la segunda (la música no se oía).
+
+El jurado murió otra vez por la cuota del plan a mitad de camino. Sirvió lo
+que entregó —el plan del «Trabajo» es de su editor de ritmo y es mejor que el
+mío— y para lo demás quedó `planificar.mjs`, que es su criterio en código.
+Nada de esto depende ya de que haya agentes.
+
+Dos palabras cambiadas por contexto y no de oído: «a dos señores» y
+«polilla». Las dos avisadas; las dos cuestan un render si me equivoqué.

@@ -143,7 +143,9 @@ function centro(zoom, cara) {
   // arriba en «para Él es posible»— el pelo se salía por arriba. El borde
   // superior del recorte tiene que quedar por encima de la cara más alta del
   // plano, con el pelo y dos dedos de aire.
-  const techoMinimo = (cara.cyMin ?? cara.cy) - 0.8 * (cara.h ?? 0.1) - 0.025;
+  // Una cabeza entera de margen y no 0,8: la pista muestrea cada segundo y
+  // entre muestra y muestra Alex levanta la cabeza más de lo que la pista ve.
+  const techoMinimo = (cara.cyMin ?? cara.cy) - 1.0 * (cara.h ?? 0.1) - 0.04;
   if (cy - v / 2 > techoMinimo) cy = techoMinimo + v / 2;
   cy = Math.min(Math.max(cy, v / 2), 1 - v / 2);
   return { cx, cy };
@@ -259,7 +261,7 @@ if (P.tarjeta) {
   const png = join(T, "tarjeta.png");
   const medidas = JSON.parse(execFileSync("python",
     [join(AQUI, "tarjeta.py"), png, P.tarjeta.cita, ...P.tarjeta.lineas],
-    { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" } }));
+    { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8", TARJETA_TAMANO: String(P.tarjeta.tamano ?? 56) } }));
   const x = Math.round((1080 - medidas.ancho) / 2);
   const y = Math.round(1920 * (P.tarjeta.y ?? 0.13));
   ff(["-i", join(T, "mudo.mp4"), "-loop", "1", "-framerate", "30", "-i", png,
@@ -320,9 +322,16 @@ const dur = Number(execFileSync("ffprobe",
 console.log("\nMúsica…");
 const M = P.musica;
 const FINAL = join(CARPETA, `${P.nombre}.mp4`);
+// Bajadas puntuales: donde Alex baja la voz («Así que ya sabes, no puedes…»)
+// ningún agachado global llega sin enterrar la música en el resto. Cada
+// bajada es un tramo con rampas de medio segundo a cada lado.
+const bajadas = (M.bajadas ?? []).map((b) =>
+  `(1-${(1 - b.factor).toFixed(3)}*min(1\,max(0\,(t-${b.desde.toFixed(2)})/0.5))*min(1\,max(0\,(${b.hasta.toFixed(2)}-t)/0.5)))`
+).join("*");
 const cadenaMusica =
   `[1:a]atrim=${M.desde ?? 0}:${((M.desde ?? 0) + dur).toFixed(3)},asetpts=N/SR/TB,` +
   `acompressor=threshold=0.04:ratio=5:attack=25:release=500,volume=${M.volumen ?? 1.5},` +
+  (bajadas ? `volume='${bajadas}':eval=frame,` : "") +
   `afade=t=in:st=0:d=1.2,afade=t=out:st=${(dur - 2.0).toFixed(2)}:d=2.0[mus];` +
   `[0:a]asplit=2[voz][llave];` +
   // El agachado va en el proyecto porque depende de la pista: el Trailer es
@@ -334,7 +343,8 @@ ff(["-i", join(T, "sin-musica.mp4"), "-i", en(M.archivo),
   "-filter_complex",
   cadenaMusica +
   `[voz][baja]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,` +
-  `alimiter=limit=0.95,loudnorm=I=-14:TP=-1.0[a]`,
+  // TP −1,5 y no −1,0: en modo dinámico `loudnorm` se pasaba a −0,4 dBTP.
+  `alimiter=limit=0.95,loudnorm=I=-14:TP=-1.5[a]`,
   "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
   "-movflags", "+faststart", FINAL]);
 

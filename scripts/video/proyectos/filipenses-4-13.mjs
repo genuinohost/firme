@@ -1,8 +1,4 @@
 /**
- * COPIA DE REFERENCIA. El original vive con el vídeo, en
- * OneDrive/Desktop/videos-genuino/filipenses/proyecto.mjs; es la plantilla
- * para los tres vídeos que quedan de esa carpeta.
- *
  * Filipenses 4:13 — mensaje devocional para Instagram y TikTok.
  *
  * NO es publicidad de la app: aquí no hay capturas, ni tarjeta de la app, ni

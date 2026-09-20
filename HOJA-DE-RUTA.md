@@ -1450,13 +1450,38 @@ La revisión adversaria de cuatro ojos (rótulos, encuadre, sonido, reglas) muri
 con «session limit · resets 8:50 pm»: el jurado había gastado la cuota de
 agentes del plan. La revisión final la hice a mano con veinte fotogramas.
 
+### Los otros tres, la misma noche (20-09, madrugada)
+
+Con la plantilla de Filipenses salieron **«El trabajo que desplaza a Dios»**
+(27 planos, Mateo 6:33), **«Oración por disciplina»** (26 planos, piano en vez
+del Trailer porque es una oración, cierre «Escribe un gran AMÉN») y
+**«¿Hasta cuándo?»** (25 planos, Mateo 6:20). Los cuatro pasaron
+`comprobar.mjs` y los cuatro están en su carpeta de `videos-genuino`.
+
+Lo nuevo que hizo falta:
+
+- **`planificar.mjs`**: el criterio del jurado hecho código (cortar donde el
+  discurso corta, sólo encuadres vecinos, cerca en lo que pesa). El jurado
+  volvió a morir por la cuota a mitad de camino; sólo entregó el editor
+  «ritmo» del «Trabajo», y ése es el plan que lleva. Los otros dos van con el
+  planificador.
+- **`sanear()`** en los rótulos: Whisper deja palabras con duración cero
+  cuando Alex se traba y reinicia («no puedes... No puedes servir»).
+- **Bajadas puntuales de música** (`musica.bajadas`): en el «Trabajo» baja la
+  voz en el segundo 52 y ningún agachado global llegaba a 8 dB sin enterrar la
+  música en el resto; se baja sólo ahí.
+- **Cuadro completo donde el original ya viene cortado**: entre los segundos
+  23 y 25 del «Trabajo» la frente se sale de la grabación (se inclina con la
+  Biblia); ahí no se acerca.
+- Dos correcciones de transcripción por contexto bíblico, avisadas a Alex:
+  «a dos señores» (Mateo 6:24) y «polilla» (Mateo 6:20).
+
 ### Pendiente
 
-- [ ] Los **otros tres vídeos** de la carpeta de Descargas, con este proyecto
-      como plantilla: «El trabajo que desplaza a Dios es lo peor», «Oración por
-      disciplina», «¿Hasta cuándo vas a desplazar a Dios?».
-- [ ] Alex tiene que verlo **con sonido en el móvil**: es lo único que no mide
-      ningún script.
+- [ ] Alex tiene que verlos **con sonido en el móvil**: es lo único que no mide
+      ningún script. Y confirmar «dos señores» y «polilla».
+- [ ] Los cuatro proyectos están copiados en `scripts/video/proyectos/` como
+      referencia; el original de cada uno vive junto a su vídeo.
 
 ---
 

@@ -168,10 +168,39 @@ function partirEnDos(texto, maximo = MAX_LINEA) {
 }
 
 /**
+ * Reparte las palabras a las que Whisper dio duración cero.
+ *
+ * Cuando Alex se traba y reinicia («no puedes... No puedes servir»), Whisper
+ * comprime el reinicio y deja tres palabras con t = fin, todas en el mismo
+ * instante. Rotuladas así aparecen de golpe y parpadean. Aquí se reparten a
+ * partes iguales entre el final de la palabra anterior y el principio de la
+ * siguiente con tiempo propio. Modifica la lista en el sitio y la devuelve.
+ */
+export function sanear(palabras) {
+  const w = palabras;
+  let i = 0;
+  while (i < w.length) {
+    if (w[i].fin - w[i].t > 0.02) { i++; continue; }
+    let j = i;
+    while (j < w.length && w[j].fin - w[j].t <= 0.02) j++;
+    const desde = i > 0 ? w[i - 1].fin : w[i].t;
+    const hasta = j < w.length ? w[j].t : desde + 0.3 * (j - i);
+    const paso = Math.max(0.08, (hasta - desde) / (j - i));
+    for (let k = i; k < j; k++) {
+      w[k].t = +(desde + paso * (k - i)).toFixed(3);
+      w[k].fin = +Math.min(hasta, desde + paso * (k - i + 1)).toFixed(3);
+    }
+    i = j;
+  }
+  return w;
+}
+
+/**
  * @param {{t:number, fin:number, p:string}[]} palabras
  * @param {number} desfase segundos que se recortaron al principio del clip
  */
 export function agrupar(palabras, desfase = 0) {
+  sanear(palabras);
   const w = palabras.filter((x) => x.p.trim());
   const n = w.length;
   if (!n) return [];

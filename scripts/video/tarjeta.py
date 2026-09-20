@@ -19,7 +19,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 salida, cita, *lineas = sys.argv[1:]
 
-CURSIVA = ImageFont.truetype("C:/Windows/Fonts/georgiai.ttf", 56)
+import os
+# Los versículos largos (Mateo 6:33 son tres líneas de 40 letras) no caben a
+# 56: el montaje pasa el tamaño del proyecto por TARJETA_TAMANO.
+TAMANO = int(os.environ.get("TARJETA_TAMANO", "56"))
+CURSIVA = ImageFont.truetype("C:/Windows/Fonts/georgiai.ttf", TAMANO)
 FUERTE = ImageFont.truetype("C:/Windows/Fonts/segoeuib.ttf", 40)
 ORO = (201, 162, 39, 255)
 BLANCO = (233, 236, 239, 255)
@@ -31,7 +35,7 @@ ENTRE = 14
 SEP_CITA = 22
 
 anchos = [CURSIVA.getlength(l) for l in lineas] + [FUERTE.getlength(cita)]
-alto_linea = 66
+alto_linea = int(TAMANO * 1.18)
 ancho = int(max(anchos)) + MARGEN * 2
 alto = MARGEN * 2 + alto_linea * len(lineas) + ENTRE * (len(lineas) - 1) + SEP_CITA + 48
 
