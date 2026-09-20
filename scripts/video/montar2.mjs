@@ -62,7 +62,12 @@ const esc = (t) =>
   t.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\u2019").replace(/%/g, "\\%");
 const cuadro = (s) => Math.round(s * 30) / 30;
 
-const COLOR =
+// El color lo mide `color.py` sobre el clip y lo escribe el proyecto en
+// `color`: balance de blancos por ganancias de canal, una subida suave de luz
+// y una S leve. La corrección antigua (curvas + colorbalance calentando las
+// altas luces) dejaba la cara de Alex amarilla — «no natural» — y se queda
+// sólo como reserva para proyectos sin `color`.
+const COLOR = P.color ??
   "curves=r='0/0 0.25/0.22 0.75/0.79 1/1':g='0/0 0.25/0.23 0.75/0.78 1/1':b='0/0.01 0.25/0.25 0.75/0.76 1/0.99'," +
   "eq=contrast=1.06:saturation=1.14:gamma=0.99," +
   "colorbalance=rs=-0.03:bs=0.04:rh=0.04:bh=-0.03";

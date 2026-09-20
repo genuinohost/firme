@@ -1,558 +1,302 @@
 ---
 name: video
-description: Montar un vídeo vertical para redes con metraje que grabó Alex — transcribe su voz en local con Whisper, corta sobre la palabra exacta, mete planos de la app y rotula con la identidad de Genuino. Usar cuando haya grabado clips y quiera una pieza para WhatsApp, Instagram o TikTok.
+description: Montar un vídeo vertical profesional con metraje que grabó Alex — dirección de arte primero (estilos renderizados sobre sus fotogramas, él elige), después montaje medido (cara, color, golpes, rótulos) y comprobación con números antes de entregar. Usar cuando haya grabado clips y quiera una pieza para Instagram, TikTok o WhatsApp.
 ---
 
-# Montar un vídeo de Genuino
+# El editor maestro de Genuino
 
-Todo corre en la máquina de Alex: **su voz no sale a ningún servidor**. Para
-grabaciones suyas hablando de su fe, eso no es un detalle técnico.
+Este skill es el método completo, en tres partes que van **en este orden y no
+en otro**: entender, dirigir, montar. El primer vídeo salió con un 6 porque se
+montó antes de entender; el cuarto le encantó porque se midió todo antes de
+cortar. Lo que sigue es lo que hay entre los dos.
 
-Los scripts están en `scripts/video/`. Se ejecutan desde la raíz del proyecto.
+Todo corre en la máquina de Alex: **su voz no sale a ningún servidor.** Whisper
+va en local (`faster-whisper`, modelo `large-v3`); no hace falta la API de
+OpenAI ni ninguna clave. Para grabaciones suyas hablando de su fe, eso no es
+un detalle técnico.
 
-## Segunda generación (19-09-2026): un proyecto por vídeo, y todo medido
+La historia de cómo se llegó aquí —cada fallo, cada medida, cada frase de
+Alex— está en `HISTORIA.md`, en esta misma carpeta. Se lee cuando algo no
+cuadre; aquí sólo está lo que vale ahora.
 
-El segundo vídeo (Filipenses 4:13, 80 s, de pie y lejos de la cámara) obligó a
-rehacer el método. Lo que vale ahora es esto; `montar-pro.mjs` queda como
-historia del primer vídeo.
+## Lo que Alex quiere, en sus palabras
+
+> «Siempre quiero lo MEJOR PARA DIOS.» · «Quiero lo mejor de lo mejor.» ·
+> «Debe poder leerse bien fácilmente.» · «Me gustan los efectos de zoom» y,
+> cuando se pasaron: «los acercamientos son MUY BRUSCOS». · «B-roll de muy
+> buena calidad, según el tema.» · «Que mi cara no se vea tan amarilla sino
+> más natural y clara.» · «Siempre me gustan los tonos fríos que tienden a un
+> poco azulado.»
+
+Y una regla de trabajo que él mismo puso: **antes de fijar una decisión de
+estilo, renderizar el mismo fotograma con las opciones y que elija él.**
+Veinte segundos de render contra ocho minutos de un vídeo que no le va a
+gustar. Eligió así la tipografía (Arial Black), el color (balance automático
+con un punto de frío) y la música (Trailer para exhortar, piano para orar).
+
+## Dónde vive cada vídeo
 
 ```
-videos-genuino/<proyecto>/
-  proyecto.mjs          TODO lo particular: clip, cara, planos, música, cierre
-  .trabajo/central.mp4  el clip preparado (1080×1920, 30 fps, −16 LUFS)
-  .trabajo/palabras-grande.json   la transcripción con large-v3
-  .trabajo/cara.json    la pista de la cara, muestra a muestra
-  <nombre>.mp4  y  <nombre>-ligero.mp4
+OneDrive\Desktop\videos-genuino\<proyecto>\
+  proyecto.mjs                    TODO lo particular de ese vídeo
+  .trabajo\central.mp4            el clip preparado (1080×1920, 30 fps, −16 LUFS)
+  .trabajo\palabras-grande.json   la transcripción con large-v3, palabra a palabra
+  .trabajo\cara.json              la pista de la cara, muestra a muestra
+  .trabajo\pro\                   los intermedios, las pistas sueltas, cortes.json
+  <Nombre>.mp4  y  <Nombre>-ligero.mp4
 ```
 
-El orden, y qué script hace cada paso:
+Su escritorio real está **dentro de OneDrive**. Los clips nuevos los deja en
+Descargas o en la raíz de `videos-genuino`; el primer paso es darles carpeta.
+Los cuatro proyectos hechos están copiados en `scripts/video/proyectos/` como
+referencia: el de Filipenses es la plantilla.
 
-| Paso | Comando | Qué deja |
+## Parte 1 · Entender (antes de tocar nada)
+
+Nada se decide hasta tener estas cinco cosas medidas. Cada una tiene su script
+y todos se ejecutan desde la raíz de `firme`.
+
+| Qué | Comando | Qué deja |
 |---|---|---|
-| 1 | preparar el clip a mano (ver abajo) | `.trabajo/central.mp4` |
-| 2 | `python scripts/video/palabras.py central.mp4 palabras-grande.json large-v3` | palabras con tiempo |
-| 3 | `python scripts/video/encuadrar.py central.mp4 80` | dónde está la cara, y los zooms que aguanta |
-| 4 | `python scripts/video/musica.py musica/ <segundos>` | tempo, arco, golpes de cada pista |
-| 5 | escribir `proyecto.mjs` | el plan |
-| 6 | `node scripts/video/montar2.mjs <carpeta>` | el vídeo, la copia ligera, las pistas sueltas, `cortes.json` |
-| 7 | `node scripts/video/comprobar.mjs <carpeta>` | el veredicto, con números |
+| El clip igualado | `ffmpeg … scale/pad 1080×1920, fps=30, loudnorm −16` (ver plantilla) | `.trabajo/central.mp4` |
+| Las palabras con tiempo | `python scripts/video/palabras.py central.mp4 palabras-grande.json large-v3` | quién dice qué y cuándo |
+| La cara | `python scripts/video/encuadrar.py central.mp4 80` | dónde está, cuánto ocupa, la pista por segundos |
+| El color | `python scripts/video/color.py central.mp4 --frio=1` | la corrección medida y un antes/después |
+| La música | `python scripts/video/musica.py musica/ <segundos>` | tempo, arco de energía, golpes de cada pista |
 
-**Nunca correr el paso 2 mientras el paso 1 sigue escribiendo.** ffmpeg no
-cierra el `moov` hasta el final: el archivo existe, crece, y Whisper lo lee
-truncado sin quejarse. Pasó el 19-09; se vio porque el JSON salió a medias.
+**Nunca transcribir mientras ffmpeg aún escribe el clip.** El archivo existe,
+crece, y Whisper lo lee truncado sin quejarse. Esperar a que termine.
 
-### La cara se mide, y por plano
+Después, **mirar**: una hoja de fotogramas (uno cada cinco segundos) y la
+transcripción entera con sus pausas. De ahí sale la lectura del vídeo:
+estructura (gancho → tesis → cita → mandato → cierre), el clímax, los gestos
+que hay que enseñar (manos al pecho, mirada arriba, brazos abiertos, la Biblia
+en alto), y lo que Whisper oyó mal.
 
-`encuadrar.py` usa YuNet (el detector de OpenCV 5; el modelo va en
-`scripts/video/modelos/`, 232 KB). Devuelve el centro de la cara, cuánto ocupa
-la cabeza y **los tres zooms calculados** para que los ojos caigan al 38 % del
-alto. Y deja `cara.json`: la pista muestra a muestra.
+**Lo que Whisper escribe se graba en la imagen.** Cada vídeo ha traído dos o
+tres palabras mal oídas: «teciendo» por «siendo», «cualidades» por
+«vanidades», «a Dios, señores» por «a dos señores», «colilla» por «polilla».
+Las citas bíblicas son la pista: si una frase es un versículo, la palabra
+buena es la del versículo. Se corrigen en `arreglos` y **se le dicen a Alex**
+—las que sean de contexto y no de oído, marcadas como tales— para que las
+confirme.
 
-`montar2.mjs` centra **cada plano** con la mediana de la cara en ese tramo. En
-Filipenses Alex entra caminando: x = 0,52 los primeros diez segundos y 0,73 al
-final; un centro único lo dejaba pegado al borde. Con la pista, el encuadre lo
-sigue solo.
+Y comprobar que Whisper no dejó palabras con duración cero (pasa cuando Alex
+se traba y reinicia): `sanear()` en `subtitulos.mjs` las reparte, pero hay que
+saber que estaban.
 
-El primer intento midió por movimiento (lo que cambia entre fotogramas es él):
-salía centrado en los brazos. **Lo que manda son los ojos.**
+## Parte 2 · Dirigir (los estilos, y Alex elige)
 
-### Los cortes van al golpe DETECTADO, no a una rejilla
+Es la parte que faltaba y la que separa «bien hecho» de «profesional». Sigue el
+método de Santiago Muñoz para editar con IA, adaptado a lo que ya tenemos:
 
-`k × pulso` vale con una pista electrónica (la Triunfal: 16 ms de error contra
-la rejilla). Con un piano, no: los golpes se apartan 109 ms de media. Ahora
-`montar2.mjs` lleva cada frontera al golpe real más cercano y después al cuadro
-más cercano, así que la suma de cuadros es exacta y no hay desfase que
-compensar. Medido en la v1 de Filipenses: **8 ms de desvío medio**.
+1. **Proponer diez estilos.** Con la transcripción y los fotogramas delante,
+   diez maneras de contar ESE vídeo. Un estilo no es un filtro: es una
+   decisión sobre cada una de estas variables a la vez:
 
-### El plan lo hace un jurado
+   | Variable | Lo que se decide |
+   |---|---|
+   | Ritmo | plano medio (1,8 / 2,3 / 3 s), dónde se acelera y dónde se respira |
+   | Encuadre | cuánto se acerca, si sigue el gesto o la idea |
+   | Rótulos | tipografía, tamaño, color de acento, una o dos líneas, palabra a palabra o frase |
+   | Color | temperatura, contraste, cuánta luz |
+   | Elementos | tarjeta de versículo, título de apertura, contador, mockup, nada |
+   | Transiciones | corte seco, fundido de seis cuadros, ninguna |
+   | Música | pista, cuándo entra, cuánto se oye |
+   | Cierre | marca, «escribe amén», pregunta, nada |
 
-Tres editores independientes (ritmo, sentido, emoción) proponen el guion de
-planos leyendo la transcripción y el metraje; un juez elige y injerta. Lo que
-salió que yo no habría visto: cortar en cada «¿hasta cuándo…?», llevar el
-primer plano a «Ahí está la clave» y a «nada es imposible» como frase entera,
-poner los dos amaneceres en bisagras del discurso y **el aviso de que la cara
-cambiaba de sitio**. En el prompt de cada agente va que sus descripciones de
-herramientas se escriben en español: Alex las lee en el panel.
+2. **Visualizar mínimo y máximo de cada uno**, sobre SUS fotogramas, en el
+   lienzo de diseño (el Artifact de tipo *Design*, que es el «Claude Design»
+   del método: `Artifact quickstart intent=design`). El mínimo es el estilo
+   con lo justo; el máximo, con todo lo que admite. Diez artboards con dos
+   versiones cada uno, y Alex mira.
 
-### `comprobar.mjs`: el vídeo no se da por bueno hasta que lo diga
+3. **Filtrar a tres.** Alex elige tres. No se discute el criterio: es su
+   cara y su mensaje.
 
-Mide sobre el archivo final y las pistas sueltas: ancho y duración de cada
-rótulo, desvío de cada corte contra el golpe, cuadros repetidos en tres planos,
-margen de la voz sobre la música, sonoridad y pico. **Falla** si un rótulo no
-cabe, si un corte está a más de 40 ms del golpe, si un plano repite cuadros, si
-la voz baja de 6 dB sobre la música o la sonoridad se sale de −14 ± 2 LUFS.
-Con `sinApp: true` en el proyecto, falla también si un rótulo nombra la app.
+4. **Cinco variaciones** de los tres elegidos (mezclas, grados intermedios),
+   renderizadas de verdad sobre un fotograma con `estilos.mjs` o a mano, y
+   Alex elige una.
 
-El propio comprobador falló mudo la primera vez: leía la sonoridad de stdout y
-ffmpeg la escribe por stderr — «NaN LUFS» sin ningún error.
+5. **Esa una es el proyecto**: sus decisiones van a `proyecto.mjs` y se
+   guardan como estilo con nombre en `scripts/video/estilos/` para repetirlo
+   en la serie sin volver a preguntar.
 
-### La música se elige con Alex, y el agachado se barre
+Si el vídeo es uno de una serie que ya tiene estilo elegido, se salta al
+paso 5 y se dice.
 
-La pista la elige él entre las medidas. El volumen y el agachado **no se ponen
-de oído**: se exportan las pistas sueltas y se barre con `medir-audio.py`
-hasta que el peor momento quede a ≥ 8–10 dB y ningún tramo apriete. El Trailer
-necesitó 1,1 y 6:1 donde la Triunfal iba con 1,5 y 4:1.
+## Parte 3 · Montar y comprobar
 
-### Rótulos: lo que se añadió
+```bash
+node scripts/video/planificar.mjs palabras-grande.json <segundos> --doradas=…   # el plan base
+node scripts/video/montar2.mjs <carpeta>                                      # el vídeo
+node scripts/video/comprobar.mjs <carpeta>                                    # el veredicto
+```
 
-- Siete palabras y 2,6 s como topes (con seis y 2,3 salían «SANTO.» y «CON
-  TODA TU MENTE,» sueltos en 0,39 s).
-- Menos de medio segundo cuesta 140 puntos, más que juntar por una coma.
-- **Parejas que no se separan**: Espíritu Santo, Cristo Jesús, Padre Celestial…
-- Mientras la tarjeta del versículo está en pantalla, los rótulos palabra a
-  palabra se callan.
-- El oro casa por palabra entera: POSIBLE no enciende «imposible».
+**El plan de planos.** `planificar.mjs` reparte los cortes donde el discurso
+corta (puntos, comas, respiraciones), con planos de 1,6–3,4 s, cambiando
+sólo al encuadre vecino y acercándose en lo que pesa. Es el criterio del
+jurado de editores hecho código. Si hay cuota de agentes, un jurado (dos
+editores con ángulos distintos y un juez) lo mejora: lee los fotogramas y
+pone el corte donde está el gesto. **Después se lee entero**: propone, no
+decide.
 
-### Lo que dijo Alex de la v3, y ahora es regla
+**El montaje** (`montar2.mjs`) hace lo que ya no se discute:
+- cada corte al golpe detectado de la música más cercano y luego al cuadro
+  (10 ms de desvío medido; una rejilla `k × pulso` falla 109 ms con un piano);
+- cada plano centrado en la cara DE ESE PLANO (pista de `cara.json`), los
+  ojos al 38 % del alto, y **la cabeza nunca se corta**: el borde superior
+  queda una cabeza entera por encima de la cara más alta del plano;
+- donde el original ya viene cortado (Alex se inclina a la cámara), cuadro
+  completo, sin acercar;
+- rótulos palabra a palabra que no parten frases (`subtitulos.mjs`: reparto
+  óptimo del texto entero, medido en píxeles de la fuente elegida), dorados
+  por palabra entera, callados mientras hay tarjeta;
+- la tarjeta del versículo como una sola pieza (`tarjeta.py`), fundida entera;
+- música con compresor propio, agachada bajo la voz y **bajadas puntuales**
+  donde él baja la voz (`musica.bajadas`), sin enterrarla en el resto;
+- las pistas sueltas y `cortes.json` para que el comprobador mida.
 
-- **Tipografía: Arial Black**, elegida entre cuatro opciones renderizadas sobre
-  un fotograma real (Segoe UI Black, Arial Black, Franklin Gothic,
-  Bahnschrift). El proyecto la declara en `fuente: { archivo, anchos, tamano }`
-  y el reparto mide con su tabla (`node scripts/video/anchos.mjs <ttf>`).
-  Arial Black es más ancha: a 66 px caben los mismos rótulos que Segoe a 74.
-- **Las dos líneas van pegadas.** El paso entre ellas es la letra más el borde
-  de la caja: las cajas se tocan y se leen como un bloque.
-- **Nada de B-roll de banco**, y menos repetido. «Es muy corto y no tiene
-  sentido.» Si no hay metraje suyo para la frase, va su cara.
-- **Los saltos de encuadre, suaves.** Pasos cortos (1,18 / 1,32 / 1,46), sólo
-  entre encuadres vecinos —nunca abierto → cerca de un corte— y deriva del
-  3–5 %. Con 1,12 → 1,52 y 8 % los vio «MUY BRUSCOS».
-- **El cierre no repite la marca**: `@GenuinoLove` y «Sígueme para más».
+**La comprobación** (`comprobar.mjs`) se niega a dar el vídeo por bueno si:
+un rótulo no cabe (960 px), un corte está a más de 40 ms del golpe, un plano
+repite cuadros, la voz baja de 6 dB sobre la música, la música va más de
+28 dB por debajo (no se oye), la sonoridad se sale de −14 ± 2 LUFS o el pico
+pasa de −0,5 dBTP, o un rótulo nombra la app en un vídeo que no es de la app.
 
-> Antes de fijar una decisión de estilo, renderizar el mismo fotograma con las
-> opciones y que elija él. Cuesta veinte segundos y evita un render de ocho
-> minutos que no le va a gustar.
+**Y después se mira.** Veinte fotogramas repartidos, más un recorte a
+resolución completa de: el primer segundo, la tarjeta, cada cambio de
+encuadre dudoso, el cierre. Los cinco fallos mudos del primer vídeo y los
+tres del segundo se vieron así, no con números. Si el jurado adversario tiene
+cuota, cuatro revisores (rótulos, encuadre, sonido, reglas) y un escéptico
+por hallazgo; si no, se hace a mano y se dice.
 
-## Lo que hace falta, y ya está instalado
+**Entregar**: el ligero (720×1280) al móvil con `SendUserFile` y aviso con
+`PushNotification`; el grande se queda en su carpeta y es el que se publica.
+Y la bitácora y la hoja de ruta al día antes de cerrar.
 
-| Pieza | Para qué |
+## Las reglas del editor maestro
+
+Las que no dependen del estilo elegido. Ninguna se negocia.
+
+1. **Nunca tapar la cara.** Ni rótulo, ni tarjeta, ni mockup, ni logo encima
+   de los ojos o la boca. La tarjeta va arriba y la cara se mide para saber
+   dónde está; si no hay sitio, la tarjeta espera al plano abierto.
+2. **Rótulos que se leen a la primera.** Nunca parten una frase, ni por
+   delante ni por detrás, ni juntan dos oraciones; las dos líneas van
+   pegadas como un bloque; nunca por debajo de los últimos 320 px (los tapa
+   Instagram); ninguno de menos de medio segundo; parejas que no se separan
+   (Espíritu Santo, Cristo Jesús, Padre Celestial).
+3. **B-roll excelente o ninguno.** Lo que suma es metraje SUYO (la app
+   funcionando en su mesa, su casa, su Biblia). De banco, sólo si es de muy
+   alta calidad, del tema exacto, en vertical, sin texto en otro idioma —las
+   Biblias de los bancos vienen en alemán, inglés y portugués— y nunca
+   repetido dos veces. Un amanecer prestado de 1,3 s no suma: se quita.
+4. **Color natural y frío.** Balance automático (`colorcorrect=analyze=median`)
+   más el punto de frío que eligió (`--frio=1`), más un poco de luz. Nunca
+   calentar: su salón ya es cálido y sale amarillo.
+5. **Movimiento suave.** Pasos de zoom cortos (1,15 / 1,30 / 1,44), sólo entre
+   encuadres vecinos, deriva del 3–5 % alternando signo. «MUY BRUSCOS» es lo
+   que pasa con 1,12 → 1,52 y 8 %.
+6. **La tipografía es Arial Black** a 66 px con su tabla de anchos, hasta que
+   él elija otra sobre un fotograma real.
+7. **El cierre no repite la marca.** `@GenuinoLove` y «Sígueme para más»;
+   si él pide «escribe un gran amén», el cierre lo repite en grande.
+8. **La app sólo aparece en vídeos de la app.** Un devocional no lleva
+   capturas, ni tarjeta de la app, ni «descárgala»; `sinApp: true` en el
+   proyecto lo vigila.
+9. **Nada de otras organizaciones**, ni en rótulos, ni en cierres, ni en
+   documentos.
+10. **Lo que él grabó se respeta.** No se le arregla la fluidez (la tiene), no
+    se le cortan silencios (no los tiene: dos pausas de 0,25 s en cuarenta
+    segundos), y sus palabras no se cambian sin decírselo.
+
+## Herramientas, y qué mide cada una
+
+| Script | Para qué |
 |---|---|
-| ffmpeg | cortar, rotular, montar |
-| opencv-python + `modelos/yunet.onnx` | detectar la cara para encuadrar |
-| Pillow | medir anchos de fuente (`anchos.mjs`) |
-| librosa | tempo, golpes y energía de la música |
-| Python 3.12 | correr Whisper — en `~/AppData/Local/Programs/Python/Python312/python.exe` |
-| faster-whisper | transcribir en local |
-| truststore | que Python confíe en los certificados de Windows |
-
-Si algún día falta Python:
-`winget install --id Python.Python.3.12 --source winget --scope user`
-
-## Dónde deja los clips
-
-En `OneDrive\Desktop\videos-genuino`. **Su escritorio real está dentro de
-OneDrive**, no en `C:\Users\InvitadosPro\Desktop` — esa carpeta existe y no es
-la que ve.
-
-Los numera por orden del guion: `01.1`, `01.2`, `2.1`… Los `.1` y `.2` son
-tomas distintas de lo mismo.
-
-## El orden
-
-### 1. Dejar todos los clips iguales
-
-```bash
-node scripts/video/preparar.mjs
-```
-
-Pasa todo a 1080×1920 vertical, 30 fps, y nivela el audio a **−16 LUFS**. Sin
-nivelar, el clip grabado de pie suena el doble que el de la mesa y el montaje
-se oye a parches.
-
-Los originales vienen a 1920×1080 con una marca de rotación de −90°; ffmpeg la
-aplica al decodificar, así que no hay que girarlos a mano.
-
-### 2. Transcribir — el paso que lo cambia todo
-
-```bash
-PYTHONIOENCODING=utf-8 python scripts/video/transcribir.py <carpeta> small
-```
-
-Saca cada frase **con el segundo en que empieza**. Sin esto no se puede cortar
-sobre la palabra: los planos de la app acaban amontonados al final porque no se
-sabe cuándo habla de cada cosa. Con esto, cada pantalla entra justo cuando la
-nombra, y eso es lo que separa un vídeo correcto de uno bueno.
-
-`small` vale para **localizar** de qué habla en cada segundo, que es para lo
-que sirve este paso. Para los rótulos no vale: ver abajo.
-
-### 2 bis. Para los rótulos, el modelo grande — no es negociable
-
-```bash
-PYTHONIOENCODING=utf-8 python scripts/video/palabras.py <clip.mp4> <salida.json> large-v3
-```
-
-`small` transcribe bien las palabras y **puntúa mal**, y la puntuación es
-justamente lo que decide dónde cortar un rótulo. Con `small` salió
-«…en nuestro perfecto dios y es que el padre ha permitido…» sin un solo punto,
-y el agrupador —que no puede adivinar— metió dos oraciones en el mismo rótulo.
-También oyó «teciendo» por «creciendo» y «la goza» por «gózala», y eso queda
-grabado en la imagen para siempre.
-
-El clip dura menos de un minuto. `large-v3` en CPU tarda unos minutos y se
-descarga una vez. **Cuesta menos que revisar los rótulos a mano.**
-
-### 3. Ver qué hay en cada clip
-
-Un fotograma del centro de cada uno, todos en una hoja:
-
-```bash
-ffmpeg -v error -y -ss <mitad> -i <clip> -frames:v 1 -vf scale=300:-2 fNN.png
-ffmpeg -v error -y -i f%02d.png -vf "tile=6x2:padding=8:color=0x111111" hoja.png
-```
-
-### 4. Los planos de la app
-
-```bash
-node scripts/video/pantallas.mjs
-```
-
-Salen de las capturas de la tienda (`docs/tienda/capturas/listas/`) con un
-empuje de zoom lento. **Se ven mejor que una grabación de pantalla del móvil** y
-Alex no tiene que grabar nada.
-
-### 5. Elegir el estilo de rótulo
-
-```bash
-node scripts/video/estilos.mjs
-```
-
-Renderiza el mismo plano con cuatro estilos **reales** y los pega en un vídeo
-para comparar. No son bocetos: es exactamente lo que va a quedar.
-
-Alex eligió el **4 · ROTUNDO** — letra grande con sombra dura, primera línea
-blanca, segunda en el dorado `#c9a227`, sin barra de fondo. La sombra lo hace
-legible sin oscurecer la imagen, y su metraje tiene buena luz que no conviene
-tapar.
-
-### 6. La música, elegida midiendo
-
-```bash
-python scripts/video/musica.py <carpeta-musica> 55
-```
-
-Saca el tempo, los golpes y **la curva de energía**. Un vídeo que abre con una
-pregunta incómoda y cierra llamando a descargar necesita una pista que empiece
-baja y suba; eso se ve en la curva, no hay que adivinarlo:
-
-```
-                     arco     forma
-piano emotivo       +0,14     ▇▃▅▆▆▃▄▄██▄   descartada
-trailer inspirador  +0,38     ▅▅▅▅▅▅█████   descartada
-triunfal            +0,76     ▂▂▂▄▃▃▄▇███   ← la elegida
-```
-
-Guarda también los golpes en un `.txt`, para cortar encima de ellos.
-
-### 7. Las palabras, una a una
-
-```bash
-python scripts/video/palabras.py <clip> <salida.json>
-```
-
-Whisper con `word_timestamps=True`. Es lo que permite los subtítulos que se
-encienden al hablar — **lo que más retiene de todo lo que se hace aquí**.
-
-### 8. Montar
-
-```bash
-node scripts/video/montar-pro.mjs      # el bueno
-node scripts/video/montar.mjs          # el simple, sin música ni subtítulos
-```
-
-El guion de planos vive en la constante `GUION`: cada bloque dice cuántos
-**pulsos** dura y con qué encuadre, así que todos los cortes caen sobre la
-música. El último bloque absorbe lo que sobre, y el script **se niega a montar**
-si las duraciones no cuadran con la voz al milisegundo.
-
-### 9. La copia ligera
-
-El vídeo bueno pesa unos 35 MB y **no se puede mandar por el chat** (tope de
-30 MB). Se hace una copia a 720×1280 con `-crf 28` — unos 5 MB — sólo para que
-lo vea desde el móvil:
-
-```bash
-ffmpeg -y -i <final>.mp4 -vf scale=720:1280 -c:v libx264 -preset slow -crf 28 \
-  -c:a aac -b:a 128k -movflags +faststart <final>-ligero.mp4
-```
-
-**La que se publica es siempre la grande.**
-
-## Cómo se mantiene la voz intacta
-
-La voz va en **una sola pista continua**. El vídeo se construye aparte, trozo a
-trozo, y cada inserto de pantalla ocupa **exactamente los mismos segundos** que
-el trozo de cara que sustituye. Al juntarlos, la voz no se mueve ni un cuadro:
-se le sigue oyendo mientras se ve la app.
-
-`montar.mjs` comprueba esa suma y **se niega a montar si no cuadra**.
-
-## Los rótulos: la regla que no se rompe
-
-**Un rótulo NUNCA termina a mitad de frase.** Alex, sobre la primera versión:
-«es imperdonable que pongas subtítulos donde las frases queden a la mitad».
-Salían cosas como «HA PERMITIDO QUE» o «TIENES QUE»: obligan a leer dos veces,
-y en cincuenta segundos nadie lee dos veces.
-
-La regla es fácil de enunciar y tiene **tres caras**, no una. Las tres han
-fallado ya, en este orden:
-
-| Falta | Cómo se ve |
-|---|---|
-| Cerrar colgando | `HA PERMITIDO QUE` · `TIENES QUE` |
-| Abrir colgando | `DE CUMPLIR` · `A AUMENTAR` · `QUE INSTALAR` |
-| Tragarse una frontera | `DIOS / Y ES QUE EL PADRE` — dos oraciones juntas |
-
-La segunda y la tercera aparecieron **al arreglar la primera**: al arrastrar
-palabras para no cerrar mal, el corte se va al otro lado. Por eso el agrupador
-no decide rótulo a rótulo.
-
-`scripts/video/subtitulos.mjs` puntúa **todos los repartos posibles** del texto
-y elige el mejor del conjunto (programación dinámica, de atrás hacia delante).
-Si empeorar un rótulo salva los tres siguientes, lo empeora. Lo que se puntúa:
-
-- cerrar en palabra de apoyo → +300
-- abrir en palabra de apoyo, salvo que ahí empezara frase → +90
-- llevar un punto o una coma **dentro** → +250
-- llevar una respiración larga dentro → +150
-- alejarse de los 16 caracteres → +1 por carácter
-- durar menos de medio segundo, o pasar de 24 caracteres por segundo → +45/+40
-- **premios** por cortar donde el hablante cortó: −35 en punto, −30 en pausa
-
-Topes duros: 1550 px de texto, 6 palabras, 2,3 s. Una palabra suelta siempre
-cabe, si no el reparto se quedaría sin solución.
-
-Cuando la línea pasa de 900 px se **parte en dos**, con el mismo criterio: la de
-arriba tampoco acaba en palabra de apoyo. Y si el único sitio por donde partir
-deja la primera línea colgando, **no se parte**: se aguanta una línea de hasta
-940 px, que se lee mejor que un corte malo.
-
-### Se mide en píxeles, no en caracteres
-
-Contar caracteres miente. `CONSTANTEMENTE A CUMPLIR` y `A NUESTRO PERFECTO
-DIOS.` tienen los mismos **24 caracteres** y ocupan **1103 y 1006 píxeles**: el
-primero se sale del cuadro de 1080 y el segundo no. Por eso
-`scripts/video/anchos.json` guarda el ancho real de cada letra de Segoe UI Bold,
-medido de la fuente, y el agrupador suma píxeles. Calculado contra real: **1 px
-de diferencia**.
-
-Con 60 px de margen a cada lado quedan 960 útiles. Si algún día cambia la fuente
-o el tamaño:
-
-```bash
-node scripts/video/anchos.mjs
-```
-
-**El silencio cuenta como puntuación.** Whisper da el segundo de cada palabra,
-así que un hueco de 0,16 s ya es coma y uno de 0,34 s es punto. Ojo: con un
-orador que no respira —como Alex— casi todos los huecos son 0,000, y entonces
-**la única frontera que queda es la puntuación del modelo grande**. Ésa es la
-razón de fondo de la sección 2 bis.
-
-```
-antes                          después
-HA PERMITIDO QUE          →    HA PERMITIDO / QUE DISEÑEMOS
-TODO LO QUE               →    CON TODO LO / QUE EL PADRE
-DIOS / Y ES QUE EL PADRE  →    PERFECTO DIOS.
-  (dos oraciones)               Y ES QUE EL PADRE
-```
-
-**Y la altura importa tanto como el corte.** Instagram y TikTok tapan los
-últimos ~320 píxeles de los 1920 con el texto del post y los botones. Los
-rótulos van a `h*0,720` con una línea y a `h*0,687` / `h*0,771` con dos: por
-debajo de eso se leen en el ordenador y **no se leen en el móvil**, que es
-donde los va a ver todo el mundo.
-
-**Y las palabras clave van en dorado** — DIOS, DESPERTADOR, PALABRA, HERMANOS,
-DISCIPLINA, GLORIA. El rótulo entero cambia de color, no la palabra suelta:
-colorear una palabra dentro de un texto centrado obliga a calcular anchuras y
-se acaba desalineando.
-
-## Tres encuadres de una sola toma
-
-Lo que llevó el vídeo de un 6 a un 8 sin volver a grabar.
-
-Se midió el primer montaje: **plano medio de 7,7 segundos** en todo el cuerpo,
-cuando lo que funciona en formato corto está entre 1,5 y 3. Se paraba en cuanto
-él empezaba a hablar.
-
-De un plano abierto se recortan un medio y un primer plano. Cortando entre
-ellos cada dos o tres segundos, **una sola toma parece rodada con tres
-cámaras**, y de paso se arregla que él salía pequeño en un móvil.
-
-```
-abierto   zoom 1,00   centro 0,50
-medio     zoom 1,22   centro 0,42
-cerca     zoom 1,45   centro 0,36
-```
-
-**El centro sube al acercarse** porque la cara está en el tercio superior: por
-el medio geométrico, el primer plano corta la frente.
-
-**Tope 1,45.** La fuente es 1080×1920: a 1,7 se muestrean 635 píxeles de ancho
-y se ve blando.
-
-## El B-roll y el zoom: dos frenadas de más
-
-Las dos veces el error fue **corregir de más**, y las dos se vieron sólo
-mirando el vídeo montado.
-
-**El B-roll.** Se quitó el amanecer que abría flojo y con él se quitó B-roll de
-todas partes: quedaron 2 planos de 1,3 s sobre 17. Quitar una cosa de la
-apertura no es razón para quitarla del resto. Lo sano son **5 o 6 planos de
-B-roll** en un vídeo de 45 s, repartidos donde las palabras los piden.
-
-**Y el B-roll bueno es el suyo.** Alex tenía grabada la app funcionando en su
-teléfono, sobre su mesa (`6.1-celular-y-la-alarma`), mientras yo le decía que
-eso era justo lo que faltaba. **Antes de bajar nada de un banco, mirar lo que
-él grabó.**
-
-> ⚠️ **Las Biblias de los bancos de vídeo no están en español.** Las tres que se
-> bajaron eran alemana, inglesa y portuguesa, y el texto se lee. En un vídeo de
-> un Capellán venezolano eso lo nota cualquiera. Si hay que poner un plano de
-> una Biblia, o es la suya o no hay plano.
-
-**El zoom.** La deriva estaba al 4 %: técnicamente existía, prácticamente no se
-veía. Los números que funcionan:
-
-| Qué | Deriva |
-|---|---|
-| Sus planos hablando | 7–9 % |
-| B-roll | 15–17 % |
-| Capturas de la app | 18 %, **saliendo** |
-
-Y **alternando**: unos planos entran y otros salen. Si todos empujan hacia
-dentro, a los diez segundos el ojo deja de registrarlo.
-
-Las capturas de la app **salen** del zoom, no entran. Entrando, el fotograma
-más recortado es el último y lo que queda en el ojo es la interfaz cortada — en
-este vídeo cortaba por la mitad los números de la racha, que es lo mejor que
-tiene la app.
-
-> Una deriva negativa que baje de 1,0 hace que `zoompan` pida más imagen de la
-> que hay y se vea el borde. El montaje **se detiene** si eso pasa, en vez de
-> sacar un vídeo con un marco raro.
-
-## El gancho: los tres primeros segundos
-
-El mismo vídeo con aperturas distintas mueve el coste por instalación **de dos
-a cuatro veces**, y el 65 % de quien aguanta tres segundos se queda diez.
-
-El primer montaje abría con un amanecer en fundido: **el primer fotograma era
-casi negro**. Se tiró el activo más valioso en un plano bonito y vacío.
-
-**Abrir con su cara y su voz, en primer plano.** El B-roll se gana el sitio
-más adelante, no al principio.
-
-## Lo que hace que un vídeo enganche
-
-Por orden de cuánto cambia el resultado. Si hay que recortar, se recorta de
-abajo hacia arriba.
-
-1. **Subtítulos que se encienden al hablar.** Grupos de dos o tres palabras,
-   cada uno en su segundo. Sin esto lo demás sobra.
-2. **Cortes sobre el golpe.** Un corte medio segundo antes del pulso se siente
-   flojo y nadie sabe decir por qué.
-3. **Corrección de color.** El metraje de móvil sale plano; con curva en S,
-   sombras frías y luces cálidas parece rodado.
-4. **Que nada esté quieto.** Zoom del 4 al 7 % en cada plano, alternando
-   dirección para que los cortes no se sientan repetidos.
-5. **La música apartándose de la voz** con `sidechaincompress`. Sin eso hay que
-   elegir entre no oír la música o no entenderle a él.
-6. **B-roll, poco.** Dos o tres segundos donde las palabras lo pidan. Más
-   convierte un testimonio propio en un anuncio genérico, y lo que vende aquí
-   es que es él.
-
-## Los subtítulos van grabados: revisarlos SIEMPRE
-
-Whisper oye mal, y lo que escribe se queda en la imagen para siempre. En el
-primer vídeo falló cuatro veces:
-
-```
-"fallar en nuestro perfecto"  ->  "fallarle a nuestro perfecto"
-"cumplir con todos los que"   ->  "cumplir con todo lo que"
-"descarga la goza"            ->  "descárgala, goza"
-"teciendo cada día"           ->  "creciendo cada día"
-```
-
-En un vídeo sobre fidelidad a Dios, un «teciendo» resta más de lo que suma
-cualquier efecto. En `montar-pro.mjs` hay una lista `ARREGLOS` para esto: las
-sustituciones respetan el número de palabras para no mover ni un tiempo.
-
-**Y mirar fotogramas del resultado antes de entregarlo.** Así se vieron los
-rótulos pisándose y un «DESCARGALA» sin tilde, que ningún script iba a avisar:
-
-```bash
-ffmpeg -i final.mp4 -vf "select='eq(n\,180)+eq(n\,900)',scale=270:-2,tile=4x1" -frames:v 1 vistazo.png
-```
+| `palabras.py` | transcribir con `large-v3`, palabra a palabra (el `small` puntúa mal y oye peor) |
+| `encuadrar.py` | la cara con YuNet (`modelos/yunet.onnx`): centro, tamaño, pista por segundos |
+| `color.py` | la corrección de color medida, con `--frio=0/1/2`, y su antes/después |
+| `musica.py` | tempo, golpes y curva de energía de cada pista candidata |
+| `planificar.mjs` | el plan base de planos desde la transcripción |
+| `montar2.mjs` | el montaje, desde `proyecto.mjs` |
+| `comprobar.mjs` | el veredicto con números |
+| `medir-audio.py` · `medir-cortes.mjs` · `medir-movimiento.py` | las tres medidas sueltas, para barrer ajustes |
+| `subtitulos.mjs` · `tarjeta.py` · `anchos.mjs <ttf>` | rótulos, tarjeta, tablas de anchos por fuente |
+| `estilos.mjs` | el mismo plano con varios estilos reales, para elegir |
+
+Instalado: ffmpeg 9, Python 3.12 con `faster-whisper`, `truststore`, `librosa`,
+`opencv-python`, `Pillow`, `numpy`; Node 24.
 
 ## Las trampas, todas pagadas ya
 
 **ffmpeg quiere todas las entradas antes de los filtros.** `-i` es opción de
-entrada y `-vf` de salida; poner una entrada detrás de los filtros rompe el
-análisis con un error que no menciona eso en ninguna parte.
+entrada y `-vf` de salida; una entrada detrás de los filtros rompe el análisis
+con un error que no lo menciona.
 
-**`drawtext` no entiende `iw`/`ih`, sólo `w`/`h`** — aunque `drawbox`, dos
-líneas más arriba en el mismo filtro, sí las entienda. El error dice «undefined
+**`drawtext` no entiende `iw`/`ih`, sólo `w`/`h`.** El error dice «undefined
 constant» y no lleva a eso.
 
-**En Windows la salida nula es `NUL`, no `-`.** Un `-f null -` hace que
-`silencedetect` y `volumedetect` no impriman nada **sin dar error**: parece que
-no hay silencios cuando lo que pasa es que no se ejecutó.
+**En Windows la salida nula es `NUL`, no `-`.** `-f null -` hace que
+`silencedetect` y `volumedetect` no impriman nada sin dar error.
 
-**Un solo `resize` por tubería**, tanto en ffmpeg como en sharp. Encadenar un
-segundo pisa al primero en silencio.
+**`loudnorm` escribe su informe por stderr.** Leyéndolo de stdout sale «NaN»
+sin ningún aviso. `spawnSync` devuelve las dos salidas.
 
-**Cuidado con las capturas apaisadas.** `02-alarma-bloqueado.png` es 1220×1001 y
-ha roto tres scripts distintos: escalada por el alto se sale del lienzo y ffmpeg
-se niega a rellenar un hueco negativo. Usar siempre
-`scale=…:force_original_aspect_ratio=decrease` y después `pad`.
+**Un solo `resize` por tubería.** Un segundo pisa al primero en silencio.
 
-**El antivirus intercepta HTTPS.** Python rechazaba descargar el modelo con un
-`CERTIFICATE_VERIFY_FAILED`. Se arregla con `truststore.inject_into_ssl()` al
-principio del script, que le dice a Python que confíe en lo mismo que confía
-Windows. Es el mismo motivo por el que winget se queja del certificado de la
-tienda.
+**`scale=…:force_original_aspect_ratio=decrease` y después `pad`**, siempre:
+una captura apaisada escalada por el alto se sale del lienzo.
 
-**La consola de Windows va en cp1252** y revienta al imprimir una flecha. De ahí
-el `sys.stdout.reconfigure(encoding="utf-8")`.
+**El antivirus intercepta HTTPS.** `truststore.inject_into_ssl()` al principio
+del script. Y HuggingFace: `HF_HUB_DISABLE_XET=1` o la descarga del modelo
+se corta.
 
-**`zoompan`: `d` es cuántos cuadros saca por CADA cuadro de entrada**, no la
-duración del plano. Con `d=53` sobre un vídeo de 53 cuadros ffmpeg genera
-2.809. Con vídeo va siempre **`d=1`**; el `d` grande sólo vale con imagen fija.
+**La consola de Windows va en cp1252**: `sys.stdout.reconfigure(encoding="utf-8")`
+en todo script de Python, y `PYTHONIOENCODING=utf-8` al llamarlo.
 
-**`fps=30` va ANTES de `zoompan`, jamás después.** Detrás, si la fuente va a 25,
-las marcas de tiempo se descuadran y el filtro siguiente se queda rellenando
-huecos **para siempre**: sin error, comiéndose la memoria. Llegó a 30 GB.
+**YuNet devuelve `float32`** y `json` no lo escribe: `float()` a todo.
 
-**Al matar una tarea, el ffmpeg hijo sobrevive.** Hay que comprobarlo aparte o
-se queda ahogando la máquina en silencio:
+**`zoompan`: `d` es cuántos cuadros saca por CADA cuadro de entrada.** Con
+vídeo siempre `d=1`; el `d` grande sólo con imagen fija.
 
-```bash
-powershell -NoProfile -Command "Get-Process ffmpeg | Stop-Process -Force"
-```
+**`fps=30` va ANTES de `zoompan` y también DENTRO (`:fps=30`).** Detrás, el
+filtro siguiente rellena huecos para siempre (30 GB). Sin el de dentro,
+`zoompan` saca 25 y `-r 30` repite un cuadro de cada seis.
 
-**`-filter_complex_script` desapareció en ffmpeg 9.** La cadena se pasa tal
-cual en `-vf`; `execFileSync` la entrega sin pasar por el intérprete de
-órdenes, así que no hay límite de longitud.
+**`zoom` en `zoompan` siempre arranca en 1,0.** `min(zoom+paso, 1.45)` y
+`max(zoom-paso, 1.0)` se quedan clavados. Todo movimiento se calcula desde
+`on`, el número de cuadro.
 
-**El recorte (`-t`) va como opción de SALIDA**, después de los filtros. Como
-opción de entrada, con `fps` de por medio, la duración sale distinta de la
-pedida y descuadra los cortes sobre el golpe.
+**Una deriva que baje de 1,0** pide más imagen de la que hay y se ve el borde:
+el montaje se detiene.
 
-**Un rótulo debe acabar exactamente donde empieza el siguiente.** Alargarlo con
-`Math.max` tapa el parpadeo y crea algo peor: cuando alguien habla rápido, dos
-rótulos se dibujan encima y sale un amasijo ilegible.
+**Al matar una tarea, el ffmpeg hijo sobrevive**: `Get-Process ffmpeg |
+Stop-Process -Force`.
 
-## Sobre cortar silencios
+**`-filter_complex_script` desapareció en ffmpeg 9.** La cadena va en `-vf` o
+`-filter_complex`; `execFileSync` la entrega sin límite de longitud.
 
-Es lo que recomienda todo el mundo, y **con Alex no aplica**. Se midió el
-18-09-2026: cuarenta segundos hablando con **dos pausas de 0,25 s**. Quitarlas
-ahorraría dos segundos a cambio de ocho saltos de imagen y de dejarle hablando
-sin respirar.
+**El recorte (`-t`) va como opción de SALIDA**, después de los filtros.
 
-**Medir antes de cortar.** Si las pausas internas suman menos de dos segundos,
-la grasa está en la apertura, no en su voz.
+**Un rótulo acaba exactamente donde empieza el siguiente.** Alargarlo con
+`Math.max` hace que dos se dibujen encima.
+
+**Contar caracteres miente.** Dos rótulos de 24 letras miden 1103 y 1006 px.
+Se mide en píxeles de la fuente, con su tabla (`anchos-<fuente>.json`).
+
+**Los golpes de un piano no siguen una rejilla** (109 ms de error). Cortar
+sobre los golpes detectados, no sobre `k × pulso`.
+
+**Un parche por texto puede fallar en silencio** (una comprobación mal hecha
+y la v4 salió sin la tipografía elegida). Después de cada parche, comprobar
+en el archivo que está lo que se cree que está.
+
+**No leer un archivo que ffmpeg aún escribe.** El `moov` se escribe al final.
+
+**La cuota de agentes del plan se acaba.** Dos jurados murieron a medias en
+un día. Todo el método funciona sin agentes; los agentes mejoran, no
+sostienen.
 
 ## Identidad
 
@@ -564,27 +308,28 @@ superficie #14181d      logro    #3f9e7a
 texto      #e9ecef      tenue    #8b949e
 ```
 
-Tipografías: **Segoe UI Bold** para los rótulos, **Georgia cursiva** para las
-citas. Las dos están en Windows, así que no hay que instalar nada.
+Rótulos en **Arial Black**; citas y frases del cierre en **Georgia cursiva**.
+Las dos están en Windows.
 
 ## Música
 
-**Nunca poner una pista sin comprobar la licencia.** Un aviso de derechos en el
-vídeo con el que quiere que la gente descargue la app es el peor sitio posible
-para uno.
+**Nunca una pista sin comprobar la licencia.** Pixabay Music: uso comercial,
+sin atribución, no revender la pista suelta. Se le dan dos o tres opciones
+medidas (tempo, arco) y **elige él**. Hasta ahora: Trailer inspirador (112
+ppm) para exhortar, piano emotivo (129 ppm) para orar; la Triunfal (136 ppm)
+fue la del vídeo de la app y no tiene golpe hasta el segundo 15.
 
-La biblioteca que sirve es **Pixabay Music**: uso comercial permitido, sin
-atribución obligatoria, y lo único prohibido es revender la pista suelta. Se le
-dan dos o tres opciones y **elige él** — la música cambia cómo se siente un
-vídeo más que casi ninguna otra decisión.
+El volumen y el agachado **se barren con `medir-audio.py`**, no se ponen de
+oído: la voz tiene que ir ≥ 8–10 dB por encima en el peor momento y la
+música ≤ 28 dB por debajo de media. Con el Trailer: 0,95–1,1 y 6:1; con el
+piano, 1,2 y 5:1 como punto de partida.
 
 ## Y una cosa que no es técnica
 
 Alex habla seguido, sin muletillas y sin arranques en falso: **no hay que
 arreglarle la fluidez**, ya la tiene y es lo difícil. Lo que le falta son
-**silencios** —uno después de la frase que más duela, uno antes de nombrar la
-app, uno antes del cierre— y **variar la duración de las frases**, que le salen
-casi todas de cinco segundos y el oído se acostumbra.
+silencios —uno después de la frase que más duela, uno antes del cierre— y
+variar la duración de las frases. Si pide opinión sobre cómo habla, dársela
+con datos y sin adornos: la pidió el 18-09 y agradeció que fuera concreta.
 
-Si pide opinión sobre cómo habla, dársela con datos y sin adornos. La pidió el
-18-09 y agradeció que fuera concreta.
+Y cuando algo no le gusta, lo dice en una frase. Esa frase va a este archivo.
