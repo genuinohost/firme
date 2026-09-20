@@ -123,9 +123,37 @@ Sin logo, sin tarjeta, sin «sígueme», sin bucle.
 | Sonido | whoosh por corte desde `cortes.json` (`adelay` 2–3 cuadros antes, `amix normalize=0`); impacto sólo en el gancho; cama de graves `lowpass=f=150` a −20 dB, comprobada con `medir-audio.py` |
 | Cierre | grabar UNA vez a Alex 2,5–3 s en primer plano a pantalla completa y concatenar a cada short (`concat=n=2:v=1:a=1`, mismos 1080×1920 / 30 fps / 48 kHz) |
 
-## Lo que no se pudo verificar
+## Afinado con los archivos (20-09-2026, con permiso de Alex)
 
-Si los rótulos entran con escala, las fuentes exactas, fundidos de menos de
-seis cuadros, Ken Burns leve en fotos, el nombre de la música. Todo sale de
-descargar 3–5 shorts (con permiso de Alex) y pasar `select='gt(scene,0.25)'`
-+ fotogramas a 2 fps + análisis por bandas con librosa.
+Descargados los tres shorts (`videos-genuino/referencias/samuel-adrian/`,
+1080×1920) y medidos cuadro a cuadro:
+
+- **Edita a 24 fps** (23,976), no a 30. Es parte del look «cine».
+- **Los rótulos entran de golpe, sin ninguna animación**: diez cuadros
+  consecutivos alrededor de la entrada de «Si no lo conocías,» son idénticos.
+  Nada de pop de escala. Y el rótulo **no se corta con el plano**: sigue en
+  pantalla mientras cambia la imagen debajo.
+- **Los cortes son secos, sin fundido**: entre el cuadro 3 y el 4 de un
+  corte no hay ningún estado intermedio.
+- **Las fotos fijas llevan un Ken Burns muy leve**: diferencia media entre
+  cuadros 0,59 (nuestros planos de cara dan ~5,8): un empuje diez veces más
+  lento que un plano de cámara, ≈ 1,03–1,05.
+- **Cortes medidos** (`select='gt(scene,0.12)'`; los punch-in entre dos
+  encuadres de cara parecidos se escapan, así que la densidad real es algo
+  mayor): narrativo 17 cortes (5 en el gancho de 7 s, 15/min en el cuerpo,
+  plano mediana 2,5 s); noticia 23 (un montaje de «recibos» de 39 a 47 s con
+  planos de 0,8–1,5 s; mediana 1,6 s); noticia con clip largo de la fuente
+  11 (mediana 3,7 s, un plano de 15,7 s).
+- **Whoosh en 13 de 17 cortes** del narrativo y en 17 de 23 del de noticia:
+  pico de agudos de +12 a +28 dB sobre la mediana, que arranca **entre 50 y
+  450 ms antes del corte** (mediana ≈ −150 ms, unos 3–4 cuadros a 24 fps).
+  Nunca después.
+- **Huecos de voz**: uno de 0,48 s en el narrativo; seis de 0,26–0,54 s en el
+  de noticia. No hay silencios que cortar; el ritmo lo ponen los cortes.
+- **Cama de graves** en el narrativo desde el gancho: picos por encima de
+  −40 dB durante casi todo el cuerpo, sin tempo claro (el detector da 123 ppm
+  sobre un motivo escaso; no fiarse). Nombre de la pista: no aparece en la
+  descripción ni en los metadatos.
+
+Sigue sin verificarse la fuente exacta de los rótulos (negrita sans
+geométrica; Arial Black da el mismo peso).
