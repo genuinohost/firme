@@ -59,10 +59,28 @@ const PAUSA_LARGA = 0.34;
  * otro. Con la tabla, el ancho calculado y el real se diferencian en 1 píxel.
  * La genera `scripts/video/anchos.mjs` y hay que rehacerla si cambia la fuente.
  */
-import anchos from "./anchos.json" with { type: "json" };
+import anchosSegoe from "./anchos.json" with { type: "json" };
+import { readFileSync } from "node:fs";
+
+let anchos = anchosSegoe;
+let tamanoRotulo = 74;
+
+/**
+ * Cambiar la tabla de anchos cuando el proyecto usa otra fuente. La genera
+ * `anchos.mjs <fuente.ttf>`; si no existe, se avisa y se mide con Segoe, que
+ * es parecida en ancho a la mayoría de las sans y sirve para no salirse.
+ */
+export function usarAnchos(ruta, tamano) {
+  try {
+    anchos = JSON.parse(readFileSync(ruta, "utf8"));
+  } catch {
+    console.error(`No hay tabla de anchos en ${ruta}; se mide con Segoe UI Bold.`);
+  }
+  if (tamano) tamanoRotulo = tamano;
+}
 
 /** Ancho en píxeles de un texto al tamaño de rótulo que usa el montaje. */
-export function ancho(texto, tamano = 74) {
+export function ancho(texto, tamano = tamanoRotulo) {
   const k = tamano / anchos.tamano;
   let px = 0;
   for (const c of texto.toUpperCase()) px += anchos.anchos[c] ?? anchos.reserva;
@@ -79,10 +97,28 @@ const MAX_LINEA = 900;
 /** Hasta aquí se aguanta en una línea antes que partir mal. */
 const LINEA_FORZADA = 940;
 /** Dos líneas cómodas. Más que esto ya es un párrafo. */
-const MAX_ANCHO = 1550;
+// 1650 y no 1550: «CON TODA TU MENTE, TODO TU CORAZÓN,» mide unos 1600 px en
+// dos líneas de 800, que caben de sobra; con 1550 el reparto no podía juntarlas.
+const MAX_ANCHO = 1650;
 const ANCHO_IDEAL = 760;
-const MAX_PAL = 6;
-const MAX_DUR = 2.3;
+// Siete y no seis: «CON TODA TU MENTE, TODO TU CORAZÓN,» son siete palabras
+// cortas que caben de sobra en dos líneas, y con seis el reparto tenía que
+// soltar «CON TODA TU MENTE,» en un parpadeo de 0,39 s. El ancho en píxeles
+// sigue mandando.
+const MAX_PAL = 7;
+// 2,3 dejaba fuera «ILIMITADO DEL ESPÍRITU SANTO.» (2,43 s) y el reparto
+// soltaba un «SANTO.» de 0,39 s. Un rótulo de 2,6 s se lee sin problema.
+const MAX_DUR = 2.6;
+
+/**
+ * Parejas que no se separan en dos rótulos. «AHÍ ESTÁ EL ESPÍRITU» /
+ * «SANTO QUE SE MANIFESTARÁ» salía del reparto sin ninguna regla que lo
+ * impidiera: un nombre propio de dos palabras es una sola palabra.
+ */
+const PAREJAS = [
+  ["espíritu", "santo"], ["cristo", "jesús"], ["jesús", "cristo"],
+  ["padre", "celestial"], ["señor", "jesús"], ["dios", "padre"],
+];
 
 const sinSignos = (p) => p.replace(/[.,;:!?…¿¡"'()«»]/g, "").toLowerCase();
 const cierra = (p) => /[.,;:!?…]$/.test(p);
@@ -168,14 +204,23 @@ export function agrupar(palabras, desfase = 0) {
     // Las dos faltas graves: dejar la frase colgando por el final o por el
     // principio. El principio se perdona si ahí arrancaba una frase.
     if (esApoyo(w[j - 1].p)) c += 300;
+    // Ni cortar entre las dos mitades de un nombre propio.
+    if (j < n) {
+      const a = sinSignos(w[j - 1].p), b = sinSignos(w[j].p);
+      if (PAREJAS.some(([x, y]) => x === a && y === b)) c += 400;
+    }
     if (esApoyo(w[i].p) && !frontera(i)) c += 90;
 
     // Y la tercera: tragarse una frontera. Un rótulo que lleva dentro un punto
     // o una respiración larga junta dos frases que no tienen nada que ver
     // — «DIOS / Y ES QUE EL PADRE» salía justo de aquí.
     for (let k = i + 1; k < j; k++) {
-      if (cierra(w[k - 1].p)) c += 250;
-      else if (hueco(k) >= PAUSA_LARGA) c += 150;
+      if (cierra(w[k - 1].p)) {
+        // Salvo que lo de antes de la coma dure un suspiro: «Con toda tu
+        // mente, todo tu corazón,» — Whisper dio 0,3 s a «con toda tu mente»
+        // y sola parpadeaba. Juntas se leen como lo que son: una lista.
+        c += w[k - 1].fin - w[i].t < 0.55 ? 60 : 250;
+      } else if (hueco(k) >= PAUSA_LARGA) c += 150;
     }
 
     // Y los dos premios: cortar donde el hablante ya cortó.
@@ -186,7 +231,12 @@ export function agrupar(palabras, desfase = 0) {
 
     // Que dé tiempo a leerlo. Mil cien píxeles por segundo son unos veinte
     // caracteres: por encima de eso el rótulo se va antes de haberlo leído.
-    if (dur < 0.5) c += 45;
+    // Y más caro aún si además es una sola palabra: un «SANTO.» de 0,39 s
+    // suelto es un parpadeo, no un rótulo.
+    // Y menos de medio segundo no se lee, tenga las palabras que tenga: el
+    // castigo tiene que pesar más que el de juntar dos trozos por una coma,
+    // si no el reparto prefiere un parpadeo «limpio» a un rótulo legible.
+    if (dur < 0.5) c += pal === 1 ? 160 : 140;
     if (px / Math.max(dur, 0.01) > 1100) c += 40;
     // Un rótulo de una palabra corta parpadea y no dice nada.
     if (pal === 1 && px < 280 && !cierra(w[j - 1].p)) c += 50;

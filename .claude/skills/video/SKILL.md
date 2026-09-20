@@ -10,11 +10,127 @@ grabaciones suyas hablando de su fe, eso no es un detalle técnico.
 
 Los scripts están en `scripts/video/`. Se ejecutan desde la raíz del proyecto.
 
+## Segunda generación (19-09-2026): un proyecto por vídeo, y todo medido
+
+El segundo vídeo (Filipenses 4:13, 80 s, de pie y lejos de la cámara) obligó a
+rehacer el método. Lo que vale ahora es esto; `montar-pro.mjs` queda como
+historia del primer vídeo.
+
+```
+videos-genuino/<proyecto>/
+  proyecto.mjs          TODO lo particular: clip, cara, planos, música, cierre
+  .trabajo/central.mp4  el clip preparado (1080×1920, 30 fps, −16 LUFS)
+  .trabajo/palabras-grande.json   la transcripción con large-v3
+  .trabajo/cara.json    la pista de la cara, muestra a muestra
+  <nombre>.mp4  y  <nombre>-ligero.mp4
+```
+
+El orden, y qué script hace cada paso:
+
+| Paso | Comando | Qué deja |
+|---|---|---|
+| 1 | preparar el clip a mano (ver abajo) | `.trabajo/central.mp4` |
+| 2 | `python scripts/video/palabras.py central.mp4 palabras-grande.json large-v3` | palabras con tiempo |
+| 3 | `python scripts/video/encuadrar.py central.mp4 80` | dónde está la cara, y los zooms que aguanta |
+| 4 | `python scripts/video/musica.py musica/ <segundos>` | tempo, arco, golpes de cada pista |
+| 5 | escribir `proyecto.mjs` | el plan |
+| 6 | `node scripts/video/montar2.mjs <carpeta>` | el vídeo, la copia ligera, las pistas sueltas, `cortes.json` |
+| 7 | `node scripts/video/comprobar.mjs <carpeta>` | el veredicto, con números |
+
+**Nunca correr el paso 2 mientras el paso 1 sigue escribiendo.** ffmpeg no
+cierra el `moov` hasta el final: el archivo existe, crece, y Whisper lo lee
+truncado sin quejarse. Pasó el 19-09; se vio porque el JSON salió a medias.
+
+### La cara se mide, y por plano
+
+`encuadrar.py` usa YuNet (el detector de OpenCV 5; el modelo va en
+`scripts/video/modelos/`, 232 KB). Devuelve el centro de la cara, cuánto ocupa
+la cabeza y **los tres zooms calculados** para que los ojos caigan al 38 % del
+alto. Y deja `cara.json`: la pista muestra a muestra.
+
+`montar2.mjs` centra **cada plano** con la mediana de la cara en ese tramo. En
+Filipenses Alex entra caminando: x = 0,52 los primeros diez segundos y 0,73 al
+final; un centro único lo dejaba pegado al borde. Con la pista, el encuadre lo
+sigue solo.
+
+El primer intento midió por movimiento (lo que cambia entre fotogramas es él):
+salía centrado en los brazos. **Lo que manda son los ojos.**
+
+### Los cortes van al golpe DETECTADO, no a una rejilla
+
+`k × pulso` vale con una pista electrónica (la Triunfal: 16 ms de error contra
+la rejilla). Con un piano, no: los golpes se apartan 109 ms de media. Ahora
+`montar2.mjs` lleva cada frontera al golpe real más cercano y después al cuadro
+más cercano, así que la suma de cuadros es exacta y no hay desfase que
+compensar. Medido en la v1 de Filipenses: **8 ms de desvío medio**.
+
+### El plan lo hace un jurado
+
+Tres editores independientes (ritmo, sentido, emoción) proponen el guion de
+planos leyendo la transcripción y el metraje; un juez elige y injerta. Lo que
+salió que yo no habría visto: cortar en cada «¿hasta cuándo…?», llevar el
+primer plano a «Ahí está la clave» y a «nada es imposible» como frase entera,
+poner los dos amaneceres en bisagras del discurso y **el aviso de que la cara
+cambiaba de sitio**. En el prompt de cada agente va que sus descripciones de
+herramientas se escriben en español: Alex las lee en el panel.
+
+### `comprobar.mjs`: el vídeo no se da por bueno hasta que lo diga
+
+Mide sobre el archivo final y las pistas sueltas: ancho y duración de cada
+rótulo, desvío de cada corte contra el golpe, cuadros repetidos en tres planos,
+margen de la voz sobre la música, sonoridad y pico. **Falla** si un rótulo no
+cabe, si un corte está a más de 40 ms del golpe, si un plano repite cuadros, si
+la voz baja de 6 dB sobre la música o la sonoridad se sale de −14 ± 2 LUFS.
+Con `sinApp: true` en el proyecto, falla también si un rótulo nombra la app.
+
+El propio comprobador falló mudo la primera vez: leía la sonoridad de stdout y
+ffmpeg la escribe por stderr — «NaN LUFS» sin ningún error.
+
+### La música se elige con Alex, y el agachado se barre
+
+La pista la elige él entre las medidas. El volumen y el agachado **no se ponen
+de oído**: se exportan las pistas sueltas y se barre con `medir-audio.py`
+hasta que el peor momento quede a ≥ 8–10 dB y ningún tramo apriete. El Trailer
+necesitó 1,1 y 6:1 donde la Triunfal iba con 1,5 y 4:1.
+
+### Rótulos: lo que se añadió
+
+- Siete palabras y 2,6 s como topes (con seis y 2,3 salían «SANTO.» y «CON
+  TODA TU MENTE,» sueltos en 0,39 s).
+- Menos de medio segundo cuesta 140 puntos, más que juntar por una coma.
+- **Parejas que no se separan**: Espíritu Santo, Cristo Jesús, Padre Celestial…
+- Mientras la tarjeta del versículo está en pantalla, los rótulos palabra a
+  palabra se callan.
+- El oro casa por palabra entera: POSIBLE no enciende «imposible».
+
+### Lo que dijo Alex de la v3, y ahora es regla
+
+- **Tipografía: Arial Black**, elegida entre cuatro opciones renderizadas sobre
+  un fotograma real (Segoe UI Black, Arial Black, Franklin Gothic,
+  Bahnschrift). El proyecto la declara en `fuente: { archivo, anchos, tamano }`
+  y el reparto mide con su tabla (`node scripts/video/anchos.mjs <ttf>`).
+  Arial Black es más ancha: a 66 px caben los mismos rótulos que Segoe a 74.
+- **Las dos líneas van pegadas.** El paso entre ellas es la letra más el borde
+  de la caja: las cajas se tocan y se leen como un bloque.
+- **Nada de B-roll de banco**, y menos repetido. «Es muy corto y no tiene
+  sentido.» Si no hay metraje suyo para la frase, va su cara.
+- **Los saltos de encuadre, suaves.** Pasos cortos (1,18 / 1,32 / 1,46), sólo
+  entre encuadres vecinos —nunca abierto → cerca de un corte— y deriva del
+  3–5 %. Con 1,12 → 1,52 y 8 % los vio «MUY BRUSCOS».
+- **El cierre no repite la marca**: `@GenuinoLove` y «Sígueme para más».
+
+> Antes de fijar una decisión de estilo, renderizar el mismo fotograma con las
+> opciones y que elija él. Cuesta veinte segundos y evita un render de ocho
+> minutos que no le va a gustar.
+
 ## Lo que hace falta, y ya está instalado
 
 | Pieza | Para qué |
 |---|---|
 | ffmpeg | cortar, rotular, montar |
+| opencv-python + `modelos/yunet.onnx` | detectar la cara para encuadrar |
+| Pillow | medir anchos de fuente (`anchos.mjs`) |
+| librosa | tempo, golpes y energía de la música |
 | Python 3.12 | correr Whisper — en `~/AppData/Local/Programs/Python/Python312/python.exe` |
 | faster-whisper | transcribir en local |
 | truststore | que Python confíe en los certificados de Windows |

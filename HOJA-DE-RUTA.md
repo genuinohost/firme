@@ -1394,6 +1394,72 @@ sólo los puede dar él:
 
 ---
 
+## 🎬 Filipenses 4:13 — el segundo vídeo, y el método de segunda generación (19-09)
+
+Un clip de 80 s, de pie y lejos de la cámara, hablando seguido sobre
+Filipenses 4:13. **No es publicidad de la app** (Alex: «ese vídeo NO es para
+aplicación, mucho cuidado»): es un mensaje devocional para Instagram y TikTok,
+cierra con `@GenuinoLove` y «Sígueme para más». Cinco versiones en una tarde;
+la v5 es la buena.
+
+### Lo que hubo que rehacer del método
+
+| Antes | Ahora | Por qué |
+|---|---|---|
+| Rutas fijas en el motor | **Un proyecto por vídeo** (`proyecto.mjs` + `montar2.mjs`) | volver a montar pisaba el vídeo anterior |
+| Encuadres a ojo | **La cara medida con detector de rostros, por plano** | de pie y entrando, está en x = 0,52 al principio y 0,73 al final |
+| Cortes en `k × pulso` | **Cortes sobre los golpes detectados** | un piano se aparta 109 ms de la rejilla; la Triunfal, 16 |
+| El plan lo hacía yo | **Un jurado de tres editores y un juez** | vio lo que yo no: cortar en cada «¿hasta cuándo?», la cara que cambia de sitio |
+| «Se ve bien» | **`comprobar.mjs`**: rótulos, cortes, cuadros repetidos, sonido, sonoridad | cinco fallos mudos en el primer vídeo |
+
+Herramientas nuevas: `encuadrar.py` (YuNet, el modelo va en `scripts/video/modelos/`),
+`tarjeta.py` (el versículo como una sola pieza), `medir-audio.py`,
+`medir-cortes.mjs`, `medir-movimiento.py`, `anchos.mjs <ttf>`.
+
+### Lo que dijo Alex de la v3, y ahora es regla
+
+> «No me gustó la tipografía de los subtítulos, también están muy separados. El
+> B-roll no me gustó y mucho menos que lo replicaras dos veces. Los zooms son
+> MUY BRUSCOS. El GENUINO LOVE al final está duplicado.»
+
+- **Arial Black**, elegida entre cuatro renderizadas sobre un fotograma real.
+  Las dos líneas de un rótulo van pegadas, como un bloque.
+- **Nada de B-roll de banco.** Si no hay metraje suyo, va su cara.
+- **Saltos suaves**: pasos 1,18 / 1,32 / 1,46, sólo entre encuadres vecinos,
+  deriva del 3–5 %.
+- **El cierre no repite la marca.**
+
+> La regla que sale de aquí: antes de fijar una decisión de estilo, renderizar
+> el mismo fotograma con las opciones y que elija él. Veinte segundos contra
+> un render de ocho minutos que no le va a gustar.
+
+### Lo que falló mudo esta vez (para la lista)
+
+- Whisper leyó el clip **mientras ffmpeg aún lo escribía**: el archivo existe,
+  crece, y sale truncado sin error.
+- `comprobar.mjs` leía la sonoridad por stdout y ffmpeg la escribe por stderr:
+  «NaN LUFS» y ningún aviso.
+- Un parche a `proyecto.mjs` se abortó por una comprobación mal hecha y la v4
+  salió sin la tipografía elegida. Se vio en el fotograma.
+- YuNet devuelve `float32` y `json` no lo escribe: la pista de la cara quedó
+  a medias.
+
+### Lo que no pudo correr
+
+La revisión adversaria de cuatro ojos (rótulos, encuadre, sonido, reglas) murió
+con «session limit · resets 8:50 pm»: el jurado había gastado la cuota de
+agentes del plan. La revisión final la hice a mano con veinte fotogramas.
+
+### Pendiente
+
+- [ ] Los **otros tres vídeos** de la carpeta de Descargas, con este proyecto
+      como plantilla: «El trabajo que desplaza a Dios es lo peor», «Oración por
+      disciplina», «¿Hasta cuándo vas a desplazar a Dios?».
+- [ ] Alex tiene que verlo **con sonido en el móvil**: es lo único que no mide
+      ningún script.
+
+---
+
 ## 🔮 Lo que Alex quiere que venga, y lo que traerá consigo
 
 Dicho el **18-09-2026**, mientras rellenábamos la ficha de Play. Queda escrito

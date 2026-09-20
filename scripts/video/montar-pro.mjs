@@ -109,7 +109,12 @@ function plano(dur, enc, deriva = 0.06) {
   const z = `${e.zoom}+${deriva}*on/${cuadros}`;
   return (
     `fps=30,scale=1512:2688:force_original_aspect_ratio=increase,crop=1512:2688,` +
-    `zoompan=z='${z}':d=1` +
+    // `fps=30` dentro de `zoompan` **no es redundante**: el filtro tiene su
+    // propia velocidad de salida y por defecto son **25**, no las 30 del
+    // vídeo. Sin esto, `-r 30` repetía un cuadro de cada seis en todos los
+    // planos de Alex y todo el B-roll. No daba ningún error; se vio midiendo
+    // la diferencia entre cuadros seguidos (`medir-movimiento.py`).
+    `zoompan=z='${z}':d=1:fps=30` +
     `:x='iw*0.5-(iw/zoom*0.5)':y='ih*${e.cy}-(ih/zoom*${e.cy})':s=1080x1920,` +
     `${COLOR},unsharp=5:5:${e.nitidez}:5:5:0.0`
   );
@@ -360,12 +365,36 @@ const dur = Number(execFileSync("ffprobe",
 
 console.log("\nMúsica…");
 const FINAL = join(BASE, "Genuino-PRO-vertical.mp4");
+// Los golpes que midió librosa caen en 15,372 + n·0,441, y los cortes del
+// montaje en k·0,441 desde cero: **la rejilla de la música está desfasada 82
+// milisegundos** respecto a la nuestra. Los cortes caían todos entre 69 y 93 ms
+// tarde. Retrasando la música esos 82 ms, cada corte cae sobre el golpe con
+// unos 12 ms de error, que es el propio error de la medición.
+const DESFASE = 0.082;
+
 ff(["-i", join(T, "sin-musica.mp4"), "-i", MUSICA,
   "-filter_complex",
-  `[1:a]atrim=0:${dur.toFixed(2)},asetpts=N/SR/TB,volume=0.36,` +
+  // Los números salen de medir, no de oído — ver `medir-audio.py`.
+  //
+  // Antes la voz iba **33,6 dB** por encima de la música: no se oía. Tres
+  // cosas la tenían enterrada: el volumen al 36 %, un agachado de ratio 9 que
+  // le quitaba 20 dB más en cuanto abría la boca, y la propia pista, que crece
+  // hacia el final justo donde él baja la voz.
+  //
+  // El `acompressor` sobre la música aplana su crecida —sin él, el segundo 38
+  // se comía «para la gloria de Dios»—, el volumen sube a 1,5 y el agachado
+  // afloja a ratio 4. Resultado medido: **22,5 dB de media, 9,0 en el peor
+  // momento, ningún tramo por debajo de 8**.
+  //
+  // Alex apenas respira al hablar, así que el agachado no tiene huecos donde
+  // devolver la música: por eso la solución es una cama más constante y menos
+  // agachado, no al revés.
+  `[1:a]atrim=0:${(dur - DESFASE).toFixed(3)},asetpts=N/SR/TB,` +
+  `adelay=${Math.round(DESFASE * 1000)}:all=1,` +
+  `acompressor=threshold=0.04:ratio=5:attack=25:release=500,volume=1.5,` +
   `afade=t=in:st=0:d=1.2,afade=t=out:st=${(dur - 2.0).toFixed(2)}:d=2.0[mus];` +
   `[0:a]asplit=2[voz][llave];` +
-  `[mus][llave]sidechaincompress=threshold=0.015:ratio=9:attack=8:release=320[baja];` +
+  `[mus][llave]sidechaincompress=threshold=0.025:ratio=4:attack=8:release=320[baja];` +
   `[voz][baja]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,` +
   `alimiter=limit=0.95,loudnorm=I=-14:TP=-1.0[a]`,
   "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",

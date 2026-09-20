@@ -377,3 +377,38 @@ de que yo me acuerde.
 
 Es coherente con el resto: trabaja con esto de fondo mientras hace otras cosas,
 y sale de casa a seguir desde el móvil.
+
+
+---
+
+# 19 de septiembre, noche · Filipenses 4:13, y cinco versiones
+
+Alex pidió el segundo vídeo con una frase: «perfecciona toda tu metodología,
+quiero lo mejor de lo mejor». Y una advertencia a tiempo: «ese vídeo NO es para
+aplicación, mucho cuidado» — yo ya había propuesto cerrar con la tarjeta del
+versículo de la app. Lo descarté en el acto.
+
+El método cambió de verdad, no de nombre: un proyecto por vídeo, la cara
+medida con un detector de rostros y **por plano** (entra caminando: x = 0,52 al
+principio, 0,73 al final), los cortes sobre los golpes detectados y no sobre
+una rejilla, el plan hecho por un jurado de tres editores, y un comprobador
+que se niega a dar el vídeo por bueno si un rótulo no cabe, un corte se aleja
+del golpe, un plano repite cuadros o la música le tapa.
+
+## Lo que dijo de la v3
+
+Cuatro cosas, sin rodeos: la tipografía no, las líneas muy separadas, el
+B-roll no («y mucho menos que lo replicaras dos veces»), los zooms «MUY
+BRUSCOS», y la marca duplicada en el cierre. Las cuatro son criterio para
+siempre, y las cuatro se arreglaron midiendo: le rendericé el mismo fotograma
+con cuatro tipografías y eligió Arial Black; los pasos de zoom se acortaron y
+sólo se cambia al encuadre vecino; el B-roll se fue entero.
+
+## Lo que aprendí sobre mí
+
+Dos parches míos fallaron mudos y salieron versiones sin lo que yo creía haber
+puesto (la v4 sin la tipografía). Las dos veces lo vio el fotograma, no el
+código. Sigue siendo la lección de la semana.
+
+Y la cuota de agentes del plan se acabó a media tarde: la revisión adversaria
+no llegó a correr. El jurado vale lo que cuesta, pero cuesta.

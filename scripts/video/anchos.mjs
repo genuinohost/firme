@@ -11,7 +11,10 @@ import { writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const FUENTE = "C:/Windows/Fonts/segoeuib.ttf";
+// La fuente va por parámetro: `node anchos.mjs C:/Windows/Fonts/framd.ttf`.
+// Cada fuente deja su propia tabla, anchos-<archivo>.json; sin parámetro se
+// rehace la de Segoe UI Bold, que es la de siempre.
+const FUENTE = process.argv[2] ?? "C:/Windows/Fonts/segoeuib.ttf";
 const TAMANO = 100;
 const LETRAS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÜÑ0123456789 .,;:!?¡¿…'\"()-–—«»/%&+";
@@ -33,5 +36,8 @@ const salida = execFileSync("python", ["-c", guion, JSON.stringify(LETRAS)], {
 });
 
 const aqui = dirname(fileURLToPath(import.meta.url));
-writeFileSync(join(aqui, "anchos.json"), salida, "utf8");
-console.log(`tabla rehecha · ${LETRAS.length} letras`);
+const nombre = FUENTE.endsWith("segoeuib.ttf")
+  ? "anchos.json"
+  : `anchos-${FUENTE.split(/[\/]/).pop().replace(/\.ttf$/i, "")}.json`;
+writeFileSync(join(aqui, nombre), salida, "utf8");
+console.log(`${nombre} · ${LETRAS.length} letras`);
