@@ -1537,6 +1537,61 @@ usuarios suban los suyos**.
 
 ---
 
+## 📹 Los dos vídeos de Play (20-09-2026)
+
+Son dos, van en sitios distintos y sólo uno bloquea la revisión.
+
+### 1 · El de la ficha de la tienda — subido, y es PROVISIONAL
+
+`https://youtu.be/C0ViRAtrwjk` · público · 16:9 · 44,5 s.
+
+Alex, al subirlo: «lo subiré para cumplir el requisito y que esté cuanto
+antes en Play Store. Pero sinceramente no es el vídeo o la versión oficial.
+Luego trabajaremos profundamente en el verdadero vídeo full profesional
+10 de 10».
+
+**Que nadie lo dé por bueno.** Cuando esté el definitivo: se sube a YouTube,
+se cambia el enlace en Play Console y éste pasa a oculto. Es un campo de
+texto, no hay revisión de por medio.
+
+Dos trampas que costaron un render y casi un error:
+
+- **Play no acepta YouTube Shorts** como vídeo de ficha, y un vertical de
+  menos de 3 minutos YouTube lo marca como Short solo. Por eso existe
+  `Genuino-PRO-horizontal.mp4`: el mismo montaje centrado sobre fondo
+  desenfocado en 1920×1080.
+- **Tiene que ser público**, no oculto ni privado, además de embebible y sin
+  monetización.
+
+Pendiente menor: el canal se llama **Johnny Martínez** (el nombre por defecto
+de la cuenta). Hay que renombrarlo a **Genuino Love** en Personalización →
+Información básica; el cambio es retroactivo y no toca la cuenta de Google.
+Y un comentario fijado avisando de que la app aún está en pruebas, porque el
+vídeo termina diciendo «descárgala».
+
+### 2 · El del permiso de servicio en primer plano — ESTE sí bloquea
+
+Sin grabar todavía. Google no aprueba el permiso sin un vídeo que demuestre
+«los pasos que el usuario da dentro de la app para activar la función».
+Es técnico, no promocional: abrir la app, crear un bloque con su hora,
+guardar, **bloquear el teléfono**, que la alarma suene en pantalla bloqueada,
+y pararla. 60–90 s, grabación de pantalla con sonido.
+
+El clip `6.1 Celular y la alarma` **no sirve**: son 11 s del teléfono en la
+mesa con la pantalla de editar un bloque, sin recorrido y sin alarma.
+
+Instrucciones completas en
+`videos-genuino/guiones/Video del permiso - que grabar.txt`. Va a YouTube
+como **no listado** (éste sí puede serlo) y el enlace en Play Console →
+Contenido de la aplicación → Servicios en primer plano.
+
+### Y lo que de verdad manda el reloj
+
+Ninguno de los dos vídeos arranca los 14 días de prueba cerrada. Eso sólo lo
+mueven **los 12 probadores**.
+
+---
+
 ## Pendiente de Alex
 
 - [x] ~~Darse de alta como moderador~~ — hecho el 18-09 con
@@ -1545,6 +1600,10 @@ usuarios suban los suyos**.
       es lo que marca cuándo se puede pedir producción
 - [x] ~~Crear la cuenta de Play~~ — hecha y verificada el 18-09
 - [ ] Dar los enlaces reales para `public/comunidad.json`
+- [ ] **Grabar el vídeo del permiso** de servicio en primer plano (60–90 s,
+      grabación de pantalla). Es lo único de vídeo que bloquea la revisión
+- [ ] Renombrar el canal de YouTube a **Genuino Love** y fijar el comentario
+- [ ] **El vídeo oficial de la app, 10 de 10.** El subido es provisional
 - [ ] **Revisar los versículos del banco** — él es Capellán y su palabra está de por medio
 - [ ] Decidir si pedir permiso a Sociedades Bíblicas Unidas para usar la RV1960
 
