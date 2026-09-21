@@ -62,7 +62,40 @@ y todos se ejecutan desde la raíz de `firme`.
 | Las palabras con tiempo | `python scripts/video/palabras.py central.mp4 palabras-grande.json large-v3` | quién dice qué y cuándo |
 | La cara | `python scripts/video/encuadrar.py central.mp4 80` | dónde está, cuánto ocupa, la pista por segundos |
 | El color | `python scripts/video/color.py central.mp4 --frio=1` | la corrección medida y un antes/después |
+| La voz, si se grabó fuera | `python scripts/video/limpiar-audio.py <clip> <salida.wav>` | la voz separada del ruido, y el margen medido antes y después |
 | La música | `python scripts/video/musica.py musica/ <segundos>` | tempo, arco de energía, golpes de cada pista |
+
+### La voz grabada en la calle
+
+Con el micrófono del teléfono en una avenida, la voz queda **5,5 dB por encima
+del tráfico** (medido en «Debes ser fructífero», 20-09-2026) y el ruido vive
+en 20–300 Hz, justo debajo de su voz. Subir el volumen sube el coche también.
+
+Se probaron cuatro herramientas sobre el mismo clip, y esto es lo que dieron:
+
+| | margen voz/ruido |
+|---|---|
+| original | 5,5 dB |
+| `afftdn` de ffmpeg | 5,6 dB — no hace nada |
+| RNNoise (`arnndn`, cuatro modelos) | 12,8 a 18,9 dB |
+| **DeepFilterNet** | **30,5 dB** |
+
+**DeepFilterNet** es una red entrenada para separar voz de ruido a 48 kHz. Corre
+en el procesador (66 s de audio en 16 s) y **no manda nada a ningún servidor**,
+que en grabaciones suyas hablando de su fe no es un detalle. El binario oficial
+está en `C:/Users/InvitadosPro/herramientas/deep-filter.exe` (v0.5.6, de la
+página de versiones del proyecto); no va en el repositorio. Los modelos de
+RNNoise sí están, en `scripts/video/modelos/rnnoise-*.rnnn`, como alternativa
+ligera.
+
+`limpiar-audio.py` hace las dos partes: separa la voz y después la pule
+—paso alto a 80, −2 dB en 250, presencia en 3 kHz, deesser, compresor 3:1 y
+−16 LUFS—, porque quitar el ruido deja la voz limpia **y apagada**.
+
+> **La prueba de que no se rompió la voz no es el oído: es Whisper.** Si la
+> limpieza se come consonantes, el modelo duda y baja la confianza. Se
+> transcribe el original y el limpio con `large-v3` y se comparan. «Suena
+> mejor» no es una medida.
 
 **Nunca transcribir mientras ffmpeg aún escribe el clip.** El archivo existe,
 crece, y Whisper lo lee truncado sin quejarse. Esperar a que termine.
