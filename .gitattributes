@@ -1,0 +1,6 @@
+# Los modelos son datos, no texto: sin esto Git les cambia los saltos de
+# linea al pasarlos por Windows y los deja inservibles sin avisar.
+*.onnx binary
+*.rnnn -text
+*.mp4 binary
+*.png binary
