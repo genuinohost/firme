@@ -432,3 +432,43 @@ Nada de esto depende ya de que haya agentes.
 
 Dos palabras cambiadas por contexto y no de oído: «a dos señores» y
 «polilla». Las dos avisadas; las dos cuestan un render si me equivoqué.
+
+
+---
+
+# 20 de septiembre, noche · dos estilos medidos y una voz rescatada de una avenida
+
+Alex mandó dos vídeos: «ese estilo también me gusta mucho» (Jordi Segués) y
+«me gusta la edición, y todos los detalles» (Daniela Pol). En vez de opinar se
+midieron, y para eso hizo falta una herramienta que no existía: los cortes de
+un hablando-a-cámara re-encuadrado no los ve un detector de escenas —mismo
+fondo, misma persona— y `scdet` encontró 1 corte donde hay uno cada segundo y
+medio. `medir-estilo.py` los busca por la cara, fotograma a fotograma.
+
+Lo que salió, y que contradice lo que hacíamos: ninguno de los dos pinta una
+palabra de color, ninguno deja el plano derivando, ninguno cierra en pantalla
+negra con la marca. Y la que pesa: **la cara de Alex ocupa el 12 % del alto y
+ellos van al 32 y al 51 %.** Eso no se arregla montando. Se arregla grabando a
+metro y medio.
+
+El motor aprendió los dos estilos: apertura a pantalla partida con titular,
+bloques de B-roll de 7–9 s, destello de dos cuadros, cierre sobre la cara,
+sin música. Probado con 18 s del metraje de Filipenses. Tres fallos, y de
+dónde salió cada uno: dos de MIRAR las hojas de fotogramas (el recorte de la
+mitad de arriba dejaba a Alex pequeño; `drawbox` quiere `ih` donde `drawtext`
+quiere `h`) y uno de MEDIR (el comprobador exigía cara dentro de un bloque de
+B-roll y daba por malo un montaje bueno).
+
+El B-roll pasó de estar programado a funcionar. Alex sacó las claves de Pexels
+y Pixabay; la primera prueba dio 403 y no era la clave: al añadir la
+autorización se borraba el User-Agent y Cloudflare responde «error code 1010»,
+que se lee igual que una clave inválida. Se perdió un rato comparando letras
+en una captura. Se añadió Wikimedia Commons, que no necesita clave y es la
+única fuente de acontecimientos: los bancos no tienen catástrofes.
+
+Y llegó «Debes ser fructífero», grabado en marzo en mitad de una avenida. La
+voz va **5,5 dB por encima del tráfico**. Cuatro herramientas medidas sobre el
+mismo clip: `afftdn` no hace nada (5,6), RNNoise llega a 18,9 y
+**DeepFilterNet a 30,5**. Con el pulido detrás, 28,3 dB de margen y la banda
+donde se entiende acaba por encima del original. Queda comprobar con Whisper
+que la limpieza no se comió consonantes; eso corre ahora.
