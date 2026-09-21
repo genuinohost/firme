@@ -50,20 +50,56 @@ cuantos = int(opciones.get("cuantos", "12"))
 MALAS = ("ai generated", "ai-generated", "logo", "text", "editorial", "watermark")
 
 
+ARCHIVO_CLAVES = os.path.join(os.path.expanduser("~"), "claves-broll.txt")
+
+
+def clave(nombre):
+    """La clave, del entorno o de un archivo FUERA del repositorio.
+
+    Pegarlas en el chat las deja escritas en la conversacion para siempre, y
+    ponerlas en el codigo las subiria a GitHub. Asi que viven en un archivo de
+    su carpeta personal, con una linea por clave:
+
+        PEXELS_KEY=...
+        PIXABAY_KEY=...
+
+    `C:/Users/InvitadosPro/claves-broll.txt`. No esta dentro del proyecto, asi
+    que ningun `git add` puede llevarselo por delante.
+    """
+    valor = os.environ.get(nombre)
+    if valor:
+        return valor
+    try:
+        with open(ARCHIVO_CLAVES, encoding="utf-8") as f:
+            for linea in f:
+                if linea.strip().startswith(nombre + "="):
+                    return linea.split("=", 1)[1].strip()
+    except FileNotFoundError:
+        pass
+    return None
+
+
 def pedir(url, cabeceras=None):
-    req = urllib.request.Request(url, headers=cabeceras or {"User-Agent": "genuino-broll/1"})
+    # El User-Agent va SIEMPRE, tambien cuando hay cabeceras propias. Al pasar
+    # la clave de Pexels se sustituian las cabeceras enteras y se quedaba sin
+    # el; Cloudflare respondia «403 error code: 1010», que parece una clave
+    # invalida y no lo es. Se perdio un rato buscando letras mal leidas en una
+    # captura cuando la clave estaba bien desde el principio.
+    todas = {"User-Agent": "genuino-broll/1"}
+    todas.update(cabeceras or {})
+    req = urllib.request.Request(url, headers=todas)
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read().decode("utf-8"))
 
 
 def pexels(q):
-    clave = os.environ.get("PEXELS_KEY")
-    if not clave:
+    llave = clave("PEXELS_KEY")
+    if not llave:
         return []
     url = ("https://api.pexels.com/videos/search?" +
            urllib.parse.urlencode({"query": q, "orientation": "portrait", "size": "large",
                                    "locale": "es-ES", "per_page": 40}))
-    datos = pedir(url, {"Authorization": clave})
+    datos = pedir(url, {"Authorization": llave})
     out = []
     for v in datos.get("videos", []):
         if v.get("duration", 0) < 8:
@@ -82,11 +118,11 @@ def pexels(q):
 
 
 def pixabay(q):
-    clave = os.environ.get("PIXABAY_KEY")
-    if not clave:
+    llave = clave("PIXABAY_KEY")
+    if not llave:
         return []
     url = ("https://pixabay.com/api/videos/?" +
-           urllib.parse.urlencode({"key": clave, "q": q, "lang": "es", "min_height": 1920,
+           urllib.parse.urlencode({"key": llave, "q": q, "lang": "es", "min_height": 1920,
                                    "safesearch": "true", "per_page": 50}))
     datos = pedir(url)
     out = []
@@ -105,12 +141,12 @@ def pixabay(q):
 
 
 def coverr(q):
-    clave = os.environ.get("COVERR_KEY")
-    if not clave:
+    llave = clave("COVERR_KEY")
+    if not llave:
         return []
     url = ("https://api.coverr.co/videos?" +
            urllib.parse.urlencode({"query": q, "page_size": 40, "urls": "true", "sort": "popular"}))
-    datos = pedir(url, {"Authorization": f"Bearer {clave}"})
+    datos = pedir(url, {"Authorization": f"Bearer {llave}"})
     out = []
     for v in datos.get("hits", datos.get("videos", [])):
         w, h = v.get("max_width", 0), v.get("max_height", 0)
@@ -204,9 +240,15 @@ rutas = []
 for i, c in enumerate(candidatos):
     p = os.path.join(carpeta, f"{i:02d}.jpg")
     try:
-        urllib.request.urlretrieve(c["miniatura"], p)
+        # Y aqui tambien el User-Agent: `urlretrieve` no lo manda, y sin el la
+        # miniatura vuelve con 403. La hoja salia vacia y la busqueda parecia
+        # haber funcionado.
+        peticion = urllib.request.Request(c["miniatura"], headers={"User-Agent": "genuino-broll/1"})
+        with urllib.request.urlopen(peticion, timeout=30) as r, open(p, "wb") as f:
+            f.write(r.read())
         rutas.append(p)
-    except Exception:
+    except Exception as e:
+        print(f"  (sin miniatura el {i + 1}: {e})")
         continue
 if rutas:
     entradas = []
