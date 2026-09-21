@@ -34,6 +34,7 @@ import subprocess
 import tempfile
 import urllib.parse
 import urllib.request
+import re
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -126,17 +127,71 @@ def coverr(q):
     return out
 
 
+def wikimedia(q):
+    """Wikimedia Commons: SIN clave, y es la unica fuente de ACONTECIMIENTOS.
+
+    Los bancos de stock tienen amaneceres y manos orando; no tienen el
+    terremoto del 24 de junio. Commons si: equipos de rescate, tomas de
+    agencias liberadas, material de organismos publicos. Para un video que
+    habla de una noticia, eso vale mas que cualquier plano bonito.
+
+    Tres diferencias con los bancos, y hay que respetarlas:
+
+    1. Casi todo viene HORIZONTAL. Hay que reencuadrarlo (recorte al centro
+       de la accion, o fondo desenfocado) y por eso no se le aplica la regla
+       de vertical.
+    2. Casi todo pide CREDITO en pantalla (CC BY, CC BY-SA). Que es lo mismo
+       que ya hacemos con los «recibos»: la fuente escrita en el plano.
+    3. La calidad es desigual. Aqui la hoja de miniaturas no es un lujo: es
+       imprescindible mirar antes de bajar nada.
+    """
+    url = ("https://commons.wikimedia.org/w/api.php?action=query&format=json"
+           "&generator=search&gsrnamespace=6&gsrlimit=20"
+           "&gsrsearch=" + urllib.parse.quote("filetype:video " + q) +
+           "&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=320")
+    datos = pedir(url)
+    paginas = (datos.get("query") or {}).get("pages") or {}
+    out = []
+    for pagina in paginas.values():
+        ii = (pagina.get("imageinfo") or [{}])[0]
+        meta = ii.get("extmetadata") or {}
+        licencia = (meta.get("LicenseShortName") or {}).get("value", "?")
+        autor = (meta.get("Artist") or {}).get("value", "")
+        # Se va lo que no deja usarlo o no se puede acreditar en un rotulo.
+        if "NC" in licencia or "ND" in licencia:
+            continue
+        alto = ii.get("height") or 0
+        if alto < 480:
+            continue
+        # Commons guarda programas enteros: la busqueda de «rescue team»
+        # devolvia cuatro episodios de dibujos animados de 40 minutos antes
+        # que el rescate real de Hatay. Un plano de B-roll no dura cuatro
+        # minutos; lo que pasa de ahi es otra cosa.
+        if (ii.get("duration") or 0) > 240:
+            continue
+        out.append({"banco": "Wikimedia", "id": pagina.get("pageid"),
+                    "dur": ii.get("duration") or 0,
+                    "ancho": ii.get("width"), "alto": alto, "fps": None,
+                    "url": ii.get("url"), "miniatura": ii.get("thumburl"),
+                    "pagina": ii.get("descriptionurl"),
+                    "licencia": licencia,
+                    "autor": re.sub("<[^>]+>", "", autor)[:60],
+                    "horizontal": (ii.get("width") or 0) >= alto,
+                    "etiquetas": ""})
+    return out
+
+
 candidatos = []
-for buscar in (pexels, pixabay, coverr):
+for buscar in (pexels, pixabay, coverr, wikimedia):
     try:
-        c = buscar(tema_en if buscar is pexels else tema)
+        c = buscar(tema_en if buscar in (pexels, wikimedia) else tema)
         candidatos += c
         print(f"  {buscar.__name__:8} {len(c):3} candidatos")
     except Exception as e:  # una API caída no tumba la búsqueda
         print(f"  {buscar.__name__:8} error: {e}")
 
 if not candidatos:
-    print("\nSin candidatos. ¿Están las claves en PEXELS_KEY / PIXABAY_KEY / COVERR_KEY?")
+    print("\nSin candidatos ni siquiera en Wikimedia, que no necesita clave. Prueba otras palabras. Para los bancos buenos hacen falta PEXELS_KEY y PIXABAY_KEY.")
     sys.exit(1)
 
 candidatos = candidatos[:cuantos]
@@ -171,4 +226,9 @@ if rutas:
 
 print(f"\n{len(candidatos)} candidatos → broll-candidatos.json y broll-candidatos.png")
 for i, c in enumerate(candidatos):
-    print(f"  {i + 1:2}. {c['banco']:8} {c['ancho']}x{c['alto']}  {c['dur']:3.0f} s  {c['pagina']}")
+    aviso = ""
+    if c.get("horizontal"):
+        aviso += "  HORIZONTAL: hay que reencuadrarlo"
+    if c.get("licencia") and c["licencia"] != "Public domain":
+        aviso += "  ·  " + c["licencia"] + ": crédito en pantalla"
+    print(f"  {i + 1:2}. {c['banco']:9} {c['ancho']}x{c['alto']}  {c['dur']:3.0f} s  {c['pagina']}{aviso}")

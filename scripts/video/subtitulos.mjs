@@ -93,22 +93,46 @@ export function ancho(texto, tamano = tamanoRotulo) {
  * Con 60 píxeles de margen a cada lado quedan 960 útiles; 900 deja aire para
  * el borde negro y la sombra del rótulo.
  */
-const MAX_LINEA = 900;
+let MAX_LINEA = 900;
 /** Hasta aquí se aguanta en una línea antes que partir mal. */
-const LINEA_FORZADA = 940;
+let LINEA_FORZADA = 940;
 /** Dos líneas cómodas. Más que esto ya es un párrafo. */
 // 1650 y no 1550: «CON TODA TU MENTE, TODO TU CORAZÓN,» mide unos 1600 px en
 // dos líneas de 800, que caben de sobra; con 1550 el reparto no podía juntarlas.
-const MAX_ANCHO = 1650;
-const ANCHO_IDEAL = 760;
+let MAX_ANCHO = 1650;
+let ANCHO_IDEAL = 760;
 // Siete y no seis: «CON TODA TU MENTE, TODO TU CORAZÓN,» son siete palabras
 // cortas que caben de sobra en dos líneas, y con seis el reparto tenía que
 // soltar «CON TODA TU MENTE,» en un parpadeo de 0,39 s. El ancho en píxeles
 // sigue mandando.
-const MAX_PAL = 7;
+let MAX_PAL = 7;
 // 2,3 dejaba fuera «ILIMITADO DEL ESPÍRITU SANTO.» (2,43 s) y el reparto
 // soltaba un «SANTO.» de 0,39 s. Un rótulo de 2,6 s se lee sin problema.
-const MAX_DUR = 2.6;
+let MAX_DUR = 2.6;
+
+/**
+ * Cambiar los topes para un estilo concreto.
+ *
+ * Los valores de arriba son los de Genuino: rótulos de hasta siete palabras
+ * en dos líneas, que es lo que pide un mensaje largo y pausado. Los estilos
+ * medidos el 20-09-2026 van por otro sitio: Jordi Segués pone **1 a 3
+ * palabras** y Daniela Pol **2 a 4**, siempre en una línea. Con siete
+ * palabras el reparto nunca llegaría ahí, por muy bien que puntúe.
+ *
+ *     ajustar({ maxPalabras: 3, anchoIdeal: 420, maxAncho: 780, maxDur: 1.6 })
+ *
+ * Lo que NO se toca desde fuera son las reglas de sentido —no cerrar ni
+ * abrir en palabra de apoyo, no tragarse un punto, no partir «Espíritu
+ * Santo»—: ésas valen para cualquier estilo y son la razón de existir de
+ * este archivo.
+ */
+export function ajustar({ maxPalabras, anchoIdeal, maxAncho, maxLinea, maxDur } = {}) {
+  if (maxPalabras) MAX_PAL = maxPalabras;
+  if (anchoIdeal) ANCHO_IDEAL = anchoIdeal;
+  if (maxAncho) MAX_ANCHO = maxAncho;
+  if (maxLinea) { MAX_LINEA = maxLinea; LINEA_FORZADA = Math.round(maxLinea * 1.045); }
+  if (maxDur) MAX_DUR = maxDur;
+}
 
 /**
  * Parejas que no se separan en dos rótulos. «AHÍ ESTÁ EL ESPÍRITU» /

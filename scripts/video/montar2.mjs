@@ -30,7 +30,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { agrupar, ancho, usarAnchos } from "./subtitulos.mjs";
+import { agrupar, ajustar, ancho, usarAnchos } from "./subtitulos.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const CARPETA = resolve(process.argv[2] ?? ".");
@@ -56,6 +56,16 @@ if (P.fuente?.anchos) usarAnchos(join(AQUI, P.fuente.anchos), TAMANO_ROTULO);
 const FUERTE = FUENTE_ROTULOS.replace(/^([A-Za-z]):/, "$1\\:");
 const CITA = "C\\:/Windows/Fonts/georgiai.ttf";
 
+// El estilo de los rótulos. Por defecto, el de Genuino: hasta siete palabras
+// en dos líneas, a 0,72 de alto, con caja negra y la palabra clave en dorado.
+// Los estilos medidos el 20-09-2026 (`estilos/jordi-segues.md` y
+// `daniela-polofi.md`) van al revés: 1–4 palabras, más arriba, sin caja y sin
+// ninguna palabra en color. Cambiarlo es cosa del proyecto, no del motor.
+const R = P.rotulos ?? {};
+const ALTURA_ROTULO = R.altura ?? 0.72;
+const CON_CAJA = R.caja !== false;
+if (R.maxPalabras || R.anchoIdeal || R.maxDur || R.maxAncho || R.maxLinea) ajustar(R);
+
 const ff = (a) =>
   execFileSync("ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", ...a], { stdio: "inherit" });
 const esc = (t) =>
@@ -73,7 +83,11 @@ const COLOR = P.color ??
   "colorbalance=rs=-0.03:bs=0.04:rh=0.04:bh=-0.03";
 
 // ═════════════════════════════════════════════ 0 · los golpes de la música
-const golpes = readFileSync(en(P.musica.golpes), "utf8")
+// Un vídeo puede ir SIN música: los dos estilos medidos el 20-09-2026 van con
+// la voz sola. Entonces no hay golpes que seguir y los cortes caen donde los
+// puso el plan, redondeados al cuadro y nada más.
+const SIN_MUSICA = !P.musica || P.musica.sinMusica === true;
+const golpes = SIN_MUSICA ? [] : readFileSync(en(P.musica.golpes), "utf8")
   .trim().split("\n").map(Number);
 
 /** El golpe detectado más cercano a un instante; si no hay ninguno a menos de
@@ -196,10 +210,42 @@ ff(["-ss", String(P.voz.desde), "-i", en(P.central), "-t", String(VOZ_DUR),
 // ═════════════════════════════════════════════ 4 · los planos
 console.log(`\n${fronteras.length} planos…`);
 const trozos = [];
+const A = P.apertura;
+// El reparto NO es la mitad: en el vídeo de Daniela Pol ella ocupa el 65 % de
+// arriba y la imagen el 35 % de abajo, con el titular apoyado en la costura.
+const ARRIBA = A ? Math.round((1920 * (A.reparto ?? 0.65)) / 2) * 2 : 0;
+const ABAJO = 1920 - ARRIBA;
+// Y el recorte de arriba NO empieza en cero. El encuadre deja los ojos al
+// 38 % de 1920; si se corta por arriba sin más, en la mitad de pantalla caen
+// al 58 % y él sale pequeño y bajo, con media habitación encima. Se desplaza
+// para que los ojos queden al 38 % DE LA MITAD, que es donde los busca el que
+// mira. Medido en la primera prueba: 256 px de desplazamiento con reparto
+// 0,65, y la diferencia entre un cartel y una foto de vigilancia.
+const DESPLAZO = A
+  ? Math.round(Math.max(0, Math.min(1920 - ARRIBA, 1920 * OJOS - ARRIBA * OJOS)) / 2) * 2
+  : 0;
 fronteras.forEach((b, i) => {
   const salida = join(T, `c${String(i).padStart(2, "0")}.mp4`);
   const origen = b.broll ? en(b.broll) : en(P.central);
   const desde = b.broll ? b.desdeBroll ?? 0 : P.voz.desde + b.desde;
+  if (A && b.hasta <= A.hasta + 0.001) {
+    // Pantalla partida. Arriba va SU plano normal, recortado por el alto: el
+    // encuadre ya pone los ojos al 38 %, así que quitando el tercio de abajo
+    // queda cabeza y hombros, que es lo que se quiere. Abajo, la imagen que
+    // cuenta lo mismo que él está diciendo, con la MISMA corrección de color
+    // —si no, se ven dos vídeos pegados en vez de uno partido.
+    ff(["-ss", String(desde), "-i", origen,
+      "-ss", String(A.desdeAbajo ?? 0), "-i", en(A.abajo), "-an",
+      "-filter_complex",
+      `[0:v]${plano(b)},crop=1080:${ARRIBA}:0:${DESPLAZO}[arr];` +
+      `[1:v]fps=30,scale=1080:${ABAJO}:force_original_aspect_ratio=increase,` +
+      `crop=1080:${ABAJO},${COLOR}[aba];[arr][aba]vstack=inputs=2[v]`,
+      "-map", "[v]", "-t", String(b.dur), "-r", "30",
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", salida]);
+    console.log(`  ok  ${String(i).padStart(2)}  partida   ${b.desde.toFixed(2).padStart(6)} → ${b.hasta.toFixed(2).padStart(6)}  ${b.dur.toFixed(2)}s`);
+    trozos.push(salida);
+    return;
+  }
   ff(["-ss", String(desde), "-i", origen, "-an",
     "-vf", plano(b), "-t", String(b.dur), "-r", "30",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", salida]);
@@ -210,6 +256,8 @@ writeFileSync(join(T, "centro.txt"), trozos.map((p) => `file '${p.replace(/\\/g,
 ff(["-f", "concat", "-safe", "0", "-i", join(T, "centro.txt"), "-an", "-c", "copy", join(T, "mudo.mp4")]);
 writeFileSync(join(T, "cortes.json"), JSON.stringify(fronteras.map((b) => ({
   desde: b.desde, hasta: b.hasta, enc: b.enc, deriva: b.deriva ?? 0.07, centro: b.centro,
+  // Para que el comprobador no busque la cara donde no tiene que estar.
+  broll: !!b.broll,
 })), null, 1));
 
 // ═════════════════════════════════════════════ 5 · los rótulos y la tarjeta
@@ -236,7 +284,11 @@ for (const g of grupos) {
   // palabra se callan: el texto ya está puesto, y dos textos a la vez se
   // pelean. Un rótulo que empieza dentro de la tarjeta no se pinta.
   if (P.tarjeta && g.t >= P.tarjeta.desde - 0.05 && g.t < P.tarjeta.hasta) continue;
-  const dorado = P.doradas.test(g.texto);
+  // Y mientras está el titular de la apertura tampoco: son cinco segundos de
+  // cartel, y dos textos a la vez se pelean. Es la misma regla que la tarjeta.
+  if (A?.titular && g.t < A.hasta) continue;
+  // `doradas` puede no existir: los estilos sin palabra en color no lo ponen.
+  const dorado = P.doradas ? P.doradas.test(g.texto) : false;
   // Las dos líneas van pegadas: el paso entre ellas es la letra más el borde
   // de la caja, así que las dos cajas se tocan y se ven como un solo bloque.
   // Con 0,084 de separación (v3) Alex las vio «muy separadas».
@@ -244,18 +296,69 @@ for (const g of grupos) {
   // tamaño, con acentos y descendentes— más los dos bordes de 12. Medido en
   // la v4: a 74 px la caja tenía 88 px y quedaban 22 de hueco.
   const paso = (0.87 * TAMANO_ROTULO + 2 * 12) / 1920;
-  const altos = g.lineas.length === 1 ? [0.72] : [0.72 - paso / 2, 0.72 + paso / 2];
+  const altos = g.lineas.length === 1
+    ? [ALTURA_ROTULO]
+    : [ALTURA_ROTULO - paso / 2, ALTURA_ROTULO + paso / 2];
   g.lineas.forEach((linea, i) => {
     const y = `h*${altos[i].toFixed(4)}-10*max(0\\,1-(t-${g.t.toFixed(2)})*12)`;
     capas.push(
       `drawtext=fontfile='${FUERTE}':text='${esc(linea)}'` +
       `:fontcolor=${dorado ? ORO : "white"}:fontsize=${TAMANO_ROTULO}` +
       `:x=(w-text_w)/2:y=${y}` +
-      `:box=1:boxcolor=black@0.45:boxborderw=12` +
+      (CON_CAJA ? `:box=1:boxcolor=black@0.45:boxborderw=12` : "") +
       `:borderw=3:bordercolor=black@0.8:shadowcolor=black@0.85:shadowx=3:shadowy=4` +
       `:enable='between(t,${g.t.toFixed(2)},${g.fin.toFixed(2)})'`
     );
   });
+}
+
+// El titular de la apertura: dos o tres líneas QUIETAS, apoyadas en la
+// costura de la pantalla partida, durante todo lo que dura la apertura. No se
+// anima, no entra palabra a palabra: es un cartel. En el vídeo de Daniela son
+// cinco segundos enteros, y ése es el gancho completo.
+if (A?.titular) {
+  const tam = A.tamano ?? 62;
+  const paso = (0.87 * tam + 16) / 1920;
+  const base = A.y ?? (A.reparto ?? 0.65) - 0.03;
+  // Un velo oscuro detrás del titular. En el estudio de Daniela no hace falta
+  // —el fondo ya es negro—, pero el salón de Alex tiene pared blanca y puerta
+  // clara, y ahí el texto blanco con borde se lee a duras penas. `velo: 0` lo
+  // quita.
+  const velo = A.velo ?? 0.3;
+  if (velo > 0) {
+    const arribaVelo = base - A.titular.length * paso - 0.012;
+    const altoVelo = A.titular.length * paso + 0.024;
+    capas.push(
+      // En `drawbox`, `w` y `h` son la caja que se está dibujando, no el
+      // cuadro: hay que decir `ih`. Con `h*0,49` ffmpeg responde «Error when
+      // evaluating the expression», que no lleva a esto por ningún lado.
+      `drawbox=x=0:y=ih*${arribaVelo.toFixed(4)}:w=iw:h=ih*${altoVelo.toFixed(4)}` +
+      `:color=black@${velo}:t=fill:enable='between(t,0,${A.hasta.toFixed(2)})'`
+    );
+  }
+  A.titular.forEach((linea, i) => {
+    const color = (A.colores ?? [])[i] === "oro" ? ORO
+      : (A.colores ?? [])[i] === "tenue" ? TENUE : "white";
+    const y = base - (A.titular.length - i) * paso;
+    capas.push(
+      `drawtext=fontfile='${FUERTE}':text='${esc(linea)}':fontcolor=${color}` +
+      `:fontsize=${tam}:x=(w-text_w)/2:y=h*${y.toFixed(4)}` +
+      `:borderw=3:bordercolor=black@0.85:shadowcolor=black@0.9:shadowx=3:shadowy=4` +
+      `:enable='between(t,0,${A.hasta.toFixed(2)})'`
+    );
+  });
+}
+
+// El destello: dos cuadros de color sobre TODO el cuadro, en la frase que más
+// pesa. Va delante de los rótulos en la cadena, así que el texto queda encima
+// y se sigue leyendo — que es como lo hace Daniela Pol. Uno o dos por vídeo:
+// el tercero ya no es un golpe, es un parpadeo.
+for (const d of P.destellos ?? []) {
+  const t = typeof d === "number" ? d : d.t;
+  const color = (typeof d === "object" && d.color) || "red";
+  const fuerza = (typeof d === "object" && d.fuerza) || 0.33;
+  capas.unshift(`drawbox=x=0:y=0:w=iw:h=ih:color=${color}@${fuerza}:t=fill` +
+    `:enable='between(t,${t.toFixed(2)},${(t + 0.07).toFixed(2)})'`);
 }
 
 // La tarjeta del versículo: UNA imagen con su caja (la dibuja `tarjeta.py`),
@@ -291,7 +394,34 @@ ff(["-f", "lavfi", "-i", "sine=frequency=110:duration=1.1",
   "-af", "volume='exp(-t*5)':eval=frame,volume=0.7,lowpass=f=200",
   "-ar", "48000", "-ac", "2", join(T, "impacto.wav")]);
 const C = P.cierre;
-const CIERRE_DUR = C.dur ?? 4.6;
+const CIERRE_DUR = C.dur ?? (C.sobreLaCara ? 2.4 : 4.6);
+
+// Dos maneras de cerrar.
+//
+// La de siempre: una tarjeta sobre el fondo de la marca, 4,6 s AÑADIDOS al
+// final. Medido el 20-09-2026: son el 6 % del vídeo en negro, justo donde se
+// decide si vuelve a empezar. Ninguno de los dos estilos que le gustan a Alex
+// hace eso; los dos acaban en su cara.
+//
+// `sobreLaCara: true` escribe las mismas líneas ENCIMA de los últimos
+// segundos de imagen y funde a negro al final. No añade ni un segundo.
+if (C.sobreLaCara) {
+  const inicio = VOZ_DUR - CIERRE_DUR;
+  const texto = C.lineas.map((l, i) => {
+    const fuente = l.fuente === "cita" ? CITA : FUERTE;
+    const color = l.color === "oro" ? ORO : l.color === "tenue" ? TENUE : "white";
+    const nace = inicio + 0.2 * i;
+    return `drawtext=fontfile='${fuente}':text='${esc(l.texto)}':fontcolor=${color}` +
+      `:fontsize=${l.tamano}:x=(w-text_w)/2:y=h*${l.y}` +
+      `:borderw=3:bordercolor=black@0.8:shadowcolor=black@0.85:shadowx=3:shadowy=4` +
+      `:alpha='min(1,(t-${nace.toFixed(2)})*4)'` +
+      `:enable='gte(t,${nace.toFixed(2)})'`;
+  }).join(",");
+  ff(["-i", join(T, "cuerpo.mp4"),
+    "-vf", `${texto},fade=t=out:st=${(VOZ_DUR - 0.6).toFixed(2)}:d=0.6`, "-r", "30",
+    "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
+    "-c:a", "copy", join(T, "sin-musica.mp4")]);
+} else {
 let cadena = "";
 let etiqueta = "0:v";
 C.lineas.forEach((l, i) => {
@@ -314,6 +444,7 @@ writeFileSync(join(T, "todo.txt"),
 ff(["-f", "concat", "-safe", "0", "-i", join(T, "todo.txt"),
   "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
   "-c:a", "aac", "-b:a", "192k", join(T, "sin-musica.mp4")]);
+}
 const dur = Number(execFileSync("ffprobe",
   ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", join(T, "sin-musica.mp4")],
   { encoding: "utf8" }).trim());
@@ -327,6 +458,16 @@ const dur = Number(execFileSync("ffprobe",
 console.log("\nMúsica…");
 const M = P.musica;
 const FINAL = join(CARPETA, `${P.nombre}.mp4`);
+
+// Sin música no hay nada que mezclar ni nada que agachar: sólo la voz, puesta
+// a la sonoridad de las redes. Se deja igualmente `m-voz.wav` para que
+// `comprobar.mjs` mida sin tener que rehacer nada.
+if (SIN_MUSICA) {
+  ff(["-i", join(T, "sin-musica.mp4"),
+    "-af", "alimiter=limit=0.95,loudnorm=I=-14:TP=-1.5",
+    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", FINAL]);
+  ff(["-i", FINAL, "-vn", "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "1", join(T, "m-voz.wav")]);
+} else {
 // Bajadas puntuales: donde Alex baja la voz («Así que ya sabes, no puedes…»)
 // ningún agachado global llega sin enterrar la música en el resto. Cada
 // bajada es un tramo con rampas de medio segundo a cada lado.
@@ -358,6 +499,7 @@ ff(["-i", join(T, "sin-musica.mp4"), "-i", en(M.archivo),
   "-filter_complex", cadenaMusica.replace(/;$/, ""),
   "-map", "[voz]", "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "1", join(T, "m-voz.wav"),
   "-map", "[baja]", "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "1", join(T, "m-musica.wav")]);
+}
 
 // ═════════════════════════════════════════════ 8 · la copia ligera
 const LIGERO = join(CARPETA, `${P.nombre}-ligero.mp4`);

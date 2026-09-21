@@ -165,6 +165,46 @@ bajados de TikTok: son cuatro segundos que estropean todas las medias.
   cuadro en la frase que pesa, cierre en su cara con fundido. Su B-roll está
   **generado con IA**, y eso Alex tiene que saberlo antes de pedirlo.
 
+### Cómo se pide cada estilo, en `proyecto.mjs`
+
+El motor ya no sabe hacer un solo vídeo: hace el de Genuino y los dos medidos.
+Todo lo que cambia va en el proyecto, nada en el código.
+
+```js
+// Rótulos: pocas palabras, más arriba, sin caja y sin dorado.
+rotulos: { maxPalabras: 4, anchoIdeal: 520, maxAncho: 900,
+           maxDur: 1.8, altura: 0.60, caja: false },
+doradas: undefined,          // si no está, ninguna palabra va en color
+
+// Apertura a pantalla partida con el titular en la costura (Daniela Pol).
+apertura: { hasta: 5.2, abajo: "broll/…", desdeAbajo: 1.0, reparto: 0.65,
+            titular: ["LÍNEA 1", "LÍNEA 2", "LÍNEA 3"],
+            colores: ["oro", "blanco", "blanco"], tamano: 66, velo: 0.3 },
+
+// Bloques de B-roll de 7–9 s, no insertos de dos.
+planos: [ …, { hasta: 22.5, enc: "abierto", deriva: 0,
+               broll: "broll/refugio.mp4", desdeBroll: 1.5 } ],
+
+// El destello de dos cuadros en la frase que pesa. Uno o dos por vídeo.
+destellos: [13.5, 34.2],
+
+// Voz sola, sin cama musical.
+musica: { sinMusica: true },
+
+// Y cerrar SOBRE su cara, sin añadir pantalla negra.
+cierre: { sobreLaCara: true, dur: 2.4, lineas: [ … ] },
+```
+
+Con `deriva: 0` en todos los planos se salta por corte sin movimiento dentro,
+que es como lo hacen los tres referentes.
+
+Probado de punta a punta el 20-09-2026 con 18 s del metraje de Filipenses:
+monta, pasa el comprobador y se ve en las hojas de `vistazo.mjs`. Dos cosas
+salieron de esa prueba y están arregladas: el recorte de la mitad de arriba
+tiene que **desplazarse** para que los ojos queden al 38 % de la MITAD (si no,
+él sale pequeño y bajo con media habitación encima), y `drawbox` quiere `ih`
+donde `drawtext` quiere `h`.
+
 ### Lo que enseñaron los tres estilos medidos
 
 |  | Samuel Adrián | Jordi Segués | Daniela Polofi | Genuino hoy |
@@ -384,6 +424,14 @@ que saca los blancos de rango: superblancos ilegales por encima de 235) y
 `rl=rh=−0,057, bl=bh=+0,089`.
 
 ### El B-roll, con herramienta
+
+> ⚠️ **Estado real al 20-09-2026: las claves de Pexels, Pixabay y Coverr NO
+> están puestas**, así que de esos tres bancos no ha salido ni un plano. Lo
+> único que funciona hoy sin clave es **Wikimedia Commons**, que es además la
+> única fuente de ACONTECIMIENTOS: rescates, material de organismos públicos,
+> tomas liberadas. Viene horizontal (hay que reencuadrar) y pide crédito en
+> pantalla, que es lo que ya hacemos con los «recibos». Las dos claves buenas
+> son gratis y se sacan en dos minutos; hay que pedírselas a Alex.
 
 `python scripts/video/broll.py "<tema>" --ingles="<topic>"` busca en Pexels
 (primero: rechaza contenido de IA), Pixabay (descarta la etiqueta «ai
