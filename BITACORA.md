@@ -472,3 +472,17 @@ mismo clip: `afftdn` no hace nada (5,6), RNNoise llega a 18,9 y
 **DeepFilterNet a 30,5**. Con el pulido detrás, 28,3 dB de margen y la banda
 donde se entiende acaba por encima del original. Queda comprobar con Whisper
 que la limpieza no se comió consonantes; eso corre ahora.
+
+**Y la comprobación con Whisper dijo que no.** El audio limpio con
+DeepFilterNet a tope transcribe PEOR que el original: confianza 0,959 → 0,940,
+palabras dudosas 4 → 8, y se perdió una frase entera («que cada día siga
+juntando con tu vida») y el final se convirtió en otra cosa («que nos traiga
+los desafíos» donde dice «que nunca nos desampara»). El margen de voz sobre
+ruido subió 23 dB y la inteligibilidad bajó: **los dos números iban en
+direcciones contrarias y el que manda es el segundo.**
+
+Queda para mañana, en este orden: probar `--atenua=20` (ya generado) y el
+post-filtro, transcribir cada uno y quedarse con el que Whisper entienda
+mejor, no con el que mida más limpio. Si ninguno gana al original, la
+limpieza se queda en suave y se acepta algo de avenida de fondo: es un vídeo
+grabado en la calle y sonar a calle no es un defecto.
