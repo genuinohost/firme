@@ -526,3 +526,22 @@ Cinco fallos, y de dónde salió cada uno:
 - **El rótulo sobre la cara en 11 muestras**, que sólo vio el comprobador.
   Los rótulos bajaron de 0,60 (la altura de los referentes) a 0,73: ellos
   graban en estudio con la cara alta, y Alex ocupa más cuadro.
+
+**Y al verlo él, dos cosas más.** «Los B-roll duran mucho y son pocos: mejor
+más y que duren menos» — de 4 bloques de 3 a 5,6 s (28 % del vídeo) a **7
+insertos de 1,4–1,6 s** (16 %), y de 24 a 29 planos. Su metraje tiene energía
+propia; los bloques largos de Daniela Pol funcionan porque ella está sentada
+y quieta en un estudio.
+
+Y «el primer B-roll no queda bien a mitad de pantalla»: el bosque es un clip
+9:16 metido en una franja de 1080×652, así que **se perdía el 66 % del
+cuadro** y quedaba una tira de troncos sin cielo ni suelo. Se probaron los
+seis clips recortados a esa franja: el árbol y la silueta componen bien pero
+sus cielos claros **se comen el titular**; ganan las naranjas, que tienen el
+follaje oscuro y son, además, el fruto del que habla el texto.
+
+**Corrección a lo que escribí antes:** dije que los cuatro vídeos anteriores
+llevaban el `pl=1` y **no es cierto**. Se montaron antes de reescribir
+`color.py` y llevan la corrección vieja. El único afectado fue éste, y ya
+está arreglado. Casi le hago gastar una hora de máquina para producir cuatro
+archivos idénticos a los que ya tenía.
