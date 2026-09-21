@@ -77,6 +77,12 @@ const cuadro = (s) => Math.round(s * 30) / 30;
 // y una S leve. La corrección antigua (curvas + colorbalance calentando las
 // altas luces) dejaba la cara de Alex amarilla — «no natural» — y se queda
 // sólo como reserva para proyectos sin `color`.
+// El B-roll NO lleva la corrección de la cara. La de Alex está medida sobre
+// SU piel bajo el sol de Caracas: aplicada a un plano de fruta o de bosque lo
+// deja turbio y gris, y se ve en la hoja de fotogramas a la primera. Por
+// defecto el B-roll va sin tocar; `colorBroll` en el proyecto pone lo que se
+// quiera (un punto de contraste suele bastar para casarlo con el resto).
+const COLOR_BROLL = P.colorBroll ?? "null";
 const COLOR = P.color ??
   "curves=r='0/0 0.25/0.22 0.75/0.79 1/1':g='0/0 0.25/0.23 0.75/0.78 1/1':b='0/0.01 0.25/0.25 0.75/0.76 1/0.99'," +
   "eq=contrast=1.06:saturation=1.14:gamma=0.99," +
@@ -197,7 +203,7 @@ function plano(b) {
     `fps=30,scale=1512:2688:force_original_aspect_ratio=increase,crop=1512:2688,` +
     `zoompan=z='${z}':d=1:fps=30` +
     `:x='iw*${cx.toFixed(4)}-(iw/zoom)*0.5':y='ih*${cy.toFixed(4)}-(ih/zoom)*0.5':s=1080x1920,` +
-    `${COLOR},unsharp=5:5:${e.nitidez ?? 0.7}:5:5:0.0${fundido}`
+    `${b.broll ? COLOR_BROLL : COLOR},unsharp=5:5:${e.nitidez ?? 0.7}:5:5:0.0${fundido}`
   );
 }
 
@@ -210,6 +216,12 @@ ff(["-ss", String(P.voz.desde), "-i", en(P.central), "-t", String(VOZ_DUR),
 // ═════════════════════════════════════════════ 4 · los planos
 console.log(`\n${fronteras.length} planos…`);
 const trozos = [];
+// Reaprovechar los planos ya renderizados. Cortar los planos de un vídeo de
+// 66 s tarda diez minutos y todo lo demás menos de uno; cuando lo que se está
+// depurando es un rótulo, repetirlos es tiempo tirado. `SALTAR_PLANOS=1` los
+// da por buenos si están todos y `mudo.mp4` existe. Es una ayuda para
+// depurar: en un montaje de verdad no se usa.
+const SALTAR = process.env.SALTAR_PLANOS === "1" && existsSync(join(T, "mudo.mp4"));
 const A = P.apertura;
 // El reparto NO es la mitad: en el vídeo de Daniela Pol ella ocupa el 65 % de
 // arriba y la imagen el 35 % de abajo, con el titular apoyado en la costura.
@@ -226,6 +238,9 @@ const DESPLAZO = A
   : 0;
 fronteras.forEach((b, i) => {
   const salida = join(T, `c${String(i).padStart(2, "0")}.mp4`);
+  // `plano(b)` se llama igualmente: es quien calcula y guarda `b.centro`,
+  // que necesita `cortes.json` para que el comprobador mida.
+  if (SALTAR && existsSync(salida)) { plano(b); trozos.push(salida); return; }
   const origen = b.broll ? en(b.broll) : en(P.central);
   const desde = b.broll ? b.desdeBroll ?? 0 : P.voz.desde + b.desde;
   if (A && b.hasta <= A.hasta + 0.001) {
@@ -252,8 +267,10 @@ fronteras.forEach((b, i) => {
   console.log(`  ok  ${String(i).padStart(2)}  ${b.enc.padEnd(9)} ${b.desde.toFixed(2).padStart(6)} → ${b.hasta.toFixed(2).padStart(6)}  ${b.dur.toFixed(2)}s  cara x=${b.centro.cx} y=${b.centro.cy}`);
   trozos.push(salida);
 });
+if (!SALTAR) {
 writeFileSync(join(T, "centro.txt"), trozos.map((p) => `file '${p.replace(/\\/g, "/")}'`).join("\n"));
 ff(["-f", "concat", "-safe", "0", "-i", join(T, "centro.txt"), "-an", "-c", "copy", join(T, "mudo.mp4")]);
+}
 writeFileSync(join(T, "cortes.json"), JSON.stringify(fronteras.map((b) => ({
   desde: b.desde, hasta: b.hasta, enc: b.enc, deriva: b.deriva ?? 0.07, centro: b.centro,
   // Para que el comprobador no busque la cara donde no tiene que estar.

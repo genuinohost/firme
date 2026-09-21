@@ -202,6 +202,19 @@ function partirEnDos(texto, maximo = MAX_LINEA) {
  */
 export function sanear(palabras) {
   const w = palabras;
+  // Los tiempos tienen que ser numeros. Si falta `fin` —una transcripcion
+  // escrita con otro nombre de campo— la resta da NaN, `NaN <= 0.02` y
+  // `NaN > 0.02` son las DOS falsas, el bucle de abajo no avanza y el proceso
+  // se queda girando para siempre sin un solo mensaje. Paso 21-09-2026 y
+  // costo cuarenta minutos de montaje colgado.
+  for (let k = 0; k < w.length; k++) {
+    if (typeof w[k].t !== "number" || typeof w[k].fin !== "number") {
+      throw new Error(
+        `La palabra ${k} ("${w[k].p}") no trae tiempos numericos: ` +
+        `t=${w[k].t} fin=${w[k].fin}. La transcripcion tiene que dar ` +
+        `{p, t, fin}; palabras.py los escribe asi.`);
+    }
+  }
   let i = 0;
   while (i < w.length) {
     if (w[i].fin - w[i].t > 0.02) { i++; continue; }

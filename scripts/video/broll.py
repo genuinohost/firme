@@ -104,9 +104,13 @@ def pexels(q):
     for v in datos.get("videos", []):
         if v.get("duration", 0) < 8:
             continue
+        # «Mas alto que ancho» no basta: un 2160x2165 lo cumple y es un
+        # cuadrado. Para que llene una pantalla de movil sin barras hace falta
+        # al menos 3:2; por debajo hay que recortar tanto que se pierde la
+        # composicion del plano.
         archivos = [f for f in v.get("video_files", [])
-                    if f.get("width") and f.get("height") and f["width"] < f["height"]
-                    and f["height"] >= 1920]
+                    if f.get("width") and f.get("height")
+                    and f["height"] >= 1.5 * f["width"] and f["height"] >= 1920]
         if not archivos:
             continue
         mejor = max(archivos, key=lambda f: f["height"])
@@ -131,7 +135,7 @@ def pixabay(q):
         if any(m in etiquetas for m in MALAS) or v.get("duration", 0) < 8:
             continue
         grande = v.get("videos", {}).get("large") or v.get("videos", {}).get("medium")
-        if not grande or grande["width"] >= grande["height"] or grande["height"] < 1920:
+        if not grande or grande["height"] < 1.5 * grande["width"] or grande["height"] < 1920:
             continue
         out.append({"banco": "Pixabay", "id": v["id"], "dur": v["duration"],
                     "ancho": grande["width"], "alto": grande["height"], "fps": None,
@@ -150,7 +154,7 @@ def coverr(q):
     out = []
     for v in datos.get("hits", datos.get("videos", [])):
         w, h = v.get("max_width", 0), v.get("max_height", 0)
-        if not w or w >= h or h < 1920 or v.get("duration", 0) < 8:
+        if not w or h < 1.5 * w or h < 1920 or v.get("duration", 0) < 8:
             continue
         etiquetas = " ".join(v.get("tags", [])).lower()
         if any(m in etiquetas for m in MALAS):
