@@ -230,7 +230,18 @@ if not candidatos:
     print("\nSin candidatos ni siquiera en Wikimedia, que no necesita clave. Prueba otras palabras. Para los bancos buenos hacen falta PEXELS_KEY y PIXABAY_KEY.")
     sys.exit(1)
 
-candidatos = candidatos[:cuantos]
+# Se barajan los bancos en vez de cortar por orden de llegada. Pexels
+# devuelve 37 y Pixabay 12, y pidiendo doce salían los doce de Pexels: el
+# segundo banco no aparecía nunca aunque tuviera el plano bueno.
+por_banco = {}
+for c in candidatos:
+    por_banco.setdefault(c["banco"], []).append(c)
+mezclados = []
+while len(mezclados) < cuantos and any(por_banco.values()):
+    for banco in list(por_banco):
+        if por_banco[banco] and len(mezclados) < cuantos:
+            mezclados.append(por_banco[banco].pop(0))
+candidatos = mezclados
 json.dump(candidatos, open("broll-candidatos.json", "w", encoding="utf-8"),
           ensure_ascii=False, indent=1)
 
