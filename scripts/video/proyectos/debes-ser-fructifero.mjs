@@ -37,10 +37,14 @@ export default {
   // De `encuadrar.py` sobre 70 fotogramas: la cabeza ocupa el 16,3 %.
   cara: { cx: 0.531, cy: 0.253, cabeza: 0.163 },
 
+  // SIN `pl=1` en el colorbalance. Lo tenían los cinco vídeos anteriores y
+  // rompía dos cosas: el letrero verde de la avenida se llenaba de manchas
+  // grises, y la frente y el pómulo de Alex salían con parches blancos. Lo
+  // vio él. Ningún número lo decía.
   // Medido con `color.py --frio=1`: el clip venía muy neutro (sol de
   // mediodía), así que la corrección es mínima y sólo añade el punto de frío
   // que le gusta y un poco de contraste.
-  color: "colorcorrect=rl=0.004:rh=0.012:bl=-0.004:bh=-0.012,colorbalance=bs=0.03:bm=0.02:bh=0.02:rs=-0.02:pl=1,curves=all='0/0 0.25/0.27 0.5/0.54 0.75/0.78 1/1',vibrance=intensity=0.04",
+  color: "colorcorrect=rl=0.004:rh=0.012:bl=-0.004:bh=-0.012,colorbalance=bs=0.03:bm=0.02:bh=0.02:rs=-0.02,curves=all='0/0 0.25/0.27 0.5/0.54 0.75/0.78 1/1',vibrance=intensity=0.04",
 
   // El estilo de los referentes: pocas palabras, más arriba, sin caja negra
   // y sin ninguna palabra en dorado. El dorado se reserva para el titular.
@@ -88,29 +92,30 @@ export default {
   planos: [
     { hasta: 4.06, enc: "medio", deriva: 0 },    // PANTALLA PARTIDA · «El Todopoderoso nos capacitó»
     { hasta: 6.94, enc: "cerca", deriva: 0 },    // «lo que más anhela es que seamos fructíferos»
-    // BLOQUE 1 · el fruto, 5,6 s, entra justo detrás de la palabra
-    { hasta: 9.56, enc: "broll", deriva: 0, broll: "../broll/fructifero/naranjas.mp4", desdeBroll: 0.5 },
-    { hasta: 12.56, enc: "broll", deriva: 0, broll: "../broll/fructifero/naranjas.mp4", desdeBroll: 3.6 },
-    { hasta: 14.70, enc: "medio", deriva: 0 },   // «El Padre, que cada día»
-    { hasta: 16.96, enc: "abierto", deriva: 0 },
+    { hasta: 8.40, enc: "broll", deriva: 0, broll: "../broll/fructifero/naranjas.mp4", desdeBroll: 0.6 },
+    { hasta: 11.10, enc: "medio", deriva: 0 },   // «que no nos cansemos de glorificar su nombre»
+    { hasta: 12.56, enc: "broll", deriva: 0, broll: "../broll/fructifero/naranjas.mp4", desdeBroll: 5.2 },
+    { hasta: 14.70, enc: "cerca", deriva: 0 },   // «El Padre, que cada día»
+    { hasta: 16.96, enc: "abierto", deriva: 0 }, // «siga contando con tu vida»
     { hasta: 19.88, enc: "medio", deriva: 0 },   // «que todo el mundo se entere»
-    { hasta: 22.24, enc: "medio", deriva: 0 },   // «un único camino…»: aquí se acerca él a la cámara, y con «cerca» el pelo tocaba el borde
-    { hasta: 25.50, enc: "abierto", deriva: 0 }, // «que se llama Jesucristo»: su cara, no una imagen
-    // BLOQUE 2 · la luz, 5,0 s
-    { hasta: 28.00, enc: "broll", deriva: 0, broll: "../broll/fructifero/rayos-bosque.mp4", desdeBroll: 4.6 },
-    { hasta: 30.48, enc: "broll", deriva: 0, broll: "../broll/fructifero/rayos-bosque.mp4", desdeBroll: 14.0 },
-    { hasta: 33.58, enc: "medio", deriva: 0 },   // «por amor a su nombre»
-    { hasta: 36.28, enc: "cerca", deriva: 0 },   // «no nos detenemos»
+    { hasta: 22.24, enc: "medio", deriva: 0 },   // «un único camino…»: aquí se acerca él a la cámara
+    { hasta: 24.90, enc: "abierto", deriva: 0 }, // «que se llama Jesucristo»: su cara, no una imagen
+    { hasta: 26.40, enc: "cerca", deriva: 0 },   // «Que todos puedan sentir»
+    { hasta: 27.90, enc: "broll", deriva: 0, broll: "../broll/fructifero/rayos-bosque.mp4", desdeBroll: 4.6 },
+    { hasta: 29.40, enc: "medio", deriva: 0 },   // «como la sal de la tierra»
+    { hasta: 30.90, enc: "broll", deriva: 0, broll: "../broll/fructifero/rayos-bosque.mp4", desdeBroll: 14.0 },
+    { hasta: 33.58, enc: "cerca", deriva: 0 },   // «y que por amor a su nombre»
+    { hasta: 36.28, enc: "medio", deriva: 0 },   // «no nos detenemos»
     { hasta: 39.04, enc: "cerca", deriva: 0 },   // «la buena batalla de la fe»
     { hasta: 41.30, enc: "medio", deriva: 0 },   // «para la gloria de Dios»
-    // BLOQUE 3 · no te detengas, 3,0 s, con el destello en el corte
-    { hasta: 44.28, enc: "broll", deriva: 0, broll: "../broll/fructifero/silueta-sol.mp4", desdeBroll: 2.0 },
-    { hasta: 47.98, enc: "cerca", deriva: 0 },   // «no te canses de hacer la voluntad de Dios»
-    { hasta: 50.38, enc: "medio", deriva: 0 },   // «en su tiempo perfecto»
-    // BLOQUE 4 · el fruto que se ve, 4,6 s en dos planos
-    { hasta: 52.88, enc: "broll", deriva: 0, broll: "../broll/fructifero/brote.mp4", desdeBroll: 1.0 },
-    { hasta: 54.96, enc: "broll", deriva: 0, broll: "../broll/fructifero/abuelo-bebe.mp4", desdeBroll: 1.5 },
-    { hasta: 58.76, enc: "medio", deriva: 0 },   // «Alabado sea nuestro Padre»
+    { hasta: 42.90, enc: "broll", deriva: 0, broll: "../broll/fructifero/silueta-sol.mp4", desdeBroll: 2.4 },
+    { hasta: 45.60, enc: "cerca", deriva: 0 },   // «Así que hoy te animo, no te detengas»
+    { hasta: 49.00, enc: "medio", deriva: 0 },   // «no te canses de hacer la voluntad de Dios»
+    { hasta: 50.40, enc: "broll", deriva: 0, broll: "../broll/fructifero/brote.mp4", desdeBroll: 1.2 },
+    { hasta: 53.20, enc: "cerca", deriva: 0 },   // «verás el fruto de extrema bendición»
+    { hasta: 54.70, enc: "broll", deriva: 0, broll: "../broll/fructifero/abuelo-bebe.mp4", desdeBroll: 1.8 },
+    { hasta: 56.90, enc: "medio", deriva: 0 },   // «Alabado sea nuestro Padre»
+    { hasta: 58.76, enc: "abierto", deriva: 0 }, // «que nunca nos desampara»
     { hasta: 61.04, enc: "cerca", deriva: 0 },   // «Amén. Si tú crees»
     { hasta: 63.38, enc: "medio", deriva: 0 },   // «te envió para buenas obras»
     { hasta: 65.80, enc: "cerca", deriva: 0 },   // «escribe un gran amén»
