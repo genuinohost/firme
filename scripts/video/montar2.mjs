@@ -227,6 +227,11 @@ const trozos = [];
 // da por buenos si están todos y `mudo.mp4` existe. Es una ayuda para
 // depurar: en un montaje de verdad no se usa.
 const SALTAR = process.env.SALTAR_PLANOS === "1" && existsSync(join(T, "mudo.mp4"));
+// Y lo mismo con los rotulos: cuando lo unico que cambia es el sonido —otra
+// version de la voz, otro volumen de musica— volver a dibujar setenta
+// rotulos sobre 200 MB de video son cuatro minutos tirados. El video con
+// rotulos no depende del audio.
+const SALTAR_ROT = process.env.SALTAR_ROTULOS === "1" && existsSync(join(T, "rotulado.mp4"));
 // Si se rehace aunque sea un plano, hay que volver a pegar: saltarse el
 // pegado dejaba `mudo.mp4` con el plano viejo dentro y el cambio no aparecia.
 let rehechos = 0;
@@ -390,6 +395,7 @@ for (const d of P.destellos ?? []) {
 // La tarjeta del versículo: UNA imagen con su caja (la dibuja `tarjeta.py`),
 // superpuesta arriba, lejos de los rótulos, y fundida entera por el canal
 // alfa. Con `drawtext` línea a línea salían tres cajas escalonadas.
+if (!SALTAR_ROT) {
 if (P.tarjeta) {
   const { desde: A, hasta: B } = P.tarjeta;
   const png = join(T, "tarjeta.png");
@@ -409,6 +415,7 @@ if (P.tarjeta) {
 } else {
   ff(["-i", join(T, "mudo.mp4"), "-vf", capas.join(","), "-r", "30",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", join(T, "rotulado.mp4")]);
+}
 }
 ff(["-i", join(T, "rotulado.mp4"), "-i", join(T, "voz.wav"),
   "-map", "0:v", "-map", "1:a", "-c:v", "copy",

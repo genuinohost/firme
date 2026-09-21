@@ -22,6 +22,15 @@ export default {
   central: ".trabajo/central.mp4",
   palabras: ".trabajo/palabras-original.json",
 
+  // La voz va con la LIMPIEZA SUAVE (DeepFilterNet con tope de 20 dB), que
+  // eligió Alex de oído el 21-09-2026 entre tres versiones de diez segundos.
+  // Medida: el tráfico baja unos 15 dB y las 200 palabras siguen ahí. La
+  // transcripción se hizo sobre el ORIGINAL, que es el que mejor entiende
+  // Whisper, y los tiempos valen igual porque DeepFilterNet compensa su
+  // propio retardo (`-D`); sin eso los rótulos irían unos milisegundos tarde.
+  //
+  // Y las dos palabras de `arreglos` las confirmó él: «contando» y
+  // «desampara». Ya no son suposiciones mías.
   // La voz entera; la última palabra acaba en 65,16.
   voz: { desde: 0.0, dur: 65.8 },
 
@@ -129,9 +138,14 @@ export default {
     // Medido sobre la v1: la música quedó 32 dB por debajo de la voz, o sea
     // no se oía. La voz de la calle trae ruido constante y el agachado la
     // tenía siempre pisada. Más volumen, menos agachado y umbral más alto.
-    volumen: 1.9,
-    umbral: 0.06,
-    ratio: 3,
+    // Dos barridos. Con la voz SUCIA hacía falta 1,9 y ratio 3 para que se
+    // oyera algo (el ruido de la calle mantenía el agachado pisado). Con la
+    // voz limpia las pausas quedan mudas y esa misma música se colaba en los
+    // huecos: la voz llegó a ir 0,3 dB por encima. Limpiar la voz cambia la
+    // mezcla entera, no sólo la voz.
+    volumen: 1.05,
+    umbral: 0.035,
+    ratio: 5,
   },
 
   // Sin pantalla negra: las dos líneas van encima de sus últimos segundos.
