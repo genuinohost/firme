@@ -120,6 +120,49 @@ linea("sonoridad del archivo", `${lufs} LUFS · pico ${pico} dBTP`);
 if (lufs < -16.5 || lufs > -12.5) faltas.push(`sonoridad ${lufs} LUFS, fuera de lo que piden las redes (−14 ± 2)`);
 if (pico > -0.5) faltas.push(`pico ${pico} dBTP: puede saturar`);
 
+// ═══════════════════════════════════════ 5 · la cara en el vídeo terminado
+// La primera regla del skill —nunca tapar la cara, nunca cortarla— no la
+// comprobaba nadie: se miraban cuatro fotogramas y se daba por buena. Así
+// pasó el primer montaje con tres encuadres calculados y ninguno aplicado.
+// Esto mide la cara en el RESULTADO, que es donde importa.
+console.log("\n5 · La cara en el resultado");
+const pista = JSON.parse(py("medir-cara.py", FINAL, "90"));
+const halladas = pista.filter((m) => m.cara);
+linea("se encuentra en", `${halladas.length} de ${pista.length} muestras`);
+if (halladas.length < pista.length * 0.85)
+  faltas.push(`la cara se pierde en ${pista.length - halladas.length} de ${pista.length} muestras: algún plano está mal encuadrado`);
+
+const frente = Math.min(...halladas.map((m) => m.y));
+const alto = halladas.reduce((a, m) => a + m.h, 0) / Math.max(1, halladas.length);
+linea("la cara ocupa de alto", `${(alto * 100).toFixed(0)} %`);
+linea("lo más arriba que llega", `y=${frente.toFixed(3)}`);
+if (frente < 0.05) faltas.push(`la cabeza llega a y=${frente.toFixed(3)}: está cortada por arriba`);
+else if (frente < 0.09) avisos.push(`la cabeza llega a y=${frente.toFixed(3)}: casi sin aire arriba`);
+
+// El rótulo se dibuja a h*0,72; con dos líneas, la de abajo cae más. La caja
+// de `drawtext` mide 0,87 del tamaño de letra, más 12 px de borde.
+const tam = P.fuente?.tamano ?? 74;
+const pasoR = (0.87 * tam + 2 * 12) / 1920;
+const techoRotulo = 0.72 - pasoR / 2 - 12 / 1920;
+let pisa = 0;
+for (const m of halladas) {
+  const g = grupos.find((x) => m.t >= x.t && m.t < x.fin);
+  if (g && m.y + m.h > techoRotulo) pisa++;
+}
+linea("rótulo sobre la cara", pisa ? `${pisa} muestras` : "nunca");
+if (pisa) faltas.push(`en ${pisa} muestras el rótulo cae sobre la cara`);
+
+// Y la tarjeta del versículo, que ocupa arriba justo donde está la cabeza.
+if (P.tarjeta && existsSync(join(T, "tarjeta.png"))) {
+  const medidas = execFileSync("ffprobe",
+    ["-v", "error", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", join(T, "tarjeta.png")],
+    { encoding: "utf8" }).trim().split("x");
+  const sueloTarjeta = (P.tarjeta.y ?? 0.13) + Number(medidas[1]) / 1920;
+  const debajo = halladas.filter((m) => m.t >= P.tarjeta.desde && m.t < P.tarjeta.hasta && m.y < sueloTarjeta);
+  linea("tarjeta sobre la cara", debajo.length ? `${debajo.length} muestras` : "nunca");
+  if (debajo.length) faltas.push(`la tarjeta pisa la cara en ${debajo.length} muestras`);
+}
+
 // ═══════════════════════════════════════ veredicto
 console.log("\n" + "═".repeat(60));
 for (const a of avisos) console.log(`  ⚠  ${a}`);

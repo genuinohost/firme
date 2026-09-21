@@ -125,6 +125,22 @@ método de Santiago Muñoz para editar con IA, adaptado a lo que ya tenemos:
 Si el vídeo es uno de una serie que ya tiene estilo elegido, se salta al
 paso 5 y se dice.
 
+**Medir el estilo de referencia es un comando**, no un trabajo a mano:
+
+```bash
+python scripts/video/medir-estilo.py <vídeo> --hasta=<s> [--muestras=130]
+```
+
+Devuelve cortes (por diferencia de imagen) y **re-encuadres de la misma toma**
+(por la cara, fotograma a fotograma), cuánto ocupa la cara, la banda donde van
+los rótulos y el sonido —incluido **si hay música debajo**, mirando el suelo
+de una pausa—. `--hasta` recorta la coletilla de la plataforma en los vídeos
+bajados de TikTok: son cuatro segundos que estropean todas las medias.
+
+> Un detector de escenas **no ve** los re-encuadres: misma cara, mismo fondo,
+> otro tamaño. En el vídeo de Jordi Segués encontró 1 corte donde hay uno cada
+> segundo y medio. Hay estilos enteros hechos de eso.
+
 **Estilos con nombre que ya existen** (`scripts/video/estilos/`):
 
 - `samuel-adrian.md` — el estilo «recibos», **medido** de tres shorts de
@@ -135,6 +151,44 @@ paso 5 y se dice.
   pidió), insertos de archivo y «recibos» compuestos, whoosh en cada corte,
   coletilla pregrabada a pantalla completa. Lo único que no se copia es su
   color cálido: Alex va en frío.
+
+- `jordi-segues.md` — «cara y nada más», medido el 20-09-2026 del vídeo que
+  mandó Alex («ese estilo también me gusta mucho»): **la cara ocupa el 51 %
+  del alto**, salto de encuadre cada 1,5 s **por corte y sin deriva**, rótulos
+  de 1–3 palabras en cursiva blanca a y=0,65, **sin B-roll y sin música**.
+  Es un 80 % decisión de rodaje: con Alex a tres metros no sale.
+
+- `daniela-polofi.md` — «historia con imágenes», medido el 20-09-2026 («me
+  gusta la edición, y todos los detalles»): pantalla partida con titular
+  quieto cinco segundos, **B-roll en bloques de 7–9 s** (no insertos de dos),
+  63 cortes en 91 s, rótulos de 2–4 palabras a y=0,60, destello rojo de un
+  cuadro en la frase que pesa, cierre en su cara con fundido. Su B-roll está
+  **generado con IA**, y eso Alex tiene que saberlo antes de pedirlo.
+
+### Lo que enseñaron los tres estilos medidos
+
+|  | Samuel Adrián | Jordi Segués | Daniela Polofi | Genuino hoy |
+|---|---|---|---|---|
+| Cara, % del alto | — | **51 %** | **32 %** | **12 %** |
+| Corte o re-encuadre | 5 en 7 s al abrir | cada 1,5 s | cada 1,4 s | cada 2,2 s |
+| Deriva dentro del plano | ninguna | ninguna | ninguna | ±4 % |
+| Rótulo | 1–3 palabras | 1–3, cursiva | 2–4, condensada | 3–7 |
+| Palabra en color | no | **no** | **no** | dorado |
+| Música | sí | **no** | **no** | sí |
+| Cierre | coletilla | su cara | su cara, fundido | **4,6 s de negro** |
+
+Tres cosas coinciden en los tres y en ninguna de ellas estábamos:
+
+1. **Nadie colorea una palabra.** El acento lo ponen el tamaño y el corte.
+2. **Nadie deja el plano quieto derivando**: se salta por corte y punto.
+3. **Nadie cierra en una pantalla negra con la marca.** Los 4,6 segundos de
+   `@GenuinoLove` sobre negro del final son el 6 % del vídeo tirados, justo
+   donde se decide si vuelve a empezar.
+
+Y la que manda sobre todas: **la cara de Alex ocupa el 12 % del alto y en los
+tres referentes va entre el 30 y el 50 %.** Eso no se arregla en el montaje
+—a más de 1,6 de zoom la imagen se ablanda—: se arregla **grabando de cerca**,
+a metro y medio en vez de a tres.
 
 ## Parte 3 · Montar y comprobar
 
@@ -174,10 +228,18 @@ repite cuadros, la voz baja de 6 dB sobre la música, la música va más de
 28 dB por debajo (no se oye), la sonoridad se sale de −14 ± 2 LUFS o el pico
 pasa de −0,5 dBTP, o un rótulo nombra la app en un vídeo que no es de la app.
 
-**Y después se mira.** Veinte fotogramas repartidos, más un recorte a
-resolución completa de: el primer segundo, la tarjeta, cada cambio de
-encuadre dudoso, el cierre. Los cinco fallos mudos del primer vídeo y los
-tres del segundo se vieron así, no con números. Si el jurado adversario tiene
+**Y después se mira**, que ya también es un comando:
+
+```bash
+node scripts/video/vistazo.mjs <carpeta>
+```
+
+Deja en `.trabajo/vistazo/` cuatro hojas **a escala de móvil** (270 px, que es
+donde se va a ver): el arranque cuadro a cuadro, **los dos lados de cada
+corte**, el cierre y el recorrido entero. Era el único paso del método sin
+script —se hacía a mano, con una orden distinta cada vez— y por eso era el que
+se saltaba. Los cinco fallos mudos del primer vídeo y los tres del segundo se
+vieron así, no con números. Si el jurado adversario tiene
 cuota, cuatro revisores (rótulos, encuadre, sonido, reglas) y un escéptico
 por hallazgo; si no, se hace a mano y se dice.
 
@@ -339,7 +401,10 @@ planos donde el texto no se lee.
 | Script | Para qué |
 |---|---|
 | `palabras.py` | transcribir con `large-v3`, palabra a palabra (el `small` puntúa mal y oye peor) |
-| `encuadrar.py` | la cara con YuNet (`modelos/yunet.onnx`): centro, tamaño, pista por segundos |
+| `encuadrar.py` | la cara con YuNet (`modelos/yunet.onnx`) en el clip de ORIGEN: centro, tamaño, pista por segundos |
+| `medir-cara.py` | la cara en el vídeo YA MONTADO, con la caja entera, para comprobar que los encuadres salieron |
+| `medir-estilo.py` | un vídeo de referencia: cortes, re-encuadres, tamaño de la cara, banda de rótulos, sonido |
+| `vistazo.mjs` | las hojas de fotogramas del montaje, a escala de móvil, para mirarlo |
 | `color.py` | la corrección de color medida, con `--frio=0/1/2`, y su antes/después |
 | `musica.py` | tempo, golpes y curva de energía de cada pista candidata |
 | `planificar.mjs` | el plan base de planos desde la transcripción |
