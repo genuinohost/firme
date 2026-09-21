@@ -486,3 +486,43 @@ post-filtro, transcribir cada uno y quedarse con el que Whisper entienda
 mejor, no con el que mida más limpio. Si ninguno gana al original, la
 limpieza se queda en suave y se acepta algo de avenida de fondo: es un vídeo
 grabado en la calle y sonar a calle no es un defecto.
+
+
+---
+
+# 21 de septiembre · «Debes ser fructífero», el primero con el estilo medido
+
+El vídeo de marzo, grabado en una avenida de Caracas. Montado con las piezas
+nuevas: apertura a pantalla partida con titular quieto, B-roll en bloques,
+cortes secos sin deriva, rótulos de 2–4 palabras sin dorado, cierre sobre su
+cara. **La cara ocupa el 23 % del alto** (en Filipenses era el 12 %): sigue
+lejos del 32 % de Daniela, pero se nota en cada plano.
+
+**El audio no se limpió, y es un resultado, no una omisión.** Cuatro
+tratamientos medidos contra el original, transcribiendo cada uno con large-v3:
+
+    original             200 palabras · confianza 0,959 · dudosas 4
+    sólo EQ              198 · 0,958 · 6
+    DeepFilterNet 12 dB  199 · 0,953 · 6
+    DeepFilterNet 20 dB  200 · 0,937 · 6
+    DeepFilterNet tope   192 · 0,940 · 8
+    DF 20 + post-filtro  203 · 0,933 · 12
+
+Gana el original en todo. Y los cinco garabatean el mismo tramo (12–17 s), o
+sea que ahí no se entiende en la grabación, no en el proceso. Queda una
+prueba de oído con Alex: tres versiones de diez segundos, que elija él.
+
+Cinco fallos, y de dónde salió cada uno:
+
+- **`sanear()` colgado para siempre** porque mi transcripción escribió `f`
+  donde el agrupador espera `fin`: NaN, las dos comparaciones falsas, bucle
+  infinito, cuarenta minutos sin un mensaje. Ahora valida al entrar.
+- **El B-roll llevaba la corrección de color de su piel** y salía turbio. Lo
+  vi en la primera hoja de fotogramas. Ahora va aparte.
+- **El bosque entraba negro**: no era el clip, era mi fundido de 0,2 s en un
+  corte que cae sobre un golpe. Los tres referentes cortan en seco; quitado.
+- **La música 32 dB por debajo de la voz**, o sea muda: el ruido de la calle
+  mantenía el agachado pisado todo el rato. Con volumen 1,9 y ratio 3, 16 dB.
+- **El rótulo sobre la cara en 11 muestras**, que sólo vio el comprobador.
+  Los rótulos bajaron de 0,60 (la altura de los referentes) a 0,73: ellos
+  graban en estudio con la cara alta, y Alex ocupa más cuadro.

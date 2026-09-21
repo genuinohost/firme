@@ -196,8 +196,13 @@ function plano(b) {
   const z = `${zInicio}+${deriva}*on/${cuadros}`;
   // El B-roll entra y sale con un fundido de seis cuadros: es una ventana
   // cálida contra una sala blanca, y el corte seco se siente como un salto.
-  const fundido = b.broll
-    ? `,fade=t=in:d=0.2,fade=t=out:st=${Math.max(0, b.dur - 0.2).toFixed(2)}:d=0.2`
+  // El B-roll entra y sale EN SECO. Llevaba un fundido de seis cuadros, y en
+  // la hoja de fotogramas se veia como si el plano entrara negro: el corte
+  // cae en un golpe de musica y el primer cuarto de segundo estaba a oscuras.
+  // Los tres estilos medidos cortan en seco, ninguno funde. `fundeBroll` en
+  // el proyecto lo devuelve si alguna vez hace falta.
+  const fundido = b.broll && P.fundeBroll
+    ? `,fade=t=in:d=${P.fundeBroll},fade=t=out:st=${Math.max(0, b.dur - P.fundeBroll).toFixed(2)}:d=${P.fundeBroll}`
     : "";
   return (
     `fps=30,scale=1512:2688:force_original_aspect_ratio=increase,crop=1512:2688,` +
@@ -222,6 +227,9 @@ const trozos = [];
 // da por buenos si están todos y `mudo.mp4` existe. Es una ayuda para
 // depurar: en un montaje de verdad no se usa.
 const SALTAR = process.env.SALTAR_PLANOS === "1" && existsSync(join(T, "mudo.mp4"));
+// Si se rehace aunque sea un plano, hay que volver a pegar: saltarse el
+// pegado dejaba `mudo.mp4` con el plano viejo dentro y el cambio no aparecia.
+let rehechos = 0;
 const A = P.apertura;
 // El reparto NO es la mitad: en el vídeo de Daniela Pol ella ocupa el 65 % de
 // arriba y la imagen el 35 % de abajo, con el titular apoyado en la costura.
@@ -241,6 +249,7 @@ fronteras.forEach((b, i) => {
   // `plano(b)` se llama igualmente: es quien calcula y guarda `b.centro`,
   // que necesita `cortes.json` para que el comprobador mida.
   if (SALTAR && existsSync(salida)) { plano(b); trozos.push(salida); return; }
+  rehechos++;
   const origen = b.broll ? en(b.broll) : en(P.central);
   const desde = b.broll ? b.desdeBroll ?? 0 : P.voz.desde + b.desde;
   if (A && b.hasta <= A.hasta + 0.001) {
@@ -267,7 +276,7 @@ fronteras.forEach((b, i) => {
   console.log(`  ok  ${String(i).padStart(2)}  ${b.enc.padEnd(9)} ${b.desde.toFixed(2).padStart(6)} → ${b.hasta.toFixed(2).padStart(6)}  ${b.dur.toFixed(2)}s  cara x=${b.centro.cx} y=${b.centro.cy}`);
   trozos.push(salida);
 });
-if (!SALTAR) {
+if (!SALTAR || rehechos > 0) {
 writeFileSync(join(T, "centro.txt"), trozos.map((p) => `file '${p.replace(/\\/g, "/")}'`).join("\n"));
 ff(["-f", "concat", "-safe", "0", "-i", join(T, "centro.txt"), "-an", "-c", "copy", join(T, "mudo.mp4")]);
 }

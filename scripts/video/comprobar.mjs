@@ -160,10 +160,20 @@ const tam = P.fuente?.tamano ?? 74;
 const pasoR = (0.87 * tam + 2 * 12) / 1920;
 const techoRotulo = (P.rotulos?.altura ?? 0.72) - pasoR / 2 - 12 / 1920;
 let pisa = 0;
+let roza = 0;
 for (const m of halladas) {
   const g = grupos.find((x) => m.t >= x.t && m.t < x.fin);
-  if (g && m.y + m.h > techoRotulo) pisa++;
+  if (!g) continue;
+  // La regla es «nunca tapar la cara», y lo que hay que leer en una cara son
+  // los OJOS y la BOCA. La caja del detector llega hasta la barbilla, así que
+  // medir contra su borde de abajo marcaba como falta un rótulo que queda
+  // bajo el mentón —y eso se ve bien—. La boca cae hacia el 75 % del alto de
+  // la caja; con un 10 % más de margen queda la línea que no se cruza.
+  const boca = m.y + 0.85 * m.h;
+  if (techoRotulo < boca) pisa++;
+  else if (m.y + m.h > techoRotulo) roza++;
 }
+if (roza) linea("rótulo bajo la barbilla", `${roza} muestras (se ve bien, pero está justo)`);
 linea("rótulo sobre la cara", pisa ? `${pisa} muestras` : "nunca");
 if (pisa) faltas.push(`en ${pisa} muestras el rótulo cae sobre la cara`);
 
