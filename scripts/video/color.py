@@ -19,7 +19,7 @@ aspecto, ningun parpadeo, y vale igual para el B-roll.
 **La receta**, en este orden (el orden importa, es el de un colorista):
 1. Balance: `colorcorrect=rl:rh:bl:bh` con los valores medidos en YUV. No toca
    la luma. (Formula del filtro: nu = u + y*(bh-bl) + bl; nv = v + y*(rh-rl) + rl.)
-2. El punto de frio que eligio: `colorbalance` con `pl=1` (preserva la luz).
+2. El punto de frio que eligio: `colorbalance` (sin `pl`, ver la nota de abajo).
    --frio=0 nada; 1 suave (por defecto); 2 marcado.
 3. Luz: `curves` con una subida suave de medios. NO `eq=brightness`: es un
    desplazamiento aditivo que saca los blancos de rango (Y>235, superblancos
@@ -29,6 +29,25 @@ aspecto, ningun parpadeo, y vale igual para el B-roll.
 
 Deja `color-antes-despues.png` junto al clip e imprime `color: "..."` para
 `proyecto.mjs`.
+
+NOTA DEL 21-09-2026 — POR QUE YA NO SE USA `pl=1`
+
+`colorbalance` tiene una opcion `pl` (preserve lightness) que parecia lo
+correcto: cambias el color sin tocar el brillo. En los cinco videos montados
+hasta hoy iba puesta.
+
+Lo que hace de verdad con un pixel ya saturado o ya claro es **aplastarlo a
+un tono plano**. En «Debes ser fructifero» se veia en dos sitios:
+
+  - el letrero verde de la avenida se llenaba de manchas grises;
+  - y mucho peor, **la frente y el pomulo de Alex salian con parches
+    blancos**, como si estuviera despellejado.
+
+Lo encontro el, mirando: «se ve de muy mala calidad en el letrero verde».
+Ningun numero lo habria dicho: la sonoridad, el contraste y la saturacion
+media estaban perfectos.
+
+El mismo `colorbalance` SIN `pl` da el mismo frio y no rompe nada.
 """
 import subprocess
 import sys
@@ -51,8 +70,8 @@ for o in opciones:
 
 FRIO = {
     0: "",
-    1: "colorbalance=bs=0.03:bm=0.02:bh=0.02:rs=-0.02:pl=1,",
-    2: "colorbalance=bs=0.06:bm=0.04:bh=0.04:rs=-0.04:rm=-0.02:pl=1,",
+    1: "colorbalance=bs=0.03:bm=0.02:bh=0.02:rs=-0.02,",
+    2: "colorbalance=bs=0.06:bm=0.04:bh=0.04:rs=-0.04:rm=-0.02,",
 }
 LUZ = "curves=all='0/0 0.25/0.27 0.5/0.54 0.75/0.78 1/1',vibrance=intensity=0.04"
 

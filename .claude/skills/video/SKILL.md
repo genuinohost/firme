@@ -552,6 +552,19 @@ Stop-Process -Force`.
 **Un rótulo acaba exactamente donde empieza el siguiente.** Alargarlo con
 `Math.max` hace que dos se dibujen encima.
 
+**`colorbalance` con `pl=1` destroza los colores saturados y la piel.** La
+opción «preserve lightness» parece lo correcto —cambias el color sin tocar el
+brillo— y estuvo puesta en los cinco primeros vídeos. Lo que hace con un píxel
+ya claro o ya saturado es **aplastarlo a un tono plano**: en «Debes ser
+fructífero» el letrero verde de la avenida salía con manchas grises y **la
+frente y el pómulo de Alex con parches blancos**. Lo vio él, mirando. Ningún
+número lo decía: sonoridad, contraste y saturación media estaban perfectos.
+El mismo `colorbalance` sin `pl` da el mismo frío y no rompe nada.
+
+> Cómo se encontró, que es la parte que vale: se cortó el mismo fotograma con
+> la cadena entera y luego **filtro por filtro**. Tres salían limpios y uno
+> sucio. Con cuatro renders de un segundo se pasa de «se ve mal» a «es este».
+
 **Contar caracteres miente.** Dos rótulos de 24 letras miden 1103 y 1006 px.
 Se mide en píxeles de la fuente, con su tabla (`anchos-<fuente>.json`).
 
