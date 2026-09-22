@@ -1601,7 +1601,15 @@ mueven **los 12 probadores**.
 - [x] ~~Crear la cuenta de Play~~ — hecha y verificada el 18-09
 - [ ] Dar los enlaces reales para `public/comunidad.json`
 - [ ] **Grabar el vídeo del permiso** de servicio en primer plano (60–90 s,
-      grabación de pantalla). Es lo único de vídeo que bloquea la revisión
+      grabación de pantalla). Es lo único de vídeo que bloquea la revisión.
+      **La declaración para Google ya está escrita** y espera sólo el enlace:
+      está en `videos-genuino/guiones/DESDE EL CELULAR - los tres pasos de la
+      app.txt`. El tipo que declara la app es `mediaPlayback`, medido en el
+      manifiesto; el servicio suena con `MediaPlayer` hasta que el usuario
+      para o pospone
+- [ ] **Pegar el vídeo de la ficha en Play Console** — está en YouTube
+      (`https://youtu.be/C0ViRAtrwjk`, público, 16:9) pero **no** en la ficha.
+      Ficha principal de Play Store → Recursos gráficos → Vídeo
 - [ ] Renombrar el canal de YouTube a **Genuino Love** y fijar el comentario
 - [ ] **El vídeo oficial de la app, 10 de 10.** El subido es provisional
 - [ ] **Revisar los versículos del banco** — él es Capellán y su palabra está de por medio
