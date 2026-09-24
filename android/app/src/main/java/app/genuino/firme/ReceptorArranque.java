@@ -28,5 +28,8 @@ public class ReceptorArranque extends BroadcastReceiver {
         // La lista de dos semanas sobrevivio al reinicio en disco; de ahi se
         // vuelven a armar las proximas sin que nadie tenga que abrir la app.
         AlarmaExacta.armarLasProximas(contexto);
+        // El trabajo periodico es persistente, pero reponerlo al arrancar no
+        // cuesta nada y cubre el caso de que el sistema lo hubiera tirado.
+        TrabajoRearmar.asegurar(contexto);
     }
 }

@@ -67,17 +67,26 @@ public class AlarmaExacta extends Plugin {
     /**
      * Cuantas alarmas se le entregan a Android de una vez.
      *
-     * La cola entera son dos semanas —unas 140 con una rutina completa— y
-     * registrarlas todas de golpe es pedirle al sistema algo que ningun
-     * despertador de verdad le pide. `setAlarmClock` es la alarma mas cara que
-     * existe: sale en la barra de estado y el sistema la protege de Doze.
+     * <p><b>Esto valia 24 y fue un error que costo un dia entero de silencio.</b>
+     * La idea era armar solo las proximas y rearmar las siguientes **cada vez
+     * que una sonaba**, para no pedirle al sistema mas de lo necesario:
+     * `setAlarmClock` es la alarma mas cara que existe.
      *
-     * Asi que se registran solo las proximas, y **cada vez que una suena se
-     * vuelven a armar las siguientes** desde la lista guardada. La cola de dos
-     * semanas sigue existiendo en disco: sirve para rearmar sin abrir la app y
-     * para rehacerla despues de reiniciar.
+     * <p>El fallo de fondo es que **el mecanismo que repara la cola dependia de
+     * que sonara una alarma**, o sea, de lo unico que se habia roto. El 23-09-2026
+     * fallo la de las 16:30 y detras cayeron doce seguidas: ninguna volvio a
+     * armarse hasta que Alex abrio la app un dia despues. Un fallo de un minuto
+     * se convirtio en un dia entero.
+     *
+     * <p>Ahora se arman TODAS. El tope real de Android son 500 alarmas por
+     * aplicacion y el lado JS nunca manda mas de 200 (catorce dias de rutina),
+     * asi que cabemos con holgura. Si una falla, las demas siguen puestas.
+     *
+     * <p>El rearme por sonido y el de arranque siguen ahi, y ademas hay un
+     * trabajo periodico que las repone sin depender de nada (ver
+     * {@link TrabajoRearmar}). Tres redes en vez de una.
      */
-    private static final int VENTANA = 24;
+    private static final int VENTANA = 400;
 
     @Override
     public void load() {
@@ -161,6 +170,8 @@ public class AlarmaExacta extends Plugin {
                 .apply();
 
         int puestas = armarLasProximas(contexto);
+        // Y el trabajo periodico que las repone aunque no suene ninguna.
+        TrabajoRearmar.asegurar(contexto);
 
         JSObject respuesta = new JSObject();
         respuesta.put("programadas", puestas);

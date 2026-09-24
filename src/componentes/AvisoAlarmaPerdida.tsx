@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AlarmaPerdida } from "@/logica/despertador";
 import {
   abrirInicioAutomatico,
+  copiarAlReloj,
   hayInicioAutomatico,
   pedirExencionBateria,
 } from "@/logica/despertador";
@@ -29,6 +30,8 @@ export function AvisoAlarmaPerdida({
 }) {
   const [marca, setMarca] = useState<{ hay: boolean; fabricante: string } | null>(null);
   const [aviso, setAviso] = useState("");
+  const [copiando, setCopiando] = useState(false);
+  const [avisoReloj, setAvisoReloj] = useState("");
 
   useEffect(() => {
     let vivo = true;
@@ -135,6 +138,57 @@ export function AvisoAlarmaPerdida({
               Sacar Genuino del ahorro de batería
             </Boton>
           </div>
+        </Tarjeta>
+
+        {/*
+          Y la red que no depende de nosotros.
+
+          Va la ultima a proposito: primero se intenta arreglar la causa, y solo
+          si eso no basta se duplica en el reloj. Pero tiene que estar AQUI y no
+          enterrada en Ajustes, porque el 24-09-2026 Alex perdio doce alarmas
+          seguidas teniendo la bateria y el inicio automatico ya concedidos: las
+          dos tarjetas de arriba no le servian de nada, y la unica que le habria
+          salvado la noche estaba en otra pantalla.
+        */}
+        <Tarjeta className="mt-3">
+          <Etiqueta>la red que no depende de nosotros</Etiqueta>
+          <p className="mt-2 text-sm leading-relaxed">
+            El reloj de tu móvil es del sistema, y ninguna capa del fabricante lo
+            congela. Podemos copiar ahí estas alarmas: sonarán las dos, la nuestra
+            y la suya. Es feo, y es a propósito — más vale un pitido de más que un
+            silencio a las cinco.
+          </p>
+          <div className="mt-3">
+            <Boton
+              ancho
+              deshabilitado={copiando}
+              onClick={async () => {
+                setCopiando(true);
+                setAvisoReloj("");
+                // Cada perdida lleva su hora; los dias van vacios para que el
+                // reloj las ponga solo una vez. Quien quiera repetirlas cada
+                // semana las edita en el reloj, que para eso es suyo.
+                const n = await copiarAlReloj(
+                  perdidas.map((p) => ({
+                    hora: hora(p.cuando),
+                    nombre: p.titulo,
+                    dias: [],
+                  })),
+                );
+                setCopiando(false);
+                setAvisoReloj(
+                  n === 0
+                    ? "No se pudo. Ponlas a mano en la app Reloj de tu móvil."
+                    : `Copiadas ${n}. Míralas en la app Reloj.`,
+                );
+              }}
+            >
+              {copiando ? "Copiando…" : "Copiarlas al reloj del móvil"}
+            </Boton>
+          </div>
+          {avisoReloj ? (
+            <p className="mt-2 text-xs leading-relaxed text-acento">{avisoReloj}</p>
+          ) : null}
         </Tarjeta>
 
         <div className="mt-4">

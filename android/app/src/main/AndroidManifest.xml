@@ -48,6 +48,14 @@
             android:foregroundServiceType="mediaPlayback"
             android:directBootAware="true" />
 
+        <!-- Repone las alarmas cada seis horas sin depender de que suene
+             ninguna. Ver TrabajoRearmar.java: el 23-09-2026 fallo una alarma y
+             se llevo doce por delante porque el rearme dependia del disparo. -->
+        <service
+            android:name=".TrabajoRearmar"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
         <receiver
             android:name=".ReceptorArranque"
             android:exported="true"
