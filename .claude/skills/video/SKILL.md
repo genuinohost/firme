@@ -552,6 +552,24 @@ Stop-Process -Force`.
 **Un rótulo acaba exactamente donde empieza el siguiente.** Alargarlo con
 `Math.max` hace que dos se dibujen encima.
 
+**`curves` cuesta más que todo lo demás junto.** Medido el 24-09-2026 sobre
+6 s de metraje, filtro a filtro: descodificar 1,2 s · subir a 1512×2688 +0,3 ·
+`zoompan` +0,8 · **`curves` +3,6** · `unsharp` +2,5. El motivo es que `curves`,
+`colorbalance` y `vibrance` trabajan en RGB y obligan a convertir cada
+fotograma desde el formato del vídeo y de vuelta; `eq`, que hace contraste y
+saturación en el formato nativo, cuesta **cero**.
+
+Dos cosas que se probaron y **no** funcionaron, para no repetirlas:
+
+- **Cocinar la cadena de color en una tabla** (`haldclut` de 8 niveles): 9,1 s
+  contra 8,2 de la cadena entera. Va más lento, no más rápido.
+- **Quitar `zoompan`** y hacer el encuadre con `crop`+`scale` cuando la deriva
+  es 0: 8,4 s contra 9,4. Apenas 1 s, y se pierde la deriva.
+
+Lo que sí queda pendiente de probar el día que el montaje moleste: sustituir
+`curves` por un `lutyuv` sobre la luma, que hace casi lo mismo sin salir del
+formato nativo.
+
 **`colorbalance` con `pl=1` destroza los colores saturados y la piel.** La
 opción «preserve lightness» parece lo correcto —cambias el color sin tocar el
 brillo— y estuvo puesta en los cinco primeros vídeos. Lo que hace con un píxel
