@@ -24,6 +24,7 @@ import { ExamenDelPlan } from "@/componentes/ExamenDelPlan";
 import { ExamenDeSantidad } from "@/componentes/ExamenDeSantidad";
 import { DetallePlan } from "@/componentes/DetallePlan";
 import { AvisoAlarmaPerdida } from "@/componentes/AvisoAlarmaPerdida";
+import { AvisoDespertadorSeguro } from "@/componentes/AvisoDespertadorSeguro";
 import { claveRegistro, diasRestaurados, estadoDelDia, registroDe } from "@/logica/planes";
 import type { Plan, RegistroPlan } from "@/datos/planes/tipos";
 import { PantallaProgreso } from "@/componentes/PantallaProgreso";
@@ -99,6 +100,16 @@ export default function App() {
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
   /** Alarmas que tenían que haber sonado y no sonaron. Se dicen en voz alta. */
   const [perdidas, setPerdidas] = useState<AlarmaPerdida[]>([]);
+  /**
+   * El aviso de «no la cierres deslizándola», una sola vez y al principio.
+   *
+   * Se guarda en el propio móvil y no en los datos: es una advertencia de este
+   * teléfono, no algo del usuario. Si se cambia de móvil, vuelve a salir, y
+   * está bien que salga: el candado hay que ponerlo en cada uno.
+   */
+  const [vioElAviso, setVioElAviso] = useState(
+    () => localStorage.getItem("genuino.avisoDespertador") === "visto",
+  );
 
   const ahora = useReloj();
 
@@ -726,6 +737,24 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
         Si el sistema se comió alguna, se dice, y se ofrece el ajuste que casi
         siempre es la causa.
       */}
+      {/*
+        Va ANTES del aviso de alarma perdida a proposito: si alguien abre la app
+        y tiene las dos cosas, lo primero que tiene que leer es como evitar que
+        vuelva a pasar, no el parte de lo que ya paso.
+
+        Y solo cuando hay rutina: en una app recien instalada y vacia, esto no
+        significa nada y se olvida antes de que haga falta.
+      */}
+      {esNativo() && !vioElAviso && datos.rutina.some((b) => b.activo) ? (
+        <AvisoDespertadorSeguro
+          rutina={datos.rutina}
+          onCerrar={() => {
+            localStorage.setItem("genuino.avisoDespertador", "visto");
+            setVioElAviso(true);
+          }}
+        />
+      ) : null}
+
       {perdidas.length > 0 ? (
         <AvisoAlarmaPerdida perdidas={perdidas} onCerrar={() => setPerdidas([])} />
       ) : null}
