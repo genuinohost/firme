@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AlarmaExacta.class);
         registerPlugin(Dictado.class);
         registerPlugin(Navegador.class);
+        registerPlugin(Sala.class);
         super.onCreate(estadoGuardado);
     }
 }

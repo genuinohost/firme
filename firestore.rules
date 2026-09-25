@@ -198,6 +198,104 @@ service cloud.firestore {
       }
     }
 
+    // ---------------------------------------------------------------- las salas
+    //
+    // El devocional en voz, y la llamada de dos. Son lo mismo con dos tamaños,
+    // así que hay una sola colección.
+    //
+    // ── Aquí no viaja audio ───────────────────────────────────────────────
+    //
+    // Firestore sólo guarda **quién está dentro y quién tiene la palabra**. La
+    // voz va por el SFU de Agora y no pasa por aquí ni queda grabada en ningún
+    // sitio. Lo que hay en estos documentos es una lista de nombres.
+    //
+    // ── La regla que sostiene el devocional ───────────────────────────────
+    //
+    // **Nadie se da la palabra a sí mismo.** Treinta micrófonos abiertos no son
+    // un devocional, son un ruido; así que se entra en silencio, se levanta la
+    // mano, y el anfitrión da la palabra.
+    //
+    // Y eso **se cumple aquí, no por educación**: al actualizar su propio
+    // documento, cada uno puede cambiar `mano` y nada más — `palabra` tiene que
+    // quedar exactamente como estaba. Sólo el anfitrión la mueve.
+    //
+    // Importa porque de ese campo depende el permiso de verdad: la Cloud
+    // Function firma un token de **oyente** o de **el que habla** según lo que
+    // diga `palabra`, y Agora no deja publicar voz a un oyente. Si esta regla
+    // cede, la que cede es la del audio.
+    match /salas/{canal} {
+
+      function esAnfitrion() {
+        return haEntrado()
+          && exists(/databases/$(database)/documents/salas/$(canal))
+          && get(/databases/$(database)/documents/salas/$(canal)).data.anfitrion == request.auth.uid;
+      }
+
+      function salaRazonable(d) {
+        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo'])
+          && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
+          && d.abierta is bool
+          && d.desde is number
+          && d.tipo in ['devocional', 'llamada'];
+      }
+
+      // La lee cualquiera que haya entrado: hace falta para saber si la sala
+      // está abierta antes de pedir permiso de entrada.
+      allow read: if haEntrado();
+      allow create: if haEntrado()
+        && request.resource.data.anfitrion == request.auth.uid
+        && salaRazonable(request.resource.data);
+      // Cerrarla, renombrarla. Nadie puede quedarse con la sala de otro: el
+      // anfitrión no se puede cambiar.
+      allow update: if esElMismo(resource.data.anfitrion)
+        && request.resource.data.anfitrion == resource.data.anfitrion
+        && salaRazonable(request.resource.data);
+      allow delete: if esElMismo(resource.data.anfitrion);
+
+      // ------------------------------------------------------ quién está dentro
+      match /dentro/{quien} {
+        function dentroRazonable(d) {
+          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra'])
+            && d.nombre is string && d.nombre.size() <= 40
+            && d.usuario is string && d.usuario.size() <= 20
+            && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000))
+            && d.entro is number
+            && d.mano is bool
+            && d.palabra is bool;
+        }
+
+        // Todos ven la lista: es una reunión, no una sala a oscuras.
+        allow read: if haEntrado();
+
+        // Entrar es a nombre propio, en silencio, y si no te han expulsado.
+        allow create: if esElMismo(quien)
+          && dentroRazonable(request.resource.data)
+          && request.resource.data.palabra == false
+          && !exists(/databases/$(database)/documents/salas/$(canal)/expulsados/$(quien));
+
+        // Levantar la mano es lo propio. La palabra la da el anfitrión, y por
+        // eso al tocar lo suyo `palabra` tiene que quedarse igual.
+        allow update: if (
+            esElMismo(quien)
+            && dentroRazonable(request.resource.data)
+            && request.resource.data.palabra == resource.data.palabra
+          ) || esAnfitrion();
+
+        // Salirse, o que el anfitrión te saque.
+        allow delete: if esElMismo(quien) || esAnfitrion();
+      }
+
+      // --------------------------------------------------------- los expulsados
+      //
+      // Se leen porque el cliente tiene que poder decirle a alguien por qué no
+      // entra, en vez de dejarle mirando una sala que no carga.
+      match /expulsados/{quien} {
+        allow read: if haEntrado();
+        allow write: if esAnfitrion();
+      }
+    }
+
+
     // --------------------------------------------------------------- el muro
     //
     // Las notas que alguien decidió publicar. **Nada llega aquí sin que su

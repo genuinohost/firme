@@ -22,7 +22,9 @@
     "revisar-reglas": "npx firebase emulators:exec --only firestore --project genuino-pruebas \"node scripts/revisar-reglas.mjs\"",
     "desplegar-reglas": "node scripts/desplegar-reglas.mjs",
     "fallos": "node scripts/fallos.mjs",
-    "capturas-tablet": "node scripts/capturas-tablet.mjs"
+    "capturas-tablet": "node scripts/capturas-tablet.mjs",
+    "revisar-portero": "npm --prefix functions run revisar",
+    "desplegar-portero": "npx firebase deploy --only functions --project genuino-host"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.1",

@@ -115,6 +115,16 @@
     "ui": {
       "enabled": false
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "functions": {
+      "port": 5011
+    }
+  },
+  "functions": {
+    "comment": "El portero de las salas de voz. Firma quien entra y quien habla; el certificado de Agora no puede viajar en la app. Necesita el plan Blaze.",
+    "source": "functions",
+    "predeploy": [
+      "npm --prefix functions run revisar"
+    ]
   }
 }

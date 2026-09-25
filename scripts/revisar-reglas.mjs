@@ -216,6 +216,113 @@ await debe(
   ),
 );
 
+// ----------------------------------------------------------------- las salas
+//
+// El devocional en voz. Aqui no viaja audio: Firestore solo guarda quien esta
+// dentro y quien tiene la palabra. Lo que se defiende es la regla de la que
+// depende el permiso de audio de verdad.
+console.log("LAS SALAS");
+
+const SALA = "sala-de-ana";
+const dentroDe = (uid, extra = {}) => ({
+  nombre: "Quien sea",
+  usuario: uid,
+  entro: 1,
+  mano: false,
+  palabra: false,
+  ...extra,
+});
+
+await debe(
+  "cada uno abre su sala",
+  assertSucceeds(
+    setDoc(doc(ana, "salas", SALA), {
+      nombre: "Devocional de la manana",
+      anfitrion: "ana",
+      abierta: true,
+      desde: 1,
+      tipo: "devocional",
+    }),
+  ),
+);
+await debe(
+  "nadie abre una sala a nombre de otro",
+  assertFails(
+    setDoc(doc(beto, "salas", "sala-robada"), {
+      nombre: "La de Ana",
+      anfitrion: "ana",
+      abierta: true,
+      desde: 1,
+      tipo: "devocional",
+    }),
+  ),
+);
+await debe(
+  "nadie se queda con la sala de otro cambiando el anfitrion",
+  assertFails(
+    updateDoc(doc(beto, "salas", SALA), { anfitrion: "beto" }),
+  ),
+);
+await debe(
+  "un hermano entra en la sala, en silencio",
+  assertSucceeds(setDoc(doc(beto, `salas/${SALA}/dentro/beto`), dentroDe("beto"))),
+);
+await debe(
+  "nadie entra a nombre de otro",
+  assertFails(setDoc(doc(curioso, `salas/${SALA}/dentro/beto`), dentroDe("beto"))),
+);
+await debe(
+  "NADIE ENTRA YA CON LA PALABRA",
+  assertFails(
+    setDoc(doc(curioso, `salas/${SALA}/dentro/curioso`), dentroDe("curioso", { palabra: true })),
+  ),
+);
+await debe(
+  "levantar la mano si se puede: es lo propio",
+  assertSucceeds(updateDoc(doc(beto, `salas/${SALA}/dentro/beto`), { mano: true })),
+);
+await debe(
+  "NADIE SE DA LA PALABRA A SI MISMO - de esto depende el audio",
+  assertFails(updateDoc(doc(beto, `salas/${SALA}/dentro/beto`), { palabra: true })),
+);
+await debe(
+  "el anfitrion SI da la palabra",
+  assertSucceeds(updateDoc(doc(ana, `salas/${SALA}/dentro/beto`), { palabra: true })),
+);
+await debe(
+  "y la quita",
+  assertSucceeds(updateDoc(doc(ana, `salas/${SALA}/dentro/beto`), { palabra: false })),
+);
+await debe(
+  "nadie silencia a un tercero",
+  assertFails(updateDoc(doc(curioso, `salas/${SALA}/dentro/beto`), { palabra: false })),
+);
+await debe(
+  "todos ven quien esta dentro: es una reunion, no una sala a oscuras",
+  assertSucceeds(getDocs(collection(curioso, `salas/${SALA}/dentro`))),
+);
+await debe(
+  "sin cuenta no se ve nada de la sala",
+  assertFails(getDoc(doc(nadie, "salas", SALA))),
+);
+await debe(
+  "cualquiera se sale cuando quiere",
+  assertSucceeds(deleteDoc(doc(beto, `salas/${SALA}/dentro/beto`))),
+);
+await debe(
+  "solo el anfitrion expulsa",
+  assertFails(setDoc(doc(beto, `salas/${SALA}/expulsados/curioso`), { cuando: 1 })),
+);
+await debe(
+  "el anfitrion expulsa",
+  assertSucceeds(setDoc(doc(ana, `salas/${SALA}/expulsados/curioso`), { cuando: 1 })),
+);
+await debe(
+  "un expulsado NO vuelve a entrar",
+  assertFails(setDoc(doc(curioso, `salas/${SALA}/dentro/curioso`), dentroDe("curioso"))),
+);
+
+
 // ------------------------------------------------------------------ el muro
 console.log("\nEl muro");
 await debe(

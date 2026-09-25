@@ -79,6 +79,15 @@ function apuntarSesion(hay: boolean): void {
 // ---------------------------------------------------------------- el arranque
 
 type Piezas = {
+  /**
+   * La app de Firebase.
+   *
+   * Se expone porque las Cloud Functions —el portero de las salas de voz— se
+   * piden con `getFunctions(app, region)`, y la región **hay que pasarla**: sin
+   * ella el SDK apunta a `us-central1` por su cuenta y el día que una función se
+   * despliegue en otra parte, dejaría de encontrarla sin decir por qué.
+   */
+  app: import("firebase/app").FirebaseApp;
   auth: import("firebase/auth").Auth;
   bd: import("firebase/firestore").Firestore;
 };
@@ -95,7 +104,7 @@ export function nube(): Promise<Piezas> {
       import("firebase/firestore"),
     ]);
     const app = getApps()[0] ?? initializeApp(CONFIG);
-    return { auth: getAuth(app), bd: getFirestore(app) };
+    return { app, auth: getAuth(app), bd: getFirestore(app) };
   })();
   return piezas;
 }

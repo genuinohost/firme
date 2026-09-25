@@ -51,6 +51,15 @@
         <!-- Repone las alarmas cada seis horas sin depender de que suene
              ninguna. Ver TrabajoRearmar.java: el 23-09-2026 fallo una alarma y
              se llevo doce por delante porque el rearme dependia del disparo. -->
+        <!--
+            Mientras hay una sala de voz abierta. El tipo `microphone` es lo que
+            impide que Android 14 corte el microfono al pasar a segundo plano.
+        -->
+        <service
+            android:name=".ServicioSala"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <service
             android:name=".TrabajoRearmar"
             android:permission="android.permission.BIND_JOB_SERVICE"
@@ -103,6 +112,22 @@
       mas rapida de que te los nieguen para siempre.
     -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+        Las salas de voz.
+
+        MODIFY_AUDIO_SETTINGS lo exige el SDK de Agora: sin el no puede cambiar
+        al modo de comunicacion ni encender el altavoz, y una llamada suena por
+        el auricular con el volumen de multimedia.
+
+        FOREGROUND_SERVICE_MICROPHONE es lo que hace que un devocional de
+        cuarenta y cinco minutos no se muera al mirar otra cosa. Desde Android 14
+        el sistema **corta el microfono** a una app en segundo plano si no hay un
+        servicio en primer plano de tipo microfono. Sin esto, salir de la app un
+        segundo te saca de la sala sin decir nada.
+    -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!--
       Poner una alarma en el reloj del propio movil, como respaldo de las que de

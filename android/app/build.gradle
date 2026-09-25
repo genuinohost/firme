@@ -62,6 +62,27 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // ------------------------------------------------- las salas de voz
+    //
+    // El SDK de **voz** de Agora, no el completo: aqui no hay video, y el
+    // completo pesa cuatro veces mas por codecs que no se usan.
+    //
+    // La version esta elegida MIDIENDO, no cogiendo la ultima (24-09-2026):
+    //
+    //   4.5.2.135        28,5 MB   <- esta
+    //   4.5.3.4.1        68,7 MB
+    //   4.6.3.1          72,3 MB
+    //
+    // A partir de 4.5.3 las compilaciones normales empaquetan los modelos de
+    // supresion de ruido por IA y **triplican el tamano**. Actualizar a ciegas
+    // llevaria la app de unos 12 MB por movil a unos 23. Si algun dia hace
+    // falta subir, medir primero y mirar las variantes `.BASIC` (27,2 MB).
+    //
+    // El .aar trae las cuatro arquitecturas. En un .aab cada movil se descarga
+    // solo la suya, asi que al usuario le llegan unos 7 MB de esto, no 28.
+    implementation 'io.agora.rtc:agora-special-voice:4.5.2.135'
+
 }
 
 apply from: 'capacitor.build.gradle'
