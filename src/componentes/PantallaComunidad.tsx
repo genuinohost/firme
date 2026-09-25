@@ -12,6 +12,7 @@ import {
 import { abrirEnlace } from "@/logica/enlaces";
 import { copiar } from "@/logica/compartir";
 import { Muro } from "./Muro";
+import { SalasAbiertas } from "./SalasAbiertas";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
 /**
@@ -114,7 +115,15 @@ export function PantallaComunidad({
   const redes = enlaces.filter((e) => !SON_GRUPOS.includes(e.tipo));
   const reunionesPuestas = reuniones.filter((r) => estaPuesto(r.url));
 
-  const vacia = enlaces.length === 0 && reunionesPuestas.length === 0;
+  /**
+   * Si en esta pantalla no hay absolutamente nada.
+   *
+   * Cuenta también lo que trae `SalasAbiertas`, que se entera aparte: un
+   * devocional abierto —o el botón de abrirlo— es contenido, y decir «aquí no
+   * hay nada» encima de una sala sonando es lo contrario de informar.
+   */
+  const [haySalas, setHaySalas] = useState(false);
+  const vacia = enlaces.length === 0 && reunionesPuestas.length === 0 && !haySalas;
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
@@ -133,6 +142,17 @@ export function PantallaComunidad({
         único que siempre tiene algo debajo de lo que casi nunca lo tiene.
       */}
       <Muro />
+
+      {/*
+        Lo que esta sonando AHORA va antes que los horarios.
+
+        Una reunion publicada dice que va a haber un devocional; esto dice que
+        hay uno abierto. El dia que empiece veinte minutos tarde —que es lo que
+        pasa siempre— esto es lo unico que lo refleja.
+      */}
+      {onEntrarEnSala ? (
+        <SalasAbiertas onEntrar={onEntrarEnSala} onHayAlgo={setHaySalas} />
+      ) : null}
 
       {vacia ? (
         <Vacio>

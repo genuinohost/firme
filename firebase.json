@@ -108,7 +108,7 @@
     "indexes": "firestore.indexes.json"
   },
   "emulators": {
-    "comment": "Sólo para probar firestore.rules en local con npm run revisar-reglas. No toca nada de producción: el emulador arranca vacío y se apaga al acabar.",
+    "comment": "Solo para probar en local: firestore.rules con npm run revisar-reglas, y el portero de las salas entero con npm run revisar-sala. No tocan nada de produccion: los emuladores arrancan vacios y se apagan al acabar.",
     "firestore": {
       "port": 8199
     },
@@ -118,6 +118,9 @@
     "singleProjectMode": true,
     "functions": {
       "port": 5011
+    },
+    "auth": {
+      "port": 9099
     }
   },
   "functions": {

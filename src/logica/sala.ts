@@ -118,11 +118,16 @@ export type Permiso = {
  */
 export async function pedirPermiso(canal: string): Promise<Permiso> {
   const { app } = await nube();
-  const { getFunctions, httpsCallable } = await import("firebase/functions");
-  const llamar = httpsCallable<{ canal: string }, Permiso>(
-    getFunctions(app, "us-central1"),
-    "permisoDeSala",
+  const { connectFunctionsEmulator, getFunctions, httpsCallable } = await import(
+    "firebase/functions"
   );
+  const funciones = getFunctions(app, "us-central1");
+  // El mismo interruptor que en `nube.ts`: en lo que se publica es la constante
+  // `false` y esto no entra en el paquete.
+  if (import.meta.env.VITE_EMULADORES === "1") {
+    connectFunctionsEmulator(funciones, "127.0.0.1", 5011);
+  }
+  const llamar = httpsCallable<{ canal: string }, Permiso>(funciones, "permisoDeSala");
   return (await llamar({ canal })).data;
 }
 
@@ -369,4 +374,44 @@ export function alCaducarElToken(
   hacer: () => void,
 ): Promise<{ remove: () => Promise<void> }> {
   return nativa.addListener("tokenPorCaducar", () => hacer());
+}
+
+/**
+ * Las salas abiertas ahora mismo.
+ *
+ * Se consulta sólo por `abierta` y se ordena aquí, en el móvil. Con `orderBy`
+ * en la consulta haría falta un índice compuesto en Firestore, y un índice que
+ * falta no da un error claro: da una consulta que falla con un enlace para
+ * crearlo, en el móvil de alguien, a la hora del devocional. Son veinte salas
+ * como mucho: ordenarlas aquí no cuesta nada.
+ */
+export async function salasAbiertas(): Promise<Sala[]> {
+  const { bd } = await nube();
+  const { collection, getDocs, limit, query, where } = await import("firebase/firestore");
+  const r = await getDocs(
+    query(collection(bd, "salas"), where("abierta", "==", true), limit(20)),
+  );
+  return r.docs
+    .map((d) => ({ canal: d.id, ...(d.data() as Omit<Sala, "canal">) }))
+    .sort((a, b) => b.desde - a.desde);
+}
+
+/**
+ * Un identificador de canal a partir del nombre que escribió una persona.
+ *
+ * Agora no admite acentos ni espacios, así que «Devocional de la mañana» no
+ * puede ser el canal. Se le añade la fecha porque **el canal es el sitio**: dos
+ * devocionales con el mismo nombre en semanas distintas tienen que ser dos
+ * salas, o quien entre tarde a uno se meterá en la grabación mental del otro.
+ */
+export function canalDesdeNombre(nombre: string, cuando = new Date()): string {
+  const limpio = nombre
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  const dia = cuando.toISOString().slice(0, 10);
+  return `${limpio || "sala"}-${dia}`;
 }

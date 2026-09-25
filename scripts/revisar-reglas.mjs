@@ -234,10 +234,22 @@ const dentroDe = (uid, extra = {}) => ({
 });
 
 await debe(
-  "cada uno abre su sala",
+  "quien modera abre una sala",
   assertSucceeds(
-    setDoc(doc(ana, "salas", SALA), {
+    setDoc(doc(moderador, "salas", SALA), {
       nombre: "Devocional de la manana",
+      anfitrion: "mod",
+      abierta: true,
+      desde: 1,
+      tipo: "devocional",
+    }),
+  ),
+);
+await debe(
+  "QUIEN NO MODERA NO ABRE SALAS - cada minuto de voz lo paga Alex",
+  assertFails(
+    setDoc(doc(ana, "salas", "sala-de-ana"), {
+      nombre: "La mia",
       anfitrion: "ana",
       abierta: true,
       desde: 1,
@@ -246,11 +258,11 @@ await debe(
   ),
 );
 await debe(
-  "nadie abre una sala a nombre de otro",
+  "ni a nombre de otro",
   assertFails(
     setDoc(doc(beto, "salas", "sala-robada"), {
-      nombre: "La de Ana",
-      anfitrion: "ana",
+      nombre: "La del moderador",
+      anfitrion: "mod",
       abierta: true,
       desde: 1,
       tipo: "devocional",
@@ -287,11 +299,11 @@ await debe(
 );
 await debe(
   "el anfitrion SI da la palabra",
-  assertSucceeds(updateDoc(doc(ana, `salas/${SALA}/dentro/beto`), { palabra: true })),
+  assertSucceeds(updateDoc(doc(moderador, `salas/${SALA}/dentro/beto`), { palabra: true })),
 );
 await debe(
   "y la quita",
-  assertSucceeds(updateDoc(doc(ana, `salas/${SALA}/dentro/beto`), { palabra: false })),
+  assertSucceeds(updateDoc(doc(moderador, `salas/${SALA}/dentro/beto`), { palabra: false })),
 );
 await debe(
   "nadie silencia a un tercero",
@@ -315,7 +327,7 @@ await debe(
 );
 await debe(
   "el anfitrion expulsa",
-  assertSucceeds(setDoc(doc(ana, `salas/${SALA}/expulsados/curioso`), { cuando: 1 })),
+  assertSucceeds(setDoc(doc(moderador, `salas/${SALA}/expulsados/curioso`), { cuando: 1 })),
 );
 await debe(
   "un expulsado NO vuelve a entrar",

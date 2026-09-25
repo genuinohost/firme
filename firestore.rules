@@ -242,7 +242,17 @@ service cloud.firestore {
       // La lee cualquiera que haya entrado: hace falta para saber si la sala
       // está abierta antes de pedir permiso de entrada.
       allow read: if haEntrado();
-      allow create: if haEntrado()
+
+      // Abrir una sala **sólo quien modera**, y no por desconfianza: cada minuto
+      // de voz que se abre aquí lo paga Alex en Agora. Cualquiera con una cuenta
+      // podría abrir salas toda la noche y vaciar el saldo sin que nadie se
+      // entere hasta el recibo.
+      //
+      // Se reutiliza la lista de `moderadores/{uid}`, que ya existe, no se puede
+      // leer desde la app y se da de alta a mano desde la consola. Cuando haya
+      // más anfitriones que Alex, esto es lo que hay que aflojar — y conviene
+      // que sea una decisión, no un descuido.
+      allow create: if esModerador()
         && request.resource.data.anfitrion == request.auth.uid
         && salaRazonable(request.resource.data);
       // Cerrarla, renombrarla. Nadie puede quedarse con la sala de otro: el

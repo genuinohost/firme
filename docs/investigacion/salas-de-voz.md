@@ -132,3 +132,46 @@ Convocar es lo que WhatsApp no sabe hacer y esta app sí.
   se avisa dentro de la sala.
 - **El timbre con la app cerrada.** Es la fase 3, y necesita push. Para el
   devocional no bloquea: la alarma ya convoca.
+
+## Probar sin cuentas: los emuladores
+
+Todo esto se puede comprobar **sin cuenta de Agora y sin plan Blaze**, porque
+firmar un token es matemática local y las reglas corren igual en el emulador.
+
+```bash
+npm run revisar-reglas    # las reglas de Firestore, 75 preguntas
+npm run revisar-portero   # las dos decisiones del portero, sueltas
+npm run revisar-sala      # el portero ENTERO: emuladores, sesiones y la puerta
+```
+
+### Y la app entera contra los emuladores
+
+Para mirar lo que hay detrás de «haber entrado» —abrir un devocional, la lista
+de salas— sin usar la cuenta de verdad de nadie:
+
+```bash
+echo VITE_EMULADORES=1 > .env.local
+npx firebase emulators:start --only firestore,functions,auth --project genuino-host
+npm run dev
+```
+
+`.env.local` está ignorado por git y **no existe en la máquina que compila lo
+que se publica**, así que en el paquete de Google Play esto es la constante
+`false` y el código ni se incluye. Al terminar, **borrarlo**: si se queda, la app
+intenta hablar con `127.0.0.1` y no funciona nada.
+
+### Tres trampas ya pagadas
+
+**El descubrimiento de funciones tarda más de diez segundos.** Cuando se pasa,
+el emulador **no falla: arranca sin funciones**, y todas las llamadas responden
+404. Las pruebas no dicen «no se pudo cargar», dicen «esa sala no existe» nueve
+veces. Se sube con `FUNCTIONS_DISCOVERY_TIMEOUT=60`, que ya va puesto en
+`scripts/revisar-sala.mjs`.
+
+**Los emuladores sobreviven a que se cierre la terminal.** Queda un `java`
+ocupando el 8199 y el siguiente arranque falla con «port taken». Se matan por
+puerto, no por nombre.
+
+**La entrada con Google no se puede completar desde un panel de navegador**: el
+flujo de ventana emergente necesita un opener y responde «No matching frame». Se
+entra creando la sesión a mano desde la consola de la página.

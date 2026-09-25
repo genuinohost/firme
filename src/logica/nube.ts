@@ -94,6 +94,29 @@ type Piezas = {
 
 let piezas: Promise<Piezas> | null = null;
 
+/**
+ * Si esta copia habla con los emuladores en vez de con producción.
+ *
+ * ── Para qué ──────────────────────────────────────────────────────────────
+ *
+ * Para poder **probar la app entera sin tocar nada de nadie**: entrar con una
+ * cuenta inventada, abrir un devocional, ver la lista. Sin esto, todo lo que
+ * está detrás de «haber entrado» sólo se puede mirar con la cuenta de verdad de
+ * alguien y con los datos de verdad de todos.
+ *
+ * ── Y por qué no puede colarse en producción ──────────────────────────────
+ *
+ * Vite **sustituye `import.meta.env` en tiempo de compilación**. La variable
+ * vive en `.env.local`, que está ignorado por git y no existe en la máquina que
+ * compila lo que se publica, así que en el paquete que llega a Google Play esto
+ * es la constante `false` y el código de dentro ni se incluye.
+ *
+ * Si algún día apareciera un `.env.local` en un servidor de compilación, la app
+ * publicada intentaría hablar con `127.0.0.1` y no funcionaría nada — ruidoso y
+ * evidente, que es como tiene que fallar esto.
+ */
+const CON_EMULADORES = import.meta.env.VITE_EMULADORES === "1";
+
 /** Arranca Firebase una sola vez, y devuelve siempre lo mismo. */
 export function nube(): Promise<Piezas> {
   if (piezas) return piezas;
@@ -104,7 +127,22 @@ export function nube(): Promise<Piezas> {
       import("firebase/firestore"),
     ]);
     const app = getApps()[0] ?? initializeApp(CONFIG);
-    return { app, auth: getAuth(app), bd: getFirestore(app) };
+    const auth = getAuth(app);
+    const bd = getFirestore(app);
+
+    if (CON_EMULADORES) {
+      // Los puertos son los de `firebase.json`. Se avisa por consola a propósito:
+      // ver datos raros y no saber que son de un emulador cuesta media tarde.
+      console.warn("Genuino: hablando con los EMULADORES, no con producción.");
+      const [{ connectAuthEmulator }, { connectFirestoreEmulator }] = await Promise.all([
+        import("firebase/auth"),
+        import("firebase/firestore"),
+      ]);
+      connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+      connectFirestoreEmulator(bd, "127.0.0.1", 8199);
+    }
+
+    return { app, auth, bd };
   })();
   return piezas;
 }
