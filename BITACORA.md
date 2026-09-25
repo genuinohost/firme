@@ -8,6 +8,118 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 24 de septiembre de 2026 (madrugada) — las salas de voz
+
+Alex, dos mensajes seguidos: «necesito poder llamar a mis amigos a través de la app» y luego
+«la app debe tener la capacidad de realizar una llamada grupal. Al menos 30 personas o más
+unidas en una llamada para poder leer los devocionales y comentarlos».
+
+Son el mismo sistema con dos tamaños. Se construye **una sola sala**.
+
+## 🔴 Se tiró el primer plan, y mejor así
+
+El plan era **WebRTC a mano**: señalización en Firestore, STUN gratis, cero proveedores.
+Sirve para dos personas y **no sirve para treinta**: sin un servidor que reparta, cada móvil
+se conecta con todos los demás — 29 conexiones y 29 subidas de audio simultáneas por
+teléfono. Ningún móvil aguanta eso, y menos con datos venezolanos.
+
+Se tiró al recibir el segundo mensaje, antes de escribir la primera línea del motor. Si el
+mensaje hubiera llegado dos días después, se tiraba con el trabajo hecho.
+
+## Tres decisiones, las tres medidas
+
+**Agora, no LiveKit ni Daily.** Cobra el audio aparte del vídeo —$0,99 frente a $3,99 por mil
+minutos— y regala 10.000 al mes. El devocional semanal gasta 5.400.
+
+| Cadencia | Agora | LiveKit | Daily |
+|---|---|---|---|
+| 1 × semana | **$0** | $50/mes | $0 |
+| Todos los días | **$30/mes** | $50/mes | $122/mes |
+
+**SDK nativo, no el de JavaScript.** Su propia documentación: el soporte de audio en apps con
+WebView «depende del dispositivo». Eso es exactamente el fallo que este proyecto lleva un mes
+persiguiendo con las alarmas — funciona en el móvil de quien programa y no en el de un
+hermano. Así que plugin de Capacitor propio, como `Dictado` y `AlarmaExacta`.
+
+**La versión del SDK, elegida midiendo:**
+
+```
+4.5.2.135        28,5 MB   <- esta
+4.5.3.3.BASIC    27,2 MB
+4.5.3.4.1        68,7 MB
+4.6.3.1          72,3 MB
+```
+
+Desde 4.5.3 las compilaciones normales empaquetan los modelos de supresión de ruido por IA y
+**triplican el tamaño**. Actualizar a ciegas se lleva la app de ~20 MB a ~40.
+
+Coste real medido en el APK: **15,1 MB de librerías nativas** para un móvil arm64.
+
+## La regla de la que depende todo
+
+**Nadie se da la palabra a sí mismo.**
+
+30 micrófonos abiertos no son un devocional, son un ruido. Se entra escuchando, se levanta la
+mano, y el anfitrión da la palabra. Y eso **no se cumple por educación**:
+
+1. El rol viaja **firmado dentro del token** de Agora. Comprobado leyendo el código de la
+   librería, no de memoria: con rol `SUBSCRIBER` el token **no lleva el privilegio de publicar
+   audio**. El oyente no es alguien a quien la app no le enciende el micrófono — es alguien
+   cuyo permiso no incluye encenderlo. Un APK modificado no se salta esto.
+2. El token lo firma una **Cloud Function**, porque el certificado de Agora no puede viajar en
+   la app. Esa función es la puerta: comprueba cuenta, sala abierta y no expulsado.
+3. Quién tiene la palabra vive en `salas/{canal}/dentro/{uid}.palabra`, y **las reglas de
+   Firestore sólo dejan moverlo al anfitrión**: al tocar tu propia ficha, ese campo tiene que
+   quedarse exactamente como estaba.
+
+Si la regla 3 cediera, cedería el audio. Tiene una prueba con ese nombre:
+
+```
+ok   NADIE SE DA LA PALABRA A SI MISMO - de esto depende el audio
+```
+
+## La sala no es una pantalla nueva: es una reunión
+
+`comunidad.ts` **ya** traía reuniones de `comunidad.json` con nombre, días, hora y zona. Un
+devocional de Genuino es una reunión cuya `url` apunta a la sala propia en vez de a Zoom:
+
+```
+genuino://sala/devocional-manana
+https://genuino-pro.web.app/sala/devocional-manana   ← para pegar en WhatsApp
+```
+
+Eso reaprovecha, sin escribir nada: publicar y cambiar sin pasar por Google Play, el horario,
+la pantalla «Juntos» — **y la alarma**. Convocar es lo que WhatsApp no sabe hacer y esta app
+sí.
+
+## Dos cosas que se descubrieron haciéndolo
+
+**`agora-token` es CommonJS.** Un `import { RtcRole } from "agora-token"` falla al **cargar el
+módulo**, no al escribirlo: habría reventado al desplegar. Se vio al ejecutarlo.
+
+**Android 14 corta el micrófono** a una app en segundo plano sin servicio en primer plano de
+tipo `microphone`. Sin eso, mirar una notificación a mitad del devocional te saca de la sala —
+y en silencio. De ahí `ServicioSala`.
+
+## Comprobado
+
+- **74 reglas de Firestore**, 17 nuevas de las salas.
+- **20 del portero**, incluidas las que leen los privilegios dentro del token.
+- El **Java compila contra el SDK de verdad**: cada llamada a Agora que escribí existe.
+- El **APK entero se ensambla**: BUILD SUCCESSFUL.
+- La app arranca y «Juntos» se pinta sin errores de consola.
+
+## Lo que falta
+
+- ⚠️ **El App ID de Agora.** Cuenta gratuita, sin tarjeta. Sin él no hay voz.
+- ⚠️ **El plan Blaze de Firebase**, para la Cloud Function. Gasto esperado $0, pide tarjeta.
+- Desplegar el portero y poner el secreto `AGORA_APP_CERTIFICATE`.
+- Probar con dos móviles de verdad. Nada de esto se ha oído todavía.
+- Fase 3: el timbre con la app cerrada (push + pantalla de llamada). Para el devocional no
+  bloquea, porque la alarma ya convoca.
+
+---
+
 # 🧭 24 de septiembre de 2026 (noche) — llamar a un hermano, y la copia que casi se borra sola
 
 ## Llamar, y a quién

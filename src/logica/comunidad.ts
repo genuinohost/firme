@@ -194,3 +194,30 @@ export function horaLocalDe(reunion: Reunion, ahora = new Date()): string {
   const norm = ((minutos % 1440) + 1440) % 1440;
   return `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
 }
+
+/**
+ * Si esta reunión es una sala de voz de Genuino, y cuál.
+ *
+ * ── Por qué una reunión y no una pantalla nueva ────────────────────────────
+ *
+ * Un devocional en Genuino es **una reunión cuya `url` apunta a la sala propia**
+ * en vez de a Zoom. Eso reaprovecha, sin escribir nada: cómo se publican y se
+ * cambian sin pasar por Google Play, el horario y la zona del anfitrión, y esta
+ * pantalla donde ya se ven.
+ *
+ * Se admiten dos formas, y las dos a propósito:
+ *
+ *   genuino://sala/devocional-manana
+ *   https://genuino-pro.web.app/sala/devocional-manana
+ *
+ * La segunda existe para poder **pegar el enlace en WhatsApp**: a quien no tenga
+ * la app le abre la web, y a quien la tenga le abre la sala. La primera es la que
+ * se escribe en `comunidad.json` cuando no hace falta compartirla fuera.
+ */
+export function salaDeLaUrl(url: string): string | null {
+  if (typeof url !== "string") return null;
+  const m = /^(?:genuino:\/\/sala\/|https:\/\/[^/]+\/sala\/)([A-Za-z0-9._\-]{1,64})$/.exec(
+    url.trim(),
+  );
+  return m ? m[1] : null;
+}

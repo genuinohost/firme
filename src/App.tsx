@@ -37,8 +37,10 @@ import { PantallaAjustes } from "@/componentes/PantallaAjustes";
 import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
 import { PantallaCuenta } from "@/componentes/PantallaCuenta";
+import { PantallaSala } from "@/componentes/PantallaSala";
 import { PantallaFallo } from "@/componentes/PantallaFallo";
-import { contarSolicitudes, publicarNota } from "@/logica/muro";
+import { contarSolicitudes, miUid, publicarNota } from "@/logica/muro";
+import { leerPerfil } from "@/logica/nube";
 import { respaldarSiToca } from "@/logica/respaldoNube";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
@@ -90,6 +92,19 @@ export default function App() {
   /** Id del plan cuya ficha está abierta. */
   const [planAbierto, setPlanAbierto] = useState<string | null>(null);
   const [bloqueAbierto, setBloqueAbierto] = useState<string | null>(null);
+
+  /**
+   * La sala de voz en la que estamos, o null.
+   *
+   * Vive aquí arriba y no dentro de «Juntos» a propósito: una sala abierta tiene
+   * que sobrevivir a que alguien cambie de pestaña a mirar su rutina. Si viviera
+   * en la pantalla de la comunidad, salir de esa pestaña desmontaría el
+   * componente y colgaría la llamada — con treinta personas dentro.
+   */
+  const [sala, setSala] = useState<{
+    canal: string;
+    quien: { uid: string; nombre: string; usuario: string; foto?: string };
+  } | null>(null);
 
   /**
    * La cerradura.
@@ -359,6 +374,35 @@ export default function App() {
       });
   };
 
+  /**
+   * Entrar en una sala de voz.
+   *
+   * Hace falta el perfil, no sólo la cuenta: en la sala se ve el nombre y la
+   * foto de cada uno, y una lista de treinta identificadores no es una reunión.
+   * Quien no tiene perfil todavía se entera aquí, que es cuando le importa.
+   */
+  const entrarEnSala = async (canal: string) => {
+    try {
+      const uid = await miUid();
+      const perfil = uid ? await leerPerfil(uid) : null;
+      if (!uid || !perfil) {
+        setAvisoMuro("Para entrar en una sala hace falta tu cuenta y tu perfil.");
+        return;
+      }
+      setSala({
+        canal,
+        quien: {
+          uid,
+          nombre: perfil.nombre,
+          usuario: perfil.usuario,
+          ...(perfil.foto ? { foto: perfil.foto } : {}),
+        },
+      });
+    } catch {
+      setAvisoMuro("No se pudo entrar en la sala.");
+    }
+  };
+
   const cambiarAjustes = (ajustes: Ajustes) => setDatos((d) => ({ ...d, ajustes }));
   const cambiarRutina = (rutina: BloqueRutina[]) => setDatos((d) => ({ ...d, rutina }));
   const cambiarMotivos = (motivos: Motivo[]) => setDatos((d) => ({ ...d, motivos }));
@@ -434,7 +478,9 @@ export default function App() {
 
         {pestaña === "mensaje" ? <PantallaMensaje /> : null}
 
-        {pestaña === "comunidad" ? <PantallaComunidad /> : null}
+        {pestaña === "comunidad" ? (
+          <PantallaComunidad onEntrarEnSala={(canal) => void entrarEnSala(canal)} />
+        ) : null}
 
         {pestaña === "mas" ? (
           <PantallaMas
@@ -790,6 +836,30 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
 
       {perdidas.length > 0 ? (
         <AvisoAlarmaPerdida perdidas={perdidas} onCerrar={() => setPerdidas([])} />
+      ) : null}
+
+      {/*
+        La sala de voz, encima de todo y sobre fondo opaco.
+
+        Tapa la app entera a proposito: mientras treinta hermanos estan leyendo
+        un devocional, lo que importa es quien habla y el boton de la mano. Nadie
+        entra en una sala para hojear su rutina, y una pantalla a medias con la
+        llamada detras invita a tocar cosas y a colgar sin querer.
+
+        Va DESPUES del aviso de alarma perdida en el HTML, asi que se pinta
+        encima. Es lo correcto: si alguien esta en un devocional, el parte de una
+        alarma de ayer puede esperar a que salga.
+      */}
+      {sala ? (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-fondo">
+          <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg p-4">
+            <PantallaSala
+              canal={sala.canal}
+              quienSoy={sala.quien}
+              onSalir={() => setSala(null)}
+            />
+          </div>
+        </div>
       ) : null}
 
       {disparo ? (

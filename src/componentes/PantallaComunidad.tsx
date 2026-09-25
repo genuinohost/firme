@@ -4,6 +4,7 @@ import {
   estadoReunion,
   horaLocalDe,
   leerGuardada,
+  salaDeLaUrl,
   type Comunidad,
   type Enlace,
   type Reunion,
@@ -47,16 +48,24 @@ const SON_GRUPOS = ["whatsapp", "telegram"];
  * daño que no tener pantalla: la primera impresión es que nadie cuida esto.
  */
 function estaPuesto(url: string): boolean {
-  return (
-    typeof url === "string" &&
-    url.startsWith("https://") &&
-    !/PON_AQUI/i.test(url)
-  );
+  if (typeof url !== "string" || /PON_AQUI/i.test(url)) return false;
+  // `genuino://sala/...` tambien cuenta: es una sala de voz de la propia app, no
+  // un enlace roto. Lo reconoce `salaDeLaUrl`.
+  return url.startsWith("https://") || salaDeLaUrl(url) != null;
 }
 
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
-export function PantallaComunidad() {
+export function PantallaComunidad({
+  onEntrarEnSala,
+}: {
+  /**
+   * Una reunion que es una sala de Genuino no se abre en el navegador: se entra.
+   * Si no se pasa —en la web, donde no hay voz— se abre como un enlace normal y
+   * la propia pantalla de la sala explica que esto es de la app.
+   */
+  onEntrarEnSala?: (canal: string) => void;
+}) {
   const [comunidad, setComunidad] = useState<Comunidad>(() => leerGuardada());
   const [cargando, setCargando] = useState(false);
   const [ahora, setAhora] = useState(() => new Date());
@@ -83,6 +92,11 @@ export function PantallaComunidad() {
    * app no hacía nada en absoluto: se tocaba un grupo y no pasaba nada.
    */
   const abrir = async (url: string) => {
+    const canal = salaDeLaUrl(url);
+    if (canal && onEntrarEnSala) {
+      onEntrarEnSala(canal);
+      return;
+    }
     if (!(await abrirEnlace(url))) setSinAbrir(url);
   };
 
@@ -191,9 +205,15 @@ export function PantallaComunidad() {
         </Boton>
       </div>
 
+      {/*
+        Esta frase decia «al entrar sales de la app», y con las salas de voz dejo
+        de ser verdad: un devocional de Genuino pasa dentro. Decir que se sale
+        cuando no se sale hace que alguien no toque el boton por miedo a perder
+        la pantalla.
+      */}
       <p className="text-center text-xs leading-relaxed text-tenue">
-        Los grupos y las reuniones los lleva quien cuida esta comunidad. Al entrar
-        sales de la app.
+        Los grupos y las reuniones los lleva quien cuida esta comunidad. Los grupos
+        se abren fuera; los devocionales de Genuino, aquí dentro.
       </p>
     </div>
   );
