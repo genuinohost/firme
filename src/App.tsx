@@ -107,9 +107,15 @@ export default function App() {
    * teléfono, no algo del usuario. Si se cambia de móvil, vuelve a salir, y
    * está bien que salga: el candado hay que ponerlo en cada uno.
    */
-  const [vioElAviso, setVioElAviso] = useState(
-    () => localStorage.getItem("genuino.avisoDespertador") === "visto",
-  );
+  const [vioElAviso, setVioElAviso] = useState(() => {
+    const guardado = localStorage.getItem("genuino.avisoDespertador");
+    if (guardado === "visto") return true;
+    // Si lo cerró con algo sin conceder, se guardó la fecha en vez de «visto»
+    // y vuelve a salir al día siguiente. No se insiste más de una vez al día:
+    // una pantalla que sale en cada arranque se cierra sin leerla.
+    const cuando = Number(guardado);
+    return Number.isFinite(cuando) && cuando > 0 && Date.now() - cuando < 86_400_000;
+  });
 
   const ahora = useReloj();
 
@@ -748,8 +754,11 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
       {esNativo() && !vioElAviso && datos.rutina.some((b) => b.activo) ? (
         <AvisoDespertadorSeguro
           rutina={datos.rutina}
-          onCerrar={() => {
-            localStorage.setItem("genuino.avisoDespertador", "visto");
+          onCerrar={(faltabaAlgo) => {
+            localStorage.setItem(
+              "genuino.avisoDespertador",
+              faltabaAlgo ? String(Date.now()) : "visto",
+            );
             setVioElAviso(true);
           }}
         />
