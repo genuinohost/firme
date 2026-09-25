@@ -51,8 +51,25 @@ const { RtcRole, RtcTokenBuilder } = agoraToken;
 
 initializeApp();
 
-/** El App ID no es secreto: va en la app de todas formas. */
-const APP_ID = defineString("AGORA_APP_ID");
+/**
+ * El App ID del proyecto de Agora.
+ *
+ * **No es secreto**, y por eso está escrito aquí en vez de en un archivo aparte:
+ * identifica el proyecto, no autoriza nada. Con el App ID solo no se puede
+ * entrar a ningún canal nuestro — hace falta un token firmado, y eso lo firma el
+ * certificado, que sí es secreto y que no aparece en este repositorio.
+ *
+ * Escrito como valor por defecto y no en un `.env` a propósito: `.gitignore`
+ * ignora todos los `.env*`, así que un archivo con esto dentro no viajaría con
+ * el proyecto y el primer despliegue desde otra máquina se quedaría a medias
+ * preguntando por un valor que nadie sabe. Se puede cambiar sin tocar el código
+ * poniendo la variable de entorno `AGORA_APP_ID`.
+ *
+ * Cuenta creada por Alex el 25-09-2026.
+ */
+const APP_ID = defineString("AGORA_APP_ID", {
+  default: "1d30537aab4a4171b9649dba7f408565",
+});
 
 /** El certificado sí. Con él se firma, y con él se podría suplantar. */
 const CERTIFICADO = defineSecret("AGORA_APP_CERTIFICATE");
