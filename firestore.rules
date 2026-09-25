@@ -26,8 +26,19 @@ rules_version = '2';
 // publican jamás: eso cuenta la batalla de alguien aunque su texto no la
 // cuente.
 //
-// El diario entero, los repasos de la noche y las rachas del día a día siguen
-// sin tener colección aquí, y siguen sin poder tenerla.
+// El diario entero y los repasos de la noche siguen sin tener colección aquí, y
+// siguen sin poder tenerla.
+//
+// ── La segunda vez que se movió: el respaldo ───────────────────────────────
+//
+// El 24 de septiembre de 2026, Alex: «los datos básicos deberían estar en una
+// nube, porque no todo el mundo va a estar pendiente de exportar una copia».
+// Tenía razón, y era un fallo de diseño: el primer hermano que cambiara de
+// teléfono perdía su rutina entera.
+//
+// Así que **la rutina y los registros sí suben ahora**, en `usuarios/{uid}/
+// respaldo/rutina`, y sólo los lee su dueño. Lo que no sube, y lo que estas
+// reglas impiden que suba nunca, está escrito abajo en esa sección.
 // ============================================================================
 
 service cloud.firestore {
@@ -116,6 +127,36 @@ service cloud.firestore {
           && (!('whatsapp' in request.resource.data)
               || (request.resource.data.whatsapp is string
                   && request.resource.data.whatsapp.size() <= 40));
+      }
+
+      // ----------------------------------------------------------- el respaldo
+      //
+      // La copia de la rutina, para que cambiar de teléfono no cueste la racha.
+      //
+      // **Sólo su dueño.** Ni los hermanos aceptados, que sí pueden leer
+      // `privado`: ahí hay un número de teléfono para que le llamen, y aquí hay
+      // el respaldo de alguien. No es un dato de su perfil, no se comparte con
+      // nadie, y por eso la condición es la más corta de este archivo.
+      //
+      // **La lista de campos es la promesa, escrita donde se cumple.** El
+      // diario (`notas`) no está en la lista, así que no cabe: no depende de
+      // que la app se acuerde de quitarlo, ni de que nadie meta mañana otra vía
+      // de subida. Si un día alguien intenta respaldar el diario, esto se lo
+      // niega en el servidor.
+      //
+      // Lo que estas reglas **no** pueden vigilar es lo que va dentro de
+      // `registros` y `planesRegistros`: las reglas no saben recorrer un mapa.
+      // Que la excusa de cada día y las áreas donde alguien cayó se queden en
+      // el móvil lo decide `src/logica/respaldoNube.ts`, en un solo sitio y a
+      // propósito. Aquí queda dicho para que se sepa dónde mirar.
+      match /respaldo/{cual} {
+        allow read: if esElMismo(uid);
+        allow write: if esElMismo(uid)
+          && request.resource.data.keys().hasOnly([
+            'version', 'planes', 'planesRegistros', 'rutina', 'tareas',
+            'registros', 'motivos', 'ajustes', 'guardado'
+          ])
+          && request.resource.data.guardado is number;
       }
 
       // --------------------------------------------------------- bloqueados

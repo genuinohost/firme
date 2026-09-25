@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { PAISES, paisDe } from "@/datos/paises";
+import type { Datos } from "@/datos/tipos";
+import { anotarQueSeBusco } from "@/logica/aQuienBuscar";
+import type { Basico } from "@/logica/respaldoNube";
+import {
+  aplicarRespaldo,
+  cuantoTrae,
+  diasRegistrados,
+  miRespaldo,
+  respaldarSiToca,
+} from "@/logica/respaldoNube";
 import { abrirEnlace } from "@/logica/enlaces";
 import {
   desbloquear,
@@ -28,12 +38,14 @@ import {
   leerWhatsapp,
   guardarWhatsapp,
   enlaceWhatsapp,
+  enlaceLlamada,
   publicarCifras,
   vigilarSesion,
   type Amigo,
   type Perfil,
   type Sesion,
 } from "@/logica/nube";
+import { AQuienBuscar } from "./AQuienBuscar";
 import { Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -54,10 +66,16 @@ export function PantallaCuenta({
   racha,
   diasEnPie,
   totalCumplidos,
+  datos,
+  onReemplazar,
 }: {
   racha: number;
   diasEnPie: number;
   totalCumplidos: number;
+  /** Para poder subir la copia a mano y para saber si este móvil está vacío. */
+  datos: Datos;
+  /** Al traer la copia se sustituye todo de golpe. */
+  onReemplazar: (datos: Datos) => void;
 }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -220,6 +238,19 @@ export function PantallaCuenta({
         totalCumplidos={totalCumplidos}
         onEditar={() => setEditando(true)}
       />
+      {/*
+        La copia en la nube va aquí y no en Ajustes, donde está la de exportar.
+
+        No es una preferencia de la app: es de la cuenta. Sin cuenta no hay
+        copia, y una tarjeta en Ajustes tendría que empezar diciendo «primero
+        entra» — que es peor que estar donde uno acaba de entrar.
+
+        Y va **encima** de los hermanos a propósito. El día que importa de
+        verdad es el primero en un móvil nuevo, y ese día lo único que hay que
+        hacer es entrar y tocar un botón. Si hubiera que bajar por una lista de
+        treinta hermanos para encontrarlo, alguien no lo encontraría.
+      */}
+      <CopiaEnLaNube datos={datos} onReemplazar={onReemplazar} />
       <Amigos yo={perfil} />
       <Bloqueados />
       <Cierre perfil={perfil} onFuera={() => setPerfil(null)} />
@@ -349,7 +380,8 @@ function Invitacion({ onEntrar }: { onEntrar: () => void }) {
             </span>
             <span>
               <strong>Sube</strong> tu nombre, tu foto, tu ciudad y tu país, y quiénes
-              son tus amigos.
+              son tus amigos. Y <strong>tu rutina y tu historial</strong>, para que
+              cambiar de teléfono no te cueste la racha. Eso sólo lo lees tú.
             </span>
           </li>
           <li className="flex gap-2">
@@ -358,7 +390,8 @@ function Invitacion({ onEntrar }: { onEntrar: () => void }) {
             </span>
             <span>
               <strong>Tu diario no sube.</strong> Ni las notas, ni los repasos de la
-              noche. Eso se queda en este teléfono y no se sincroniza en ningún sitio.
+              noche, ni lo que escribiste el día que te saltaste algo. Eso se queda en
+              este teléfono.
             </span>
           </li>
           <li className="flex gap-2">
@@ -701,6 +734,229 @@ function Cifra({
   );
 }
 
+// ----------------------------------------------------------- la copia en la nube
+
+/**
+ * La copia de la rutina, y el botón para traerla.
+ *
+ * Lo que sube y lo que no está en `@/logica/respaldoNube`. Aquí sólo se enseña,
+ * y con dos cuidados:
+ *
+ * **Se dice qué trae la copia, en días y en bloques.** «Restaurar tu respaldo»
+ * no significa nada; «trae 43 días y 287 bloques cumplidos» sí, y es lo que
+ * deja decidir a alguien que está a punto de sustituir lo que tiene.
+ *
+ * **Traerla pregunta antes.** Sustituye la rutina y el historial de este
+ * teléfono: no se mezcla, porque mezclar dos estados que se separaron —un bloque
+ * borrado aquí, otro añadido allá— es una fábrica de sorpresas, y una sorpresa
+ * aquí es una alarma que no suena.
+ */
+function CopiaEnLaNube({
+  datos,
+  onReemplazar,
+}: {
+  datos: Datos;
+  onReemplazar: (datos: Datos) => void;
+}) {
+  const [copia, setCopia] = useState<Basico | null>(null);
+  const [mirando, setMirando] = useState(true);
+  const [ocupado, setOcupado] = useState(false);
+  /** null = nada · "traer" = va a sustituir el móvil · "pisar" = va a pisar la copia. */
+  const [preguntando, setPreguntando] = useState<"traer" | "pisar" | null>(null);
+  const [aviso, setAviso] = useState("");
+
+  const mirar = async () => {
+    setMirando(true);
+    setCopia(await miRespaldo().catch(() => null));
+    setMirando(false);
+  };
+
+  useEffect(() => {
+    let vivo = true;
+    void miRespaldo()
+      .catch(() => null)
+      .then((c) => {
+        if (!vivo) return;
+        setCopia(c);
+        setMirando(false);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  /**
+   * La copia trae más historial que este teléfono.
+   *
+   * Es el caso del móvil nuevo, y es el único en que esta tarjeta tiene que
+   * llamar la atención. Se compara el historial y no «está vacío» porque el
+   * caso intermedio existe y es igual de grave: alguien que reinstaló, usó la
+   * app dos días y luego se acordó de entrar tiene 2 días aquí y 43 arriba.
+   *
+   * Mientras esto sea verdad, la copia automática **no sube**: se niega a pisar
+   * lo de arriba. Lo dice `respaldarSiToca`, y por eso aquí se puede prometer
+   * sin mentir que la copia sigue entera.
+   */
+  const laNubeTraeMas =
+    !mirando &&
+    copia != null &&
+    diasRegistrados(copia.registros) > diasRegistrados(datos.registros);
+  const urgente = laNubeTraeMas;
+
+  const guardar = async () => {
+    setOcupado(true);
+    setAviso("");
+    // `forzar` porque esto es un botón: si alguien lo toca teniendo más
+    // historial arriba, está diciendo que lo de este teléfono manda. Por eso el
+    // botón pregunta primero cuando hay algo que perder — abajo, en el JSX.
+    const que = await respaldarSiToca(datos, { forzar: true });
+    if (que === "subido" || que === "igual") {
+      await mirar();
+      setAviso(que === "subido" ? "Guardada." : "Ya estaba al día.");
+    } else if (que === "sin-cuenta") {
+      setAviso("Hace falta haber entrado.");
+    } else {
+      setAviso("No se pudo. Mira la conexión y vuelve a probar.");
+    }
+    setOcupado(false);
+    setPreguntando(null);
+  };
+
+  const traer = () => {
+    if (!copia) return;
+    onReemplazar(aplicarRespaldo(datos, copia));
+    setPreguntando(null);
+    setAviso("Traída. Tu rutina y tu historial han vuelto.");
+  };
+
+  const cuando = copia?.guardado
+    ? new Date(copia.guardado).toLocaleDateString("es", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : null;
+  const trae = copia ? cuantoTrae(copia) : null;
+
+  return (
+    <Tarjeta className={urgente ? "border-acento/50" : undefined}>
+      <Etiqueta>tu copia en la nube</Etiqueta>
+
+      {mirando ? (
+        <p className="mt-2 text-sm text-tenue">Mirando si hay copia…</p>
+      ) : copia == null ? (
+        <>
+          <p className="mt-2 text-sm leading-relaxed">
+            Todavía no hay ninguna. Se guarda sola, sin que tengas que acordarte:
+            unos segundos después de que cambies algo.
+          </p>
+          <div className="mt-3">
+            <Boton ancho deshabilitado={ocupado} onClick={() => void guardar()}>
+              {ocupado ? "Guardando…" : "Guardar ahora"}
+            </Boton>
+          </div>
+        </>
+      ) : preguntando === "traer" ? (
+        <>
+          <p className="mt-2 text-sm leading-relaxed">
+            Traer la copia <strong>sustituye</strong> la rutina y el historial de este
+            teléfono por los de la copia. No se mezclan.
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-tenue">
+            Tu diario no se toca: la copia no lo trae, así que tampoco puede
+            borrarlo.
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <Boton variante="fuerte" ancho onClick={traer}>
+              Sí, traerla
+            </Boton>
+            <Boton ancho onClick={() => setPreguntando(null)}>
+              Dejarlo
+            </Boton>
+          </div>
+        </>
+      ) : preguntando === "pisar" ? (
+        <>
+          {/*
+            Guardar teniendo más historial arriba borra ese historial. Es lo
+            único de esta tarjeta que no se puede deshacer, así que se dice con
+            los dos números delante y el botón peligroso NO es el fuerte.
+          */}
+          <p className="mt-2 text-sm leading-relaxed text-fallo">
+            Tu copia guarda {trae?.dias} días y este teléfono tiene{" "}
+            {diasRegistrados(datos.registros)}. Si guardas ahora,{" "}
+            <strong>la copia se queda con {diasRegistrados(datos.registros)}</strong> y
+            el resto no vuelve.
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <Boton variante="fuerte" ancho onClick={() => setPreguntando("traer")}>
+              Mejor traer la copia
+            </Boton>
+            <Boton ancho deshabilitado={ocupado} onClick={() => void guardar()}>
+              {ocupado ? "Guardando…" : "Guardar igual y perder lo demás"}
+            </Boton>
+            <button
+              onClick={() => setPreguntando(null)}
+              className="self-start text-xs text-tenue transition hover:text-texto"
+            >
+              Dejarlo
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {urgente ? (
+            <p className="mt-2 text-sm leading-relaxed text-acento">
+              Tu copia trae más historial que este teléfono. Hasta que la traigas,
+              no se sobrescribe sola.
+            </p>
+          ) : null}
+          <p className="mt-2 text-sm leading-relaxed">
+            Guardada el {cuando}. Trae tu rutina y{" "}
+            {trae && trae.dias > 0 ? (
+              <>
+                <strong>
+                  {trae.dias} {trae.dias === 1 ? "día" : "días"}
+                </strong>{" "}
+                de historial, con {trae.bloques} bloques cumplidos.
+              </>
+            ) : (
+              <>tus planes. Todavía sin días registrados.</>
+            )}
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <Boton
+              variante={urgente ? "fuerte" : undefined}
+              ancho
+              onClick={() => setPreguntando("traer")}
+            >
+              Traer mi copia a este teléfono
+            </Boton>
+            <Boton
+              ancho
+              deshabilitado={ocupado}
+              onClick={() => {
+                // Con más historial arriba, guardar borra. Se pregunta.
+                if (laNubeTraeMas) setPreguntando("pisar");
+                else void guardar();
+              }}
+            >
+              {ocupado ? "Guardando…" : "Guardar ahora"}
+            </Boton>
+          </div>
+        </>
+      )}
+
+      {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
+
+      <p className="mt-3 text-xs leading-relaxed text-tenue">
+        La copia no lleva el diario, ni lo que escribes cuando te saltas algo, ni en
+        qué áreas caíste. Eso no sale de este teléfono.
+      </p>
+    </Tarjeta>
+  );
+}
+
 // ------------------------------------------------------------------ los amigos
 
 function Amigos({ yo }: { yo: Perfil }) {
@@ -772,6 +1028,17 @@ function Amigos({ yo }: { yo: Perfil }) {
   }
 
   return (
+    <>
+    {/*
+      A quién buscar hoy, encima de la lista.
+
+      Va aquí y no en Hoy a propósito: Hoy es de la rutina, y meterle una
+      tarjeta que empuja a llamar a alguien compite con la promesa principal de
+      la app. Aquí está donde uno ya vino a mirar a sus hermanos.
+    */}
+    {aceptadas.length > 0 ? (
+      <AQuienBuscar amigos={aceptadas} onVerFicha={(uid) => setAbierto(uid)} />
+    ) : null}
     <Tarjeta>
       <Etiqueta>hermanos · {aceptadas.length}</Etiqueta>
 
@@ -910,6 +1177,7 @@ function Amigos({ yo }: { yo: Perfil }) {
         </p>
       ) : null}
     </Tarjeta>
+    </>
   );
 }
 
@@ -1252,6 +1520,7 @@ function FichaDeHermano({
     ? new Date(perfil.desde).toLocaleDateString("es", { month: "long", year: "numeric" })
     : null;
   const enlace = whatsapp ? enlaceWhatsapp(whatsapp) : null;
+  const llamada = whatsapp ? enlaceLlamada(whatsapp) : null;
 
   return (
     <>
@@ -1402,12 +1671,41 @@ function FichaDeHermano({
 
       {enlace ? (
         <Tarjeta>
-          <Etiqueta>escríbele</Etiqueta>
+          <Etiqueta>búscalo</Etiqueta>
           <p className="mt-2 text-sm leading-relaxed">
-            Una palabra a tiempo sostiene más que diez consejos tarde.
+            Una palabra a tiempo sostiene más que diez consejos tarde. Y hay cosas
+            que no se arreglan escribiendo.
           </p>
-          <div className="mt-3">
-            <Boton variante="fuerte" ancho onClick={() => void abrirEnlace(enlace)}>
+          <div className="mt-3 flex flex-col gap-2">
+            {/*
+              Llamar va PRIMERO y es el botón fuerte. Alex lo pidió así el
+              24-09-2026, y tiene sentido en una app de disciplina: a un hermano
+              que lleva tres días cayendo no se le escribe, se le llama.
+
+              Es una llamada normal del teléfono: se abre el marcador con el
+              número puesto y decide él. WhatsApp no deja empezar una llamada
+              desde un enlace —sólo abrir la conversación—, así que prometer
+              «llamada de WhatsApp» sería mentir.
+            */}
+            {llamada ? (
+              <Boton
+                variante="fuerte"
+                ancho
+                onClick={() => {
+                  anotarQueSeBusco(uid);
+                  void abrirEnlace(llamada);
+                }}
+              >
+                Llamarle
+              </Boton>
+            ) : null}
+            <Boton
+              ancho
+              onClick={() => {
+                anotarQueSeBusco(uid);
+                void abrirEnlace(enlace);
+              }}
+            >
               Escribirle por WhatsApp
             </Boton>
           </div>

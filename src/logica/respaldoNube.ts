@@ -1,4 +1,5 @@
 import type { Datos } from "@/datos/tipos";
+import { miUid } from "./muro";
 import { nube } from "./nube";
 
 /**
@@ -142,4 +143,99 @@ export function aplicarRespaldo(datos: Datos, copia: Basico): Datos {
     ajustes: copia.ajustes ?? datos.ajustes,
     notas: datos.notas,
   };
+}
+
+// ---------------------------------------------------------------- lo automático
+
+/**
+ * La huella de lo que viaja, sin la hora.
+ *
+ * Sirve para no subir lo mismo dos veces. Importa más de lo que parece: el
+ * diario cambia con cada letra que alguien escribe por la noche, y el diario
+ * **no va** en la copia. Sin esta comparación, escribir tres párrafos mandaría
+ * treinta copias idénticas al servidor.
+ */
+function huella(datos: Datos): string {
+  const { guardado: _guardado, ...resto } = soloLoBasico(datos, 0);
+  return JSON.stringify(resto);
+}
+
+/** Lo último que se subió desde esta sesión. Así no se repite. */
+let ultimaHuella: string | null = null;
+
+/**
+ * Si ya se comprobó, en esta ejecución, que subir no destruye nada.
+ *
+ * Una vez basta: después de la primera subida buena, lo que hay arriba lo puso
+ * este teléfono.
+ */
+let comprobado = false;
+
+/** Cuántos días distintos hay registrados. Las claves son `AAAA-MM-DD|id`. */
+export function diasRegistrados(registros: Datos["registros"] | undefined): number {
+  return new Set(Object.keys(registros ?? {}).map((c) => c.slice(0, 10))).size;
+}
+
+/**
+ * Sube la copia si hay cuenta, si cambió algo, y **si subirla no borra nada**.
+ *
+ * ── El fallo que esto evita, que casi se publica ───────────────────────────
+ *
+ * La primera versión de esto subía cada veinte segundos sin mirar qué había
+ * arriba. Léase la secuencia entera: alguien reinstala la app, le queda la
+ * rutina de ejemplo y cero historial, entra con su cuenta para recuperar lo
+ * suyo… y veinte segundos después **la copia automática sustituye sus 43 días
+ * por el teléfono vacío**, antes de que llegue a tocar el botón de traerla.
+ *
+ * El respaldo que se escribió para que nadie pierda su racha habría sido el que
+ * la borra, y sin un solo mensaje de error.
+ *
+ * Así que la subida automática se niega a pisar una copia que tiene más
+ * historial que este teléfono. Se comprueba **una vez por ejecución**: cuesta
+ * una lectura al abrir la app y compra que el caso del móvil nuevo sea
+ * imposible, no improbable.
+ *
+ * `forzar` es el botón de «Guardar ahora»: si alguien decide a mano que lo de
+ * este teléfono manda, manda. Pero lo decide él, mirándolo.
+ */
+export async function respaldarSiToca(
+  datos: Datos,
+  opciones: { forzar?: boolean } = {},
+): Promise<"subido" | "igual" | "sin-cuenta" | "la-nube-trae-más" | "falló"> {
+  const uid = await miUid();
+  if (!uid) return "sin-cuenta";
+
+  const h = huella(datos);
+  if (h === ultimaHuella && !opciones.forzar) return "igual";
+
+  if (!comprobado && !opciones.forzar) {
+    const arriba = await bajarRespaldo(uid);
+    if (
+      arriba &&
+      diasRegistrados(arriba.registros) > diasRegistrados(datos.registros)
+    ) {
+      return "la-nube-trae-más";
+    }
+  }
+
+  const bien = await subirRespaldo(uid, datos);
+  if (!bien) return "falló";
+  ultimaHuella = h;
+  comprobado = true;
+  return "subido";
+}
+
+/** Trae la copia de quien esté dentro, o null. */
+export async function miRespaldo(): Promise<Basico | null> {
+  const uid = await miUid();
+  if (!uid) return null;
+  return bajarRespaldo(uid);
+}
+
+/** Cuántos bloques cumplidos guarda la copia. Para poder decir qué se recupera. */
+export function cuantoTrae(copia: Basico): { dias: number; bloques: number } {
+  const claves = Object.keys(copia.registros ?? {});
+  const dias = new Set(claves.map((c) => c.slice(0, 10))).size;
+  const bloques = claves.filter((c) => copia.registros[c]?.estado === "cumplido").length;
+  return { dias, bloques };
 }

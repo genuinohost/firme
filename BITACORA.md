@@ -8,6 +8,107 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 24 de septiembre de 2026 (noche) — llamar a un hermano, y la copia que casi se borra sola
+
+## Llamar, y a quién
+
+Alex: «necesito poder llamar a mis amigos a través de la app. Por ejemplo, quiero llamar
+a Joseito.»
+
+En la ficha de cada hermano, **«Llamarle» primero y en botón fuerte**, encima de escribir
+por WhatsApp. Es el marcador del teléfono con el número puesto: se abre y decide él.
+
+> ⚠️ **WhatsApp no deja empezar una llamada desde un enlace**, sólo abrir la conversación.
+> Prometer «llamada de WhatsApp» sería mentir, así que no se promete.
+
+Y la otra mitad, que es la que vale: **la app dice a quién buscar**. Un nombre, el motivo,
+y el botón para llamarle. `src/logica/aQuienBuscar.ts`.
+
+**Un nombre, no una lista.** Una lista de cinco hermanos a los que convendría llamar se
+mira, se siente culpa y se cierra. Un nombre se llama.
+
+Tres señales, por orden de fuerza:
+
+| Señal | De dónde sale |
+|---|---|
+| Se le rompió la racha | **De este móvil**, que recuerda qué racha llevaba cada uno. Cero datos nuevos publicados. |
+| Lleva días en cero | Cayó hace tiempo y no se ha levantado. El que menos se nota. |
+| Hace mucho que no le buscas | Mide lo tuyo, no lo suyo. Funciona con quien tiene las rachas apagadas. |
+
+Con el tiempo la tercera será la que más suene, y está bien: lo normal entre hermanos no
+es que alguien se esté cayendo, es que se dejó de llamar.
+
+El hermano **no se entera** de nada de esto. Sólo se lee lo que él ya decidió publicar.
+
+## La copia en la nube — y el fallo que casi se publicó
+
+Alex: «los datos básicos deberían estar en una nube, porque no todo el mundo va a estar
+pendiente de exportar una copia». Tenía razón, y era un fallo de diseño: pedirle a alguien
+que exporte un respaldo «por si acaso» es pedirle que piense en perder el móvil **antes**
+de perderlo.
+
+Sube la rutina, los planes, las tareas y los registros. **No sube el diario**, ni la excusa
+que alguien escribió al saltarse algo, ni en qué áreas cayó.
+
+### 🔴 Y esto es lo que hay que recordar de hoy
+
+La primera versión subía la copia cada veinte segundos sin mirar qué había arriba. Léase
+la secuencia entera:
+
+1. Alguien reinstala la app → rutina de ejemplo, cero historial.
+2. Entra con su cuenta **para recuperar lo suyo**.
+3. Veinte segundos después, la copia automática sustituye sus 43 días por el teléfono vacío.
+4. Todavía no ha llegado a tocar el botón de traerla.
+
+**El respaldo escrito para que nadie pierda su racha habría sido el que la borra**, y sin
+un solo mensaje de error. Se encontró antes de compilar, leyendo la secuencia en voz alta.
+
+Arreglo: la subida automática **se niega a pisar una copia con más historial que este
+teléfono**. Se comprueba una vez por ejecución — cuesta una lectura al abrir la app y
+compra que el caso del móvil nuevo sea imposible, no improbable. El botón de «Guardar
+ahora» sí puede pisarla, pero pone los dos números delante y el botón peligroso no es el
+fuerte.
+
+### La regla es la promesa
+
+`usuarios/{uid}/respaldo/rutina`, **sólo su dueño** — ni los hermanos aceptados, que sí
+pueden leer el WhatsApp. Y la regla lista los campos que caben: **el diario no está en la
+lista, así que no cabe**. No depende de que la app se acuerde de quitarlo.
+
+`npm run revisar-reglas`: **57 comprobaciones, sin problemas** (9 nuevas). La que importa:
+
+```
+ok   EL DIARIO NO CABE en la copia, ni mandandolo a proposito
+```
+
+Lo que las reglas **no** pueden vigilar es lo que va dentro de `registros`: no saben
+recorrer un mapa. Que la excusa de cada día se quede en el móvil lo decide
+`src/logica/respaldoNube.ts`, en un solo sitio y a propósito.
+
+## Precios, para el devocional de ~30
+
+| Cadencia | Agora | LiveKit | Daily |
+|---|---|---|---|
+| 1 × semana | **$0** | $50/mes | **$0** |
+| Todos los días | **$30/mes** | $50/mes | $122/mes |
+
+Pero **la llamada de grupo de WhatsApp aguanta 32**, que es justo el tamaño. Lo que
+WhatsApp no da, y sí vale dinero, es **convocar**: la alarma a la hora, quién vino, quién
+lleva tres días sin cumplir. Eso Genuino ya lo puede hacer.
+
+## Lo que queda
+
+- ⚠️ **Desplegar las reglas** (`firestore:rules`). Hasta entonces «Guardar ahora» falla.
+  La 6.10 no debe salir antes que esto.
+- Subir la 6.9 a la prueba interna y hacer las dos declaraciones de Play.
+- Faltan 5 probadores de los 12.
+- **Exportar los datos antes de reinstalar desde Play**: la firma es distinta y hay que
+  desinstalar.
+- Cifrar el diario, cuando la prueba cerrada esté corriendo.
+- Decidir qué hace `allowBackup` de Android con el diario. Sigue sin respuesta.
+
+---
+
 # 🧭 12 de septiembre de 2026 — no sonó nada, y las herramientas para saber por qué
 
 ## 🔴 El reporte: «no sonó nada y ya di permiso de batería»

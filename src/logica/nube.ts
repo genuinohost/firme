@@ -675,6 +675,26 @@ export async function leerWhatsapp(uid: string): Promise<string | null> {
  * número se quita todo lo que no sea cifra: los espacios, los guiones y los
  * paréntesis que trae cualquier número copiado de la agenda.
  */
+/**
+ * El enlace para LLAMARLE por teléfono.
+ *
+ * Alex, el 24-09-2026: «necesito poder llamar a mis amigos a través de la app».
+ * Esto es una llamada normal del teléfono, no una llamada por internet: se abre
+ * el marcador con el número puesto y él decide si llama. `ACTION_VIEW` sobre un
+ * `tel:` no pide ningún permiso — marcar directamente sí lo pediría, y no hace
+ * falta: nadie quiere que una app llame sola.
+ *
+ * Se usan las mismas cifras que el enlace de WhatsApp, incluido el código de
+ * país, porque el campo pide «+58 412 000 0000» y quien lo puso mal ya tenía
+ * roto también el botón de escribir. Una regla distinta aquí sólo serviría para
+ * que los dos botones fallaran de maneras diferentes.
+ */
+export function enlaceLlamada(bruto: string): string | null {
+  const cifras = bruto.replace(/\D/g, "");
+  if (cifras.length < 8) return null;
+  return `tel:+${cifras}`;
+}
+
 export function enlaceWhatsapp(bruto: string): string | null {
   const t = bruto.trim();
   if (!t) return null;

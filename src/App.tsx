@@ -39,6 +39,7 @@ import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
 import { PantallaCuenta } from "@/componentes/PantallaCuenta";
 import { PantallaFallo } from "@/componentes/PantallaFallo";
 import { contarSolicitudes, publicarNota } from "@/logica/muro";
+import { respaldarSiToca } from "@/logica/respaldoNube";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
@@ -120,6 +121,27 @@ export default function App() {
   const ahora = useReloj();
 
   useEffect(() => guardar(datos), [datos]);
+
+  /**
+   * La copia en la nube, sola y en silencio.
+   *
+   * Alex, el 24-09-2026: «los datos básicos deberían estar en una nube, porque
+   * no todo el mundo va a estar pendiente de exportar una copia». Eso es esto:
+   * quien tiene cuenta no tiene que hacer nada, y quien no la tiene sigue con
+   * la app entera y con su copia a mano en Ajustes.
+   *
+   * Qué sube y qué se queda aquí está en `@/logica/respaldoNube`, en un solo
+   * sitio. **El diario no sube**, y la huella que se compara allí lo tiene en
+   * cuenta: escribir tres párrafos por la noche no manda treinta copias.
+   *
+   * Veinte segundos de calma antes de subir. Cada cambio reinicia la cuenta, así
+   * que quien está marcando bloques uno detrás de otro sube una sola vez al
+   * acabar, no ocho veces.
+   */
+  useEffect(() => {
+    const id = window.setTimeout(() => void respaldarSiToca(datos), 20_000);
+    return () => clearTimeout(id);
+  }, [datos]);
 
   /**
    * En la app de Android las horas se le entregan al sistema, que es quien
@@ -546,6 +568,8 @@ export default function App() {
               racha={racha}
               diasEnPie={diasEnPie}
               totalCumplidos={cumplidos}
+              datos={datos}
+              onReemplazar={(nuevos) => setDatos(nuevos)}
             />
           </ConVuelta>
         ) : null}

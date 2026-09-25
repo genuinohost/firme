@@ -152,6 +152,70 @@ await debe(
   assertFails(setDoc(doc(beto, "usuarios/ana/privado/contacto"), { whatsapp: "+1" })),
 );
 
+// ------------------------------------------------- el respaldo de la rutina
+//
+// La copia existe para que cambiar de telefono no cueste la racha. Lo que estas
+// preguntas defienden es que **no se haya convertido en una fuga del diario**:
+// la lista de campos de la regla es la promesa, y aqui se comprueba que muerde.
+console.log("\nEl respaldo");
+
+const copia = (extra = {}) => ({
+  version: 1,
+  planes: [],
+  planesRegistros: {},
+  rutina: [{ id: "b1", hora: "05:30", nombre: "Levantarse" }],
+  tareas: [],
+  registros: { "2026-09-24|b1": { estado: "cumplido", momento: 1 } },
+  motivos: [],
+  ajustes: { nombre: "Ana" },
+  guardado: 1,
+  ...extra,
+});
+
+await debe(
+  "cada uno guarda su propia copia",
+  assertSucceeds(setDoc(doc(ana, "usuarios/ana/respaldo/rutina"), copia())),
+);
+await debe(
+  "y la lee",
+  assertSucceeds(getDoc(doc(ana, "usuarios/ana/respaldo/rutina"))),
+);
+await debe(
+  "un amigo YA ACEPTADO no la lee - esto no es el WhatsApp",
+  assertFails(getDoc(doc(beto, "usuarios/ana/respaldo/rutina"))),
+);
+await debe(
+  "un desconocido con cuenta no la lee",
+  assertFails(getDoc(doc(curioso, "usuarios/ana/respaldo/rutina"))),
+);
+await debe(
+  "sin haber entrado no se lee",
+  assertFails(getDoc(doc(nadie, "usuarios/ana/respaldo/rutina"))),
+);
+await debe(
+  "nadie escribe en la copia de otro",
+  assertFails(setDoc(doc(beto, "usuarios/ana/respaldo/rutina"), copia())),
+);
+await debe(
+  "EL DIARIO NO CABE en la copia, ni mandandolo a proposito",
+  assertFails(
+    setDoc(
+      doc(ana, "usuarios/ana/respaldo/rutina"),
+      copia({ notas: [{ id: "n1", texto: "Lo que escribi a las tres" }] }),
+    ),
+  ),
+);
+await debe(
+  "tampoco cabe ningun campo que nadie haya pensado",
+  assertFails(setDoc(doc(ana, "usuarios/ana/respaldo/rutina"), copia({ loQueSea: "x" }))),
+);
+await debe(
+  "una copia sin fecha no vale: sin ella no se puede decir de cuando es",
+  assertFails(
+    setDoc(doc(ana, "usuarios/ana/respaldo/rutina"), { ...copia(), guardado: "ayer" }),
+  ),
+);
+
 // ------------------------------------------------------------------ el muro
 console.log("\nEl muro");
 await debe(
