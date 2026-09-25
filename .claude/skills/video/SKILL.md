@@ -51,6 +51,36 @@ Descargas o en la raíz de `videos-genuino`; el primer paso es darles carpeta.
 Los cuatro proyectos hechos están copiados en `scripts/video/proyectos/` como
 referencia: el de Filipenses es la plantilla.
 
+### Vídeos grabados por tramos (desde el 24-09-2026)
+
+Cuando Alex graba **una toma por hoja del teleprompter** y no de un tirón
+—el primero fue el anuncio de aliados, `videos-genuino\aliados\`—, todo va
+con un comando:
+
+```bash
+node scripts/video/montar-tomas.mjs "<carpeta>"      # [--solo-medir]
+```
+
+La carpeta lleva `guion.json` (los tramos, cada uno con una o varias
+versiones del texto), las tomas crudas en `tomas\` y un `proyecto.mjs` que
+**no lleva ni un segundo a mano**: lee de `.trabajo\` dónde cayó cada tramo
+(`tramos.json`), la cara (`cara-resumen.json`), el color (`color.json`) y el
+plan (`planos.json`). `tomas.py` reconoce cada tramo comparando lo dicho con
+el guion (no hace falta nombrar ni ordenar los archivos), descarta arranques
+en falso y tomas incompletas —a igualdad, la última—, parte una toma que dice
+dos tramos, detecta la toma muda de relleno y **dice qué palabras no se
+oyeron**. Probado el 24-09 con siete tomas sintéticas llenas de trampas: las
+resolvió todas.
+
+Dos cosas del motor que nacieron aquí: `superpuestos` en el proyecto (PNG de
+1080×1920 con transparencia, con su tramo y `subir` en píxeles; los
+subtítulos se callan mientras están) y `cierre.lineas: []` válido, para
+cerrar con un rótulo de marca en vez de texto.
+
+Un anuncio de **Genuino Host** no lleva la identidad de Genuino Love: fuente
+TT Chocolates Bold (`anchos-ttchocolates-bold.json`) y los rótulos carbón y
+oro de la campaña, nunca `@GenuinoLove`.
+
 ## Parte 1 · Entender (antes de tocar nada)
 
 Nada se decide hasta tener estas cinco cosas medidas. Cada una tiene su script

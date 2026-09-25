@@ -22,7 +22,7 @@
  * las palabras de cada plano como comentario. Después hay que LEERLO: esto
  * propone, no decide.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const [ruta, durArg, ...resto] = process.argv.slice(2);
 if (!ruta || !durArg) {
@@ -120,6 +120,13 @@ for (const p of planos) {
   console.log(`    { hasta: ${p.hasta.toFixed(2)}, enc: "${p.enc}", deriva: ${p.deriva > 0 ? "" : ""}${p.deriva.toFixed(2)} }, // ${t}`);
 }
 console.log("  ],");
+
+// `--json=<ruta>`: el mismo plan a un archivo, para que un proyecto lo lea.
+const rutaJson = resto.find((a) => a.startsWith("--json="))?.slice(7);
+if (rutaJson) {
+  writeFileSync(rutaJson, JSON.stringify(planos.map((p) => ({
+    hasta: +p.hasta.toFixed(2), enc: p.enc, deriva: p.deriva, texto: p.texto })), null, 1));
+}
 
 // Pistas para la tarjeta: citas bíblicas que nombre.
 const cita = w.map((x) => x.p).join(" ").match(/\b(Génesis|Éxodo|Salmos?|Proverbios|Isaías|Jeremías|Mateo|Marcos|Lucas|Juan|Hechos|Romanos|Corintios|Gálatas|Efesios|Filipenses|Colosenses|Tesalonicenses|Timoteo|Hebreos|Santiago|Pedro|Apocalipsis)\b[^.]{0,20}/gi);

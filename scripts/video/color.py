@@ -121,6 +121,10 @@ print(f"clip de {dur:.1f}s · medido en {len(medidas)} fotogramas · frío {frio
 print(f"  lo neutro medía U={U:+.3f} V={V:+.3f}  (U<0 y V>0 = cálido, amarillo-naranja)")
 print(f"  balance fijo: {balance}")
 print(f"\n  color: \"{filtro}\",\n")
+# Tambien a un archivo, para que un proyecto lo lea sin pegarlo a mano.
+import json
+with open(os.path.join(os.path.dirname(os.path.abspath(clip)), "color.json"), "w", encoding="utf-8") as f:
+    json.dump({"filtro": filtro, "U": float(U), "V": float(V), "frio": frio}, f, ensure_ascii=False)
 
 salida = os.path.join(os.path.dirname(os.path.abspath(clip)), "color-antes-despues.png")
 subprocess.run(["ffmpeg", "-v", "error", "-ss", str(dur / 2), "-i", clip, "-frames:v", "1",

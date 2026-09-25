@@ -318,6 +318,13 @@ for (const g of grupos) {
   // Y mientras está el titular de la apertura tampoco: son cinco segundos de
   // cartel, y dos textos a la vez se pelean. Es la misma regla que la tarjeta.
   if (A?.titular && g.t < A.hasta) continue;
+  // Y mientras hay un rótulo superpuesto (los PNG de la marca: el gancho, la
+  // escalera, el cierre), igual. Si el subtítulo ya estaba y el rótulo entra
+  // encima, el subtítulo se corta justo cuando entra.
+  const sup = (P.superpuestos ?? []);
+  if (sup.some((s) => g.t >= s.desde - 0.05 && g.t < s.hasta)) continue;
+  const entra = sup.find((s) => s.desde > g.t && s.desde < g.fin);
+  if (entra) g.fin = entra.desde;
   // `doradas` puede no existir: los estilos sin palabra en color no lo ponen.
   const dorado = P.doradas ? P.doradas.test(g.texto) : false;
   // Las dos líneas van pegadas: el paso entre ellas es la letra más el borde
@@ -395,21 +402,37 @@ for (const d of P.destellos ?? []) {
 // La tarjeta del versículo: UNA imagen con su caja (la dibuja `tarjeta.py`),
 // superpuesta arriba, lejos de los rótulos, y fundida entera por el canal
 // alfa. Con `drawtext` línea a línea salían tres cajas escalonadas.
-if (!SALTAR_ROT) {
-if (P.tarjeta) {
-  const { desde: A, hasta: B } = P.tarjeta;
+// Las imágenes que van ENCIMA: la tarjeta del versículo y los rótulos de la
+// marca (`superpuestos`: PNG de 1080×1920 con fondo transparente, cada uno
+// con su tramo). Todas por la misma cadena de `overlay`, fundidas por el
+// canal alfa. `subir` sube la imagen esos píxeles: los rótulos de la campaña
+// de aliados traen la banda a 180 px del borde, dentro de los 320 que tapa
+// Instagram, y así se usan sin volver a dibujarlos.
+const encima = [];
+if (!SALTAR_ROT && P.tarjeta) {
   const png = join(T, "tarjeta.png");
   const medidas = JSON.parse(execFileSync("python",
     [join(AQUI, "tarjeta.py"), png, P.tarjeta.cita, ...P.tarjeta.lineas],
     { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8", TARJETA_TAMANO: String(P.tarjeta.tamano ?? 56) } }));
-  const x = Math.round((1080 - medidas.ancho) / 2);
-  const y = Math.round(1920 * (P.tarjeta.y ?? 0.13));
-  ff(["-i", join(T, "mudo.mp4"), "-loop", "1", "-framerate", "30", "-i", png,
-    "-filter_complex",
-    `[0:v]${capas.join(",")}[base];` +
-    `[1:v]format=rgba,fade=t=in:st=${A.toFixed(2)}:d=0.4:alpha=1,` +
-    `fade=t=out:st=${(B - 0.4).toFixed(2)}:d=0.4:alpha=1[tarjeta];` +
-    `[base][tarjeta]overlay=${x}:${y}:shortest=1:enable='between(t,${A.toFixed(2)},${B.toFixed(2)})'[v]`,
+  encima.push({ png, x: Math.round((1080 - medidas.ancho) / 2), y: Math.round(1920 * (P.tarjeta.y ?? 0.13)),
+    desde: P.tarjeta.desde, hasta: P.tarjeta.hasta, fundido: 0.4 });
+}
+for (const s of P.superpuestos ?? []) {
+  if (!existsSync(en(s.png))) { console.error(`No existe el superpuesto ${s.png}`); process.exit(1); }
+  encima.push({ png: en(s.png), x: 0, y: -(s.subir ?? 0), desde: s.desde, hasta: s.hasta, fundido: s.fundido ?? 0.25 });
+}
+if (!SALTAR_ROT) {
+if (encima.length) {
+  const entradas = encima.flatMap((o) => ["-loop", "1", "-framerate", "30", "-i", o.png]);
+  let cadena = `[0:v]${capas.length ? capas.join(",") : "null"}[b0];`;
+  encima.forEach((o, k) => {
+    const A = o.desde.toFixed(2), B = o.hasta.toFixed(2), f = o.fundido;
+    cadena += `[${k + 1}:v]format=rgba,fade=t=in:st=${A}:d=${f}:alpha=1,` +
+      `fade=t=out:st=${(o.hasta - f).toFixed(2)}:d=${f}:alpha=1[o${k}];` +
+      `[b${k}][o${k}]overlay=${o.x}:${o.y}:shortest=1:enable='between(t,${A},${B})'` +
+      (k === encima.length - 1 ? "[v]" : `[b${k + 1}];`);
+  });
+  ff(["-i", join(T, "mudo.mp4"), ...entradas, "-filter_complex", cadena,
     "-map", "[v]", "-r", "30",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", join(T, "rotulado.mp4")]);
 } else {
@@ -450,8 +473,10 @@ if (C.sobreLaCara) {
       `:alpha='min(1,(t-${nace.toFixed(2)})*4)'` +
       `:enable='gte(t,${nace.toFixed(2)})'`;
   }).join(",");
+  // Sin líneas es válido: el cierre lo pone un superpuesto (el rótulo de la
+  // marca) y aquí sólo queda el fundido.
   ff(["-i", join(T, "cuerpo.mp4"),
-    "-vf", `${texto},fade=t=out:st=${(VOZ_DUR - 0.6).toFixed(2)}:d=0.6`, "-r", "30",
+    "-vf", [texto, `fade=t=out:st=${(VOZ_DUR - 0.6).toFixed(2)}:d=0.6`].filter(Boolean).join(","), "-r", "30",
     "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
     "-c:a", "copy", join(T, "sin-musica.mp4")]);
 } else {

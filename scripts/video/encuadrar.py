@@ -95,6 +95,10 @@ cx = float(np.median(caras[:, 0] + caras[:, 2] / 2))
 cy = float(np.median(caras[:, 1] + caras[:, 3] / 2))
 ch = float(np.median(caras[:, 3]))
 
+# El resumen tambien a un archivo, para que un proyecto lo lea sin pegarlo.
+with open(os.path.join(os.path.dirname(os.path.abspath(clip)), "cara-resumen.json"), "w", encoding="utf-8") as f:
+    json.dump({"cx": round(cx, 4), "cy": round(cy, 4), "cabeza": round(ch, 4)}, f)
+
 print(f"clip de {dur:.1f}s · cara encontrada en {len(caras)} de {cuantos} fotogramas\n")
 print(f"  la cabeza ocupa el {ch * 100:.1f}% del alto del cuadro")
 print(f"  centro de la cara en x={cx:.3f}  y={cy:.3f}")
