@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { dondeEstaElPortero } from "./comunidad";
 import { miUid } from "./muro";
 import { nube } from "./nube";
 
@@ -117,18 +118,35 @@ export type Permiso = {
  * entrar en esta sala».
  */
 export async function pedirPermiso(canal: string): Promise<Permiso> {
-  const { app } = await nube();
-  const { connectFunctionsEmulator, getFunctions, httpsCallable } = await import(
-    "firebase/functions"
-  );
-  const funciones = getFunctions(app, "us-central1");
-  // El mismo interruptor que en `nube.ts`: en lo que se publica es la constante
-  // `false` y esto no entra en el paquete.
-  if (import.meta.env.VITE_EMULADORES === "1") {
-    connectFunctionsEmulator(funciones, "127.0.0.1", 5011);
+  const { auth } = await nube();
+  const quien = auth.currentUser;
+  if (!quien) throw new Error("sin-cuenta");
+
+  // El token de la sesión, que es lo único que el portero necesita para saber
+  // quién llama. Firebase lo renueva solo cuando toca.
+  const token = await quien.getIdToken();
+
+  const r = await fetch(dondeEstaElPortero(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ canal, token }),
+  });
+
+  if (!r.ok) {
+    // El portero manda el motivo ya escrito para una persona — «la sala está
+    // cerrada», «no puedes entrar en esta sala»—, porque él es el único que lo
+    // sabe. Si no vino ninguno, es que falló la red y no el permiso.
+    let porque = "No se pudo entrar en la sala.";
+    try {
+      const e = (await r.json()) as { porque?: string };
+      if (e?.porque) porque = e.porque;
+    } catch {
+      // Una respuesta que no es JSON significa que no llegamos al portero.
+    }
+    throw new Error(porque);
   }
-  const llamar = httpsCallable<{ canal: string }, Permiso>(funciones, "permisoDeSala");
-  return (await llamar({ canal })).data;
+
+  return (await r.json()) as Permiso;
 }
 
 async function refSala(canal: string) {

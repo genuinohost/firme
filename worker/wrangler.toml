@@ -1,0 +1,26 @@
+# El portero de las salas de voz.
+#
+# Vive aqui y no en Firebase porque las Cloud Functions exigen el plan Blaze,
+# Blaze exige tarjeta, y a Alex se la rechazaron el 25-09-2026: Google Cloud no
+# opera en Venezuela. El plan gratuito de Workers no pide tarjeta y da 100.000
+# peticiones al dia — un devocional de treinta gasta treinta.
+
+name = "genuino-portero"
+main = "src/index.js"
+compatibility_date = "2026-09-25"
+
+# `nodejs_compat` porque la libreria de Agora usa `crypto` y `zlib` de Node para
+# firmar. Sin esto el Worker ni arranca.
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PROYECTO = "genuino-host"
+FIRESTORE_URL = "https://firestore.googleapis.com/v1/projects/genuino-host/databases/(default)/documents"
+CLAVES_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+# El App ID no es secreto: identifica el proyecto, no autoriza nada.
+AGORA_APP_ID = "1d30537aab4a4171b9649dba7f408565"
+
+# AGORA_APP_CERTIFICATE **no va aqui**. Es el que firma, y con el se podrian
+# abrir canales a nuestro nombre. Se pone una vez, y nunca toca un archivo:
+#
+#   npx wrangler secret put AGORA_APP_CERTIFICATE

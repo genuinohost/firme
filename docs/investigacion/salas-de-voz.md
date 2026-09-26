@@ -102,9 +102,47 @@ vivir: **la función es el portero.** Antes de firmar comprueba que
 Las reglas de Firestore no pueden hacer esto: no saben nada de Agora. Y poner la
 puerta en el cliente es no poner puerta.
 
-**Por eso hace falta el plan Blaze de Firebase.** A este volumen el gasto
-esperado es $0 (el regalo de Functions son 2 millones de invocaciones al mes),
-pero pide tarjeta.
+### ⚠️ Y por eso el portero NO está en Firebase
+
+Lo natural era una Cloud Function, y así se escribió primero. No se pudo
+desplegar: **las Cloud Functions exigen el plan Blaze**, Blaze exige tarjeta, y
+el 25-09-2026 Google la rechazó con `OR_CCREU_01`.
+
+La causa no es la tarjeta: **Google Cloud no opera en Venezuela**. Venezuela ni
+siquiera aparece en la lista de países del formulario, y una tarjeta con
+dirección venezolana no pasa aunque se elija otro país. La de Binance, además,
+es prepagada, y Google Cloud no acepta prepagadas.
+
+No es algo que se arregle intentándolo otra vez.
+
+**El portero vive en un Worker de Cloudflare**, plan gratuito, sin tarjeta:
+100.000 peticiones al día, y un devocional de treinta gasta treinta. El código
+de Firebase se guarda en `functions/index.js` marcado como no usado, por si
+algún día hay una tarjeta que Google acepte.
+
+Lo que **no** está duplicado es la decisión de quién habla: vive en
+`functions/decidir.js` y la importan los dos porteros. La regla que sostiene un
+devocional de treinta no puede tener dos versiones.
+
+### Las dos decisiones que hacen que esto no necesite secretos de Google
+
+**Comprobar quién llama.** En una Cloud Function la plataforma te da el `uid`
+hecho. Fuera hay que verificar el JWT de Firebase a mano: firma RS256 contra las
+claves públicas de Google, y después `iss`, `aud` y `exp`. Los dos pasos hacen
+falta — **comprobar la firma y no el contenido no vale de nada**, porque Google
+firma los tokens de todos sus proyectos con las mismas claves y un token
+legítimo de un proyecto ajeno pasaría.
+
+**Leer Firestore.** Lo normal sería una cuenta de servicio, que lo ve todo y
+habría que guardar en Cloudflare. No hace falta: Firestore acepta **el propio
+token de la persona** y aplica `firestore.rules` como si leyera ella. Así en
+Cloudflare no hay ninguna credencial de Google, y el portero no puede ver nada
+que la persona no viera. Lo que decide no es qué ve, sino qué firma.
+
+El precio es que esas tres lecturas tienen que seguir permitidas por las reglas.
+Hay tres comprobaciones con ese nombre en `scripts/revisar-reglas.mjs`, porque
+si alguien las cerrara por prudencia nadie entraría a ningún devocional y
+ninguna otra prueba se enteraría.
 
 ## La sala no es una pantalla nueva: es una reunión
 
@@ -133,16 +171,42 @@ Convocar es lo que WhatsApp no sabe hacer y esta app sí.
 - **El timbre con la app cerrada.** Es la fase 3, y necesita push. Para el
   devocional no bloquea: la alarma ya convoca.
 
+## Desplegar el portero
+
+```bash
+cd worker
+npx wrangler login                              # abre el navegador, una vez
+npx wrangler secret put AGORA_APP_CERTIFICATE   # lo pide por teclado
+npm run desplegar
+```
+
+Cloudflare da una dirección `https://genuino-portero.<algo>.workers.dev`. **Esa
+dirección se publica en `comunidad.json`, en el campo `portero`**, y no va fija
+en el APK: si algún día cambia de sitio, con el valor dentro del paquete harían
+falta días de revisión de Google Play con el devocional sin dejar entrar a
+nadie. El valor por defecto de `src/logica/comunidad.ts` es sólo la red de
+seguridad.
+
 ## Probar sin cuentas: los emuladores
 
 Todo esto se puede comprobar **sin cuenta de Agora y sin plan Blaze**, porque
 firmar un token es matemática local y las reglas corren igual en el emulador.
 
 ```bash
-npm run revisar-reglas    # las reglas de Firestore, 75 preguntas
-npm run revisar-portero   # las dos decisiones del portero, sueltas
-npm run revisar-sala      # el portero ENTERO: emuladores, sesiones y la puerta
+npm run revisar-reglas    # las reglas de Firestore, 78 preguntas
+npm run revisar-portero   # el portero ENTERO, 28 preguntas
 ```
+
+`revisar-portero` llama al Worker **igual que lo llama la app** y no necesita ni
+Cloudflare ni cuenta ni red: el manejador de un Worker es una función normal. Se
+levantan dos cosas de mentira y cada una por su motivo:
+
+- **Las claves de Google**: se genera un par RSA y se publica el juego en un
+  servidor local, así las pruebas firman tokens con firma de verdad y **el
+  portero no tiene ningún modo de «no comprobar»** — que sería lo cómodo y es
+  justo el interruptor que acaba encendido en producción.
+- **Firestore**: un servidor local con la forma exacta de su API. Que las reglas
+  sean correctas ya lo comprueba `revisar-reglas` con el emulador de verdad.
 
 ### Y la app entera contra los emuladores
 

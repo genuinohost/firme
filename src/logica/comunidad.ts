@@ -52,6 +52,18 @@ export type Comunidad = {
   bienvenida?: string;
   enlaces: Enlace[];
   reuniones: Reunion[];
+  /**
+   * Dónde vive el portero de las salas de voz.
+   *
+   * Va aquí y no fijo en el código por lo mismo que los enlaces: si la
+   * dirección cambiara —porque se mueva de proveedor, o porque algún día vuelva
+   * a Firebase— con el valor dentro del APK haría falta publicar una versión y
+   * esperar a que Google la apruebe. Días con el devocional sin dejar entrar a
+   * nadie.
+   *
+   * Si falta, se usa el de siempre.
+   */
+  portero?: string;
 };
 
 const VACIA: Comunidad = { enlaces: [], reuniones: [] };
@@ -65,6 +77,7 @@ export function leerGuardada(): Comunidad {
       bienvenida: c.bienvenida,
       enlaces: Array.isArray(c.enlaces) ? c.enlaces : [],
       reuniones: Array.isArray(c.reuniones) ? c.reuniones : [],
+      portero: typeof c.portero === "string" ? c.portero : undefined,
     };
   } catch {
     return VACIA;
@@ -220,4 +233,20 @@ export function salaDeLaUrl(url: string): string | null {
     url.trim(),
   );
   return m ? m[1] : null;
+}
+
+/**
+ * El portero de siempre, para cuando `comunidad.json` no diga otra cosa.
+ *
+ * Vive en Cloudflare y no en Firebase: las Cloud Functions exigen el plan
+ * Blaze, Blaze exige tarjeta, y la de Alex fue rechazada el 25-09-2026 porque
+ * **Google Cloud no opera en Venezuela**. El porqué completo está en
+ * `docs/investigacion/salas-de-voz.md`.
+ */
+const PORTERO_POR_DEFECTO = "https://genuino-portero.PENDIENTE.workers.dev";
+
+/** A qué dirección se le piden los permisos de entrada. */
+export function dondeEstaElPortero(): string {
+  const publicado = leerGuardada().portero;
+  return publicado && publicado.startsWith("https://") ? publicado : PORTERO_POR_DEFECTO;
 }

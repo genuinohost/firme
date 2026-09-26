@@ -108,26 +108,13 @@
     "indexes": "firestore.indexes.json"
   },
   "emulators": {
-    "comment": "Solo para probar en local: firestore.rules con npm run revisar-reglas, y el portero de las salas entero con npm run revisar-sala. No tocan nada de produccion: los emuladores arrancan vacios y se apagan al acabar.",
+    "comment": "Solo para probar en local: firestore.rules con npm run revisar-reglas. El portero de las salas vive en Cloudflare y tiene sus propias pruebas en worker/. No tocan nada de produccion: los emuladores arrancan vacios y se apagan al acabar.",
     "firestore": {
       "port": 8199
     },
     "ui": {
       "enabled": false
     },
-    "singleProjectMode": true,
-    "functions": {
-      "port": 5011
-    },
-    "auth": {
-      "port": 9099
-    }
-  },
-  "functions": {
-    "comment": "El portero de las salas de voz. Firma quien entra y quien habla; el certificado de Agora no puede viajar en la app. Necesita el plan Blaze.",
-    "source": "functions",
-    "predeploy": [
-      "npm --prefix functions run revisar"
-    ]
+    "singleProjectMode": true
   }
 }

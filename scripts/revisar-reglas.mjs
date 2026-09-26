@@ -335,6 +335,34 @@ await debe(
 );
 
 
+// ------------------------------- las tres lecturas de las que vive el portero
+//
+// El portero de las salas corre en Cloudflare y lee Firestore **con el token de
+// la propia persona**, no con una cuenta de servicio: asi no hay ninguna
+// credencial nuestra guardada alli, y no puede ver nada que ella no viera.
+//
+// El precio es que estas tres lecturas tienen que seguir permitidas. Si un dia
+// alguien las cierra —por prudencia, que es como pasan estas cosas— el portero
+// deja de poder comprobar nada y **nadie entra a ningun devocional**, sin que
+// ninguna otra prueba se entere: las del Worker usan un Firestore de mentira.
+//
+// Por eso estan aqui, con este nombre.
+console.log("\nLo que el portero necesita leer");
+
+await debe(
+  "EL PORTERO LEE LA SALA con el token de quien entra",
+  assertSucceeds(getDoc(doc(beto, "salas", SALA))),
+);
+await debe(
+  "EL PORTERO LEE SI ESTA EXPULSADO",
+  assertSucceeds(getDoc(doc(beto, `salas/${SALA}/expulsados/beto`))),
+);
+await debe(
+  "EL PORTERO LEE SU FICHA, que es donde dice si tiene la palabra",
+  assertSucceeds(getDoc(doc(beto, `salas/${SALA}/dentro/beto`))),
+);
+
+
 // ------------------------------------------------------------------ el muro
 console.log("\nEl muro");
 await debe(

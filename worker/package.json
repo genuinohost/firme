@@ -1,0 +1,17 @@
+{
+  "name": "genuino-portero",
+  "description": "El portero de las salas de voz. Firma quien entra y quien habla, en Cloudflare y sin tarjeta.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "revisar": "node revisar-worker.mjs",
+    "local": "npx wrangler dev",
+    "desplegar": "npx wrangler deploy"
+  },
+  "dependencies": {
+    "agora-token": "^2.0.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}

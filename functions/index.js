@@ -1,3 +1,25 @@
+/*
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │  ESTE PORTERO NO ESTA EN USO.                                         │
+ * │                                                                       │
+ * │  El que corre de verdad esta en `worker/src/index.js`, en Cloudflare. │
+ * └───────────────────────────────────────────────────────────────────────┘
+ *
+ * Se escribio primero aqui, que es donde va lo natural, y no se pudo desplegar:
+ * las Cloud Functions exigen el plan Blaze, Blaze exige tarjeta, y a Alex se la
+ * rechazaron el 25-09-2026 con `OR_CCREU_01` — **Google Cloud no opera en
+ * Venezuela**, y una tarjeta con direccion venezolana no pasa aunque se elija
+ * otro pais. No es algo que se arregle intentandolo otra vez.
+ *
+ * Se guarda, y no se borra, porque el dia que haya una tarjeta que Google
+ * acepte esto vuelve a servir tal cual. Lo que **no** se guarda por duplicado
+ * es la decision de quien habla: vive en `decidir.js` y la usan los dos.
+ *
+ * Si algun dia se reactiva: hay que volver a poner el bloque `functions` en
+ * `firebase.json`, que se quito para que nadie intente desplegar esto sin
+ * querer.
+ */
+
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { defineSecret, defineString } from "firebase-functions/params";

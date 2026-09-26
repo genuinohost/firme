@@ -21,3 +21,6 @@ firebase-debug.log
 ui-debug.log
 docs/fallos/
 __pycache__/
+
+# Lo que deja wrangler al empaquetar el portero.
+worker/.wrangler/
