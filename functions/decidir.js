@@ -30,12 +30,20 @@ export function nombreDeSalaValido(canal) {
  *
  * - En una **llamada** de dos no hay nada que moderar: los dos hablan.
  * - En un **devocional** habla el anfitrión y quien él haya llamado.
+ * - Salvo que el anfitrión ponga los **micrófonos libres**: entonces hablan
+ *   todos. Alex lo pidió el 27-09-2026 para la lectura por turnos: «todos
+ *   deben tener la posibilidad de abrir y cerrar el micrófono sin mi permiso
+ *   porque sería muy tedioso». Él elige cuándo.
  *
  * `palabra` sólo lo puede mover el anfitrión, y eso lo garantizan las reglas de
  * Firestore — hay una prueba con ese nombre en `scripts/revisar-reglas.mjs`.
  */
-export function puedeHablar({ tipo, anfitrion, uid, palabra }) {
+export function puedeHablar({ tipo, anfitrion, uid, palabra, micLibre }) {
   if (tipo === "llamada") return true;
   if (anfitrion === uid) return true;
+  // Micrófonos libres: el anfitrión decidió que todos hablen sin pedir. Es
+  // lo que hace falta cuando se lee el devocional por turnos — pedir la
+  // palabra para cada versículo sería insufrible. Lo enciende y lo apaga él.
+  if (micLibre === true) return true;
   return palabra === true;
 }

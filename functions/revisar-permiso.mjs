@@ -62,6 +62,18 @@ debe(
   puedeHablar({ tipo: "devocional", anfitrion: "ana", uid: "beto", palabra: true }),
 );
 debe(
+  "con los MICRÓFONOS LIBRES, quien llega habla sin pedir",
+  puedeHablar({ tipo: "devocional", anfitrion: "ana", uid: "beto", palabra: false, micLibre: true }),
+);
+debe(
+  "y con los micrófonos moderados, vuelve a escuchar",
+  !puedeHablar({ tipo: "devocional", anfitrion: "ana", uid: "beto", palabra: false, micLibre: false }),
+);
+debe(
+  "un «true» de texto en micLibre tampoco cuela",
+  !puedeHablar({ tipo: "devocional", anfitrion: "ana", uid: "beto", palabra: false, micLibre: "true" }),
+);
+debe(
   "un tipo desconocido no da la palabra a nadie",
   !puedeHablar({ tipo: "loQueSea", anfitrion: "ana", uid: "beto", palabra: false }),
 );

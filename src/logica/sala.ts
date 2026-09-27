@@ -83,6 +83,18 @@ export type Sala = {
   abierta: boolean;
   desde: number;
   tipo: "devocional" | "llamada";
+  /**
+   * Micrófonos libres: todos pueden abrir el suyo sin pedir la palabra.
+   *
+   * Lo enciende y lo apaga el anfitrión. Alex, el 27-09-2026: «cuando viene la
+   * lectura en los devocionales, todos deben tener la posibilidad de abrir y
+   * cerrar el micrófono sin mi permiso porque sería muy tedioso». Cuando está
+   * apagado, se vuelve a levantar la mano.
+   *
+   * Vive en la sala y no en cada ficha porque es una decisión sobre todos, y
+   * la sala sólo la escribe él. El portero lo lee al firmar el token.
+   */
+  micLibre?: boolean;
 };
 
 /** Uno de los que están dentro. Sale de Firestore, con su nombre y su foto. */
@@ -184,6 +196,36 @@ export async function abrirSala(
     abierta: true,
     desde: Date.now(),
     tipo,
+    // Se nace con permiso. Que sea el anfitrión quien decida soltar los
+    // micrófonos, y no que se encuentre treinta abiertos sin haberlo pedido.
+    micLibre: false,
+  });
+}
+
+/**
+ * Soltar o recoger los micrófonos. Sólo el anfitrión, y lo garantizan las
+ * reglas.
+ *
+ * A los demás les llega por el oyente de la sala y su app pide un token nuevo:
+ * el permiso de hablar viaja firmado, así que sin token nuevo no cambia nada.
+ */
+export async function ponerMicLibre(canal: string, libre: boolean): Promise<void> {
+  const { updateDoc } = await import("firebase/firestore");
+  await updateDoc(await refSala(canal), { micLibre: libre });
+}
+
+/**
+ * Avisa de cualquier cambio en la sala: se cerró, se soltaron los micrófonos.
+ *
+ * Devuelve la función para dejar de escuchar. Hay que llamarla al salir.
+ */
+export async function verSala(
+  canal: string,
+  alCambiar: (sala: Sala | null) => void,
+): Promise<() => void> {
+  const { onSnapshot } = await import("firebase/firestore");
+  return onSnapshot(await refSala(canal), (d) => {
+    alCambiar(d.exists() ? { canal, ...(d.data() as Omit<Sala, "canal">) } : null);
   });
 }
 

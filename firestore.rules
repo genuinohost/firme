@@ -232,11 +232,14 @@ service cloud.firestore {
       }
 
       function salaRazonable(d) {
-        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo'])
+        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre'])
           && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
           && d.abierta is bool
           && d.desde is number
-          && d.tipo in ['devocional', 'llamada'];
+          && d.tipo in ['devocional', 'llamada']
+          // Micrófonos libres. Vive en la sala y no en cada ficha porque es una
+          // decisión del anfitrión sobre todos, y la sala sólo la escribe él.
+          && (!('micLibre' in d) || d.micLibre is bool);
       }
 
       // La lee cualquiera que haya entrado: hace falta para saber si la sala

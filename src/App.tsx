@@ -524,8 +524,10 @@ export default function App() {
               {
                 id: "pasar",
                 icono: "↗",
-                titulo: "Pasarle la app a alguien",
-                detalle: "Por WhatsApp, Bluetooth o Compartir cercano. Sin descargar nada.",
+                // «Compartir» y no «pasar»: Alex la buscó por esa palabra el
+                // 27-09-2026 y no la encontró. Se llama como la gente la busca.
+                titulo: "Compartir la app",
+                detalle: "Pásasela a alguien por WhatsApp, Bluetooth o Compartir cercano. Sin descargar nada.",
                 onIr: () => {
                   void pasarLaApp().then((que) => {
                     if (que === "copiado") setAvisoMuro("Enlace copiado. Pégalo donde quieras.");

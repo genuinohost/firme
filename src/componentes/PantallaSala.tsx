@@ -11,11 +11,13 @@ import {
   leerSala,
   mano,
   miMicro,
+  ponerMicLibre,
   porElAltavoz,
   renovarToken,
   salirDeSala,
   verQuienEsta,
   verQuienHabla,
+  verSala,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
@@ -176,6 +178,21 @@ export function PantallaSala({
     };
   }, [canal, estado]);
 
+  // ── la sala misma: si se cierra, si se sueltan los micrófonos ──────────
+  useEffect(() => {
+    if (estado !== "dentro") return;
+    let dejar: (() => void) | null = null;
+    let vivo = true;
+    void verSala(canal, (nueva) => vivo && setSala(nueva)).then((f) => {
+      if (!vivo) f();
+      else dejar = f;
+    });
+    return () => {
+      vivo = false;
+      dejar?.();
+    };
+  }, [canal, estado]);
+
   // ── quién habla ahora mismo ─────────────────────────────────────────────
   useEffect(() => {
     if (estado !== "dentro") return;
@@ -248,6 +265,38 @@ export function PantallaSala({
       }
     })();
   }, [yo?.palabra, canal, estado, yo]);
+
+  /**
+   * El anfitrión soltó o recogió los micrófonos.
+   *
+   * El permiso de hablar viaja firmado en el token, así que hay que pedir otro.
+   * Y al recibirlo con los micrófonos libres, **el propio queda cerrado**: como
+   * en WhatsApp, cada uno lo abre cuando le toca. Treinta micrófonos que se
+   * abren solos a la vez no es una lectura, es un ruido. Distinto de cuando el
+   * anfitrión le da la palabra a alguien en concreto, que sí se abre — ahí se la
+   * dio para que hable ya.
+   */
+  const micLibreAnterior = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (estado !== "dentro" || esAnfitrion || !sala) return;
+    const libre = sala.micLibre === true;
+    if (micLibreAnterior.current === null) {
+      micLibreAnterior.current = libre;
+      return;
+    }
+    if (micLibreAnterior.current === libre) return;
+    micLibreAnterior.current = libre;
+    void (async () => {
+      try {
+        const ahoraHabla = await cambiarDePapel(canal);
+        setHabla(ahoraHabla);
+        setMicroAbierto(false);
+        if (ahoraHabla) await miMicro(false);
+      } catch {
+        setError("No se pudo cambiar tu turno. Sal y vuelve a entrar.");
+      }
+    })();
+  }, [sala?.micLibre, sala, canal, estado, esAnfitrion]);
 
   // ── lo que se ve ────────────────────────────────────────────────────────
 
@@ -375,7 +424,9 @@ export function PantallaSala({
               ? sonando.yo
                 ? "Tienes la palabra y se te está oyendo."
                 : "Tienes la palabra. Habla."
-              : "Tienes la palabra, pero tu micrófono está cerrado."
+              : sala?.micLibre && !esAnfitrion
+                ? "Micrófonos libres. Abre el tuyo cuando te toque."
+                : "Tienes la palabra, pero tu micrófono está cerrado."
             : "Estás escuchando. Levanta la mano para comentar."}
         </p>
 
@@ -383,6 +434,44 @@ export function PantallaSala({
           <p className="mt-2 text-sm leading-relaxed text-fallo">{error}</p>
         ) : null}
       </Tarjeta>
+
+      {/*
+        Los micrófonos, para el anfitrión: con permiso o libres.
+
+        Alex, el 27-09-2026: «me gusta que el que quiera abrir el micrófono pida
+        permiso. Pero cuando viene la lectura, todos deben poder abrir y cerrar
+        el micrófono sin mi permiso porque sería muy tedioso. Esa opción debe
+        estar a un lado y yo elijo cuándo se activa».
+
+        Va aquí, a la vista, y no en un menú: se cambia varias veces en un mismo
+        devocional — libres para leer por turnos, con permiso para comentar.
+      */}
+      {esAnfitrion && sala?.tipo !== "llamada" ? (
+        <Tarjeta>
+          <Etiqueta>micrófonos de los demás</Etiqueta>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Boton
+              variante={sala?.micLibre ? "normal" : "fuerte"}
+              ancho
+              onClick={() => void ponerMicLibre(canal, false)}
+            >
+              Con permiso
+            </Boton>
+            <Boton
+              variante={sala?.micLibre ? "logro" : "normal"}
+              ancho
+              onClick={() => void ponerMicLibre(canal, true)}
+            >
+              Libres
+            </Boton>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            {sala?.micLibre
+              ? "Cualquiera puede abrir el suyo. Para la lectura por turnos."
+              : "Levantan la mano y tú das la palabra. Para comentar sin pisarse."}
+          </p>
+        </Tarjeta>
+      ) : null}
 
       {/* Las manos levantadas, arriba y en orden: es lo único que pide algo. */}
       {esAnfitrion && manos.length > 0 ? (
@@ -502,46 +591,147 @@ export function PantallaSala({
         ) : null}
       </Tarjeta>
 
-      {/* Los botones, abajo y al alcance del pulgar. */}
-      <div className="flex flex-col gap-2">
-        {habla ? (
-          <Boton
-            variante={microAbierto ? "logro" : "normal"}
-            ancho
-            onClick={() => {
-              const nuevo = !microAbierto;
-              setMicroAbierto(nuevo);
-              void miMicro(nuevo);
-            }}
-          >
-            {microAbierto ? "Cerrar mi micrófono" : "Abrir mi micrófono"}
-          </Boton>
-        ) : (
-          <Boton
-            variante={yo?.mano ? "fuerte" : "normal"}
-            ancho
-            onClick={() => void mano(canal, !yo?.mano)}
-          >
-            {yo?.mano ? "Bajar la mano" : "Levantar la mano para comentar"}
-          </Boton>
-        )}
+      {/*
+        Los botones, como en una llamada de WhatsApp: tres redondos, el del
+        micrófono en medio, el de colgar en rojo. Alex, el 27-09-2026: «está
+        bien que diga por escrito cuando está abierto o cerrado, pero más
+        importante es que se vea gráficamente muy parecido al de WhatsApp. Así
+        los que lo vean se van a familiarizar fácilmente». El texto se queda
+        arriba, en la tarjeta; aquí manda el icono.
 
-        <Boton
-          ancho
+        En el medio va el micrófono si puedes hablar, y la mano si no: es el
+        mismo sitio para «lo que puedes hacer ahora», y el pulgar lo aprende.
+      */}
+      <div className="flex items-start justify-center gap-6 pt-2">
+        <BotonRedondo
+          etiqueta={altavoz ? "Altavoz" : "Auricular"}
+          activo={altavoz}
           onClick={() => {
             const nuevo = !altavoz;
             setAltavoz(nuevo);
             void porElAltavoz(nuevo);
           }}
         >
-          {altavoz ? "Pasar al auricular" : "Poner el altavoz"}
-        </Boton>
+          <IconoAltavoz apagado={!altavoz} />
+        </BotonRedondo>
 
-        <Boton variante="fallo" ancho onClick={onSalir}>
-          Salir de la sala
-        </Boton>
+        {habla ? (
+          <BotonRedondo
+            etiqueta={microAbierto ? "Silenciar" : "Abrir micro"}
+            activo={microAbierto}
+            grande
+            onClick={() => {
+              const nuevo = !microAbierto;
+              setMicroAbierto(nuevo);
+              void miMicro(nuevo);
+            }}
+          >
+            <IconoMicro tachado={!microAbierto} />
+          </BotonRedondo>
+        ) : (
+          <BotonRedondo
+            etiqueta={yo?.mano ? "Bajar la mano" : "Pedir la palabra"}
+            activo={!!yo?.mano}
+            grande
+            onClick={() => void mano(canal, !yo?.mano)}
+          >
+            <IconoMano />
+          </BotonRedondo>
+        )}
+
+        <BotonRedondo etiqueta="Salir" peligro onClick={onSalir}>
+          <IconoColgar />
+        </BotonRedondo>
       </div>
     </div>
+  );
+}
+
+// ------------------------------------------------------------ los botones
+
+/**
+ * Un botón redondo con su etiqueta debajo, como los de una llamada.
+ *
+ * Los iconos van en SVG dentro del código y no como emojis: un emoji cambia de
+ * dibujo según el móvil, y lo que se busca aquí es justo lo contrario — que el
+ * micrófono se vea igual que en la app que ya conocen.
+ */
+function BotonRedondo({
+  children,
+  etiqueta,
+  activo,
+  grande,
+  peligro,
+  onClick,
+}: {
+  children: React.ReactNode;
+  etiqueta: string;
+  activo?: boolean;
+  grande?: boolean;
+  peligro?: boolean;
+  onClick: () => void;
+}) {
+  const tamano = grande ? "size-[72px]" : "size-14";
+  const color = peligro
+    ? "bg-fallo text-fondo"
+    : activo
+      ? "bg-logro text-fondo"
+      : "bg-superficie-alta text-texto border border-borde";
+  return (
+    <button onClick={onClick} className="flex w-20 flex-col items-center gap-1.5">
+      <span
+        className={`flex ${tamano} items-center justify-center rounded-full transition active:scale-95 ${color}`}
+      >
+        {children}
+      </span>
+      <span className="text-center text-[11px] leading-tight text-tenue">{etiqueta}</span>
+    </button>
+  );
+}
+
+function IconoMicro({ tachado }: { tachado: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-8" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3" />
+      {tachado ? <path d="M4 4l16 16" strokeWidth={2.5} /> : null}
+    </svg>
+  );
+}
+
+function IconoAltavoz({ apagado }: { apagado: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none" />
+      {apagado ? (
+        <path d="M17 9l4 6M21 9l-4 6" />
+      ) : (
+        <>
+          <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+          <path d="M19.5 5.5a9 9 0 0 1 0 13" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function IconoMano() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-8" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12" />
+      <path d="M11 12V4.5a1.5 1.5 0 0 1 3 0V12" />
+      <path d="M14 12V6.5a1.5 1.5 0 0 1 3 0V13" />
+      <path d="M17 13V9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-6-3.4L3.6 14a1.6 1.6 0 0 1 2.6-1.8L8 14" />
+    </svg>
+  );
+}
+
+function IconoColgar() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-7" fill="currentColor" aria-hidden>
+      <path d="M12 9c-2.6 0-5 .5-7.2 1.5a2 2 0 0 0-1.1 2.3l.6 2.2a1.5 1.5 0 0 0 1.9 1l2.6-.9a1.5 1.5 0 0 0 1-1.3l.1-1.6a12 12 0 0 1 4.2 0l.1 1.6a1.5 1.5 0 0 0 1 1.3l2.6.9a1.5 1.5 0 0 0 1.9-1l.6-2.2a2 2 0 0 0-1.1-2.3A17 17 0 0 0 12 9z" />
+    </svg>
   );
 }
 

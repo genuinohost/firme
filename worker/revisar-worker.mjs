@@ -254,6 +254,14 @@ let deOyente = null;
   delete base["salas/devocional/dentro/beto"];
 }
 {
+  base["salas/devocional"].micLibre = siNo(true);
+  const r = await llamar({ canal: "devocional", token: tokenDe("beto") });
+  debe("con los MICRÓFONOS LIBRES, quien llega HABLA sin pedir", r.estado === 200 && r.datos.habla === true);
+  delete base["salas/devocional"].micLibre;
+  const r2 = await llamar({ canal: "devocional", token: tokenDe("beto") });
+  debe("y al apagarlos, vuelve a escuchar", r2.estado === 200 && r2.datos.habla === false);
+}
+{
   base["salas/llamada"] = {
     nombre: texto("Ana y Beto"),
     anfitrion: texto("ana"),

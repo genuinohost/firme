@@ -269,6 +269,7 @@ export default {
       anfitrion: sala.anfitrion,
       uid,
       palabra: dentro?.palabra,
+      micLibre: sala.micLibre,
     });
 
     // Con la cuenta en texto, no con un número: el uid de Firebase es una cadena

@@ -276,6 +276,18 @@ await debe(
   ),
 );
 await debe(
+  "el anfitrion pone los MICROFONOS LIBRES",
+  assertSucceeds(updateDoc(doc(moderador, "salas", SALA), { micLibre: true })),
+);
+await debe(
+  "nadie mas los pone: es una decision del anfitrion sobre todos",
+  assertFails(updateDoc(doc(beto, "salas", SALA), { micLibre: true })),
+);
+await debe(
+  "y un micLibre que no sea si/no no pasa",
+  assertFails(updateDoc(doc(moderador, "salas", SALA), { micLibre: "si" })),
+);
+await debe(
   "un hermano entra en la sala, en silencio",
   assertSucceeds(setDoc(doc(beto, `salas/${SALA}/dentro/beto`), dentroDe("beto"))),
 );
