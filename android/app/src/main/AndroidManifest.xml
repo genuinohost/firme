@@ -60,6 +60,18 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!--
+            Recibe «te llaman al devocional» con la app cerrada. Es lo unico
+            que Google deja despertar; que suene lo hace ServicioAlarma.
+        -->
+        <service
+            android:name=".ServicioAvisos"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".TrabajoRearmar"
             android:permission="android.permission.BIND_JOB_SERVICE"

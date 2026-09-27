@@ -16,8 +16,8 @@ android {
         applicationId "app.genuino.firme"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 56
-        versionName "6.14"
+        versionCode 57
+        versionName "6.15"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // ------------------------------------------ que arquitecturas van
@@ -99,6 +99,14 @@ dependencies {
     // El .aar trae las cuatro arquitecturas. En un .aab cada movil se descarga
     // solo la suya, asi que al usuario le llegan unos 7 MB de esto, no 28.
     implementation 'io.agora.rtc:agora-special-voice:4.5.2.135'
+
+    // ------------------------------------------------- el timbre
+    //
+    // Firebase Cloud Messaging, para que «te llaman al devocional» llegue con
+    // la app cerrada. Sin BoM, fijado a mano: el plugin de autenticacion fija
+    // firebase-auth 24.0.1 tambien a mano, y meter un BoM por encima haria que
+    // los dos tiraran de versiones distintas sin decirlo.
+    implementation 'com.google.firebase:firebase-messaging:25.1.3'
 
 }
 

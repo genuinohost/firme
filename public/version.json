@@ -1,12 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 56,
-  "nombre": "6.14",
+  "codigo": 57,
+  "nombre": "6.15",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Los botones de la sala ahora son como los de una llamada de WhatsApp: altavoz, microfono y colgar, redondos y con icono.",
-    "Nuevo para el anfitrion: MICROFONOS LIBRES. Para la lectura por turnos, todos abren el suyo sin pedir la palabra. Se enciende y se apaga cuando tu quieras.",
-    "En Mas, «Pasarle la app» ahora se llama «Compartir la app»."
+    "NUEVO: la comunidad de voz. En Juntos te apuntas, y cuando el anfitrion llame al devocional TU MOVIL SUENA aunque la app este cerrada. Entras con un toque. Salirte es otro toque.",
+    "Para el anfitrion: «Llamar a la comunidad» dentro de la sala. Un toque y les suena a todos los apuntados.",
+    "Una reunion publicada se puede poner en tu rutina: te suena a su hora como una alarma, y la pantalla te ofrece entrar al devocional."
   ],
   "importante": false
 }

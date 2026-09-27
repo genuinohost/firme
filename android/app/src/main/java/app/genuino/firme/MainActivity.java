@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(Navegador.class);
         registerPlugin(Sala.class);
         registerPlugin(PasarApp.class);
+        registerPlugin(Timbre.class);
         super.onCreate(estadoGuardado);
     }
 }

@@ -20,6 +20,7 @@ import {
   verSala,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
+import { llamarALaComunidad } from "@/logica/timbre";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -79,6 +80,8 @@ export function PantallaSala({
     yo: false,
   });
   const [tocando, setTocando] = useState<string | null>(null);
+  const [llamando, setLlamando] = useState(false);
+  const [avisoLlamada, setAvisoLlamada] = useState("");
 
   /**
    * El papel que teníamos la última vez.
@@ -446,6 +449,45 @@ export function PantallaSala({
         Va aquí, a la vista, y no en un menú: se cambia varias veces en un mismo
         devocional — libres para leer por turnos, con permiso para comentar.
       */}
+      {/*
+        Llamar a la comunidad: que suenen los móviles de los apuntados.
+
+        Es lo que Alex pidió como VITAL el 27-09-2026. Va arriba del todo de lo
+        que puede hacer el anfitrión, porque es lo primero que hace al abrir:
+        abre, llama, y espera a que entren. Lo decide el portero: si quien
+        toca no modera, vuelve con su motivo escrito.
+      */}
+      {esAnfitrion && sala?.tipo !== "llamada" ? (
+        <Tarjeta className="border-acento/50">
+          <Etiqueta>la comunidad</Etiqueta>
+          <p className="mt-2 text-sm leading-relaxed">
+            Hace sonar el móvil de todos los que se apuntaron, aunque tengan la
+            app cerrada.
+          </p>
+          <div className="mt-3">
+            <Boton
+              variante="fuerte"
+              ancho
+              deshabilitado={llamando}
+              onClick={async () => {
+                setLlamando(true);
+                setAvisoLlamada("");
+                const r = await llamarALaComunidad(canal, sala?.nombre ?? "Devocional");
+                setAvisoLlamada(
+                  r.enviado ? "Llamando. Les está sonando ahora mismo." : r.porque,
+                );
+                setLlamando(false);
+              }}
+            >
+              {llamando ? "Llamando…" : "Llamar a la comunidad"}
+            </Boton>
+          </div>
+          {avisoLlamada ? (
+            <p className="mt-2 text-xs leading-relaxed text-acento">{avisoLlamada}</p>
+          ) : null}
+        </Tarjeta>
+      ) : null}
+
       {esAnfitrion && sala?.tipo !== "llamada" ? (
         <Tarjeta>
           <Etiqueta>micrófonos de los demás</Etiqueta>

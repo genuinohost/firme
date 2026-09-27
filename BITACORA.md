@@ -8,6 +8,79 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 27 de septiembre de 2026 (tarde y noche) — «Funciona PERFECTO», y el timbre
+
+## 🟢 La primera voz que cruza el sistema entero
+
+Alex, con dos móviles: **«Funciona PERFECTO»**. Él de anfitrión, su mamá (Fanny) con la palabra.
+Firebase → Worker en Cloudflare → token de Agora → SDK nativo → micrófono → «se te está
+oyendo». Todo lo de tres días, de punta a punta, por primera vez.
+
+## Tres versiones en un día
+
+**6.12** — la app se trababa en una alarma sin contestar y las siguientes se perdían en
+silencio (cola); la segunda alarma ya no hereda el corte de la primera; el aviso de parar
+vuelve arriba cada 15 s y va coloreado. **La descarga no funcionaba desde Venezuela**: GitHub
+redirige a `objects.githubusercontent.com` y se cae. Firebase Hosting niega los APK en Spark
+con todas las letras. Lo sirve el Worker, reanudable. Y el APK pasa de 62,6 a 31,2 MB
+quitando las dos arquitecturas de emulador.
+
+**6.13** — «Compartir la app»: manda el archivo mismo por WhatsApp/Bluetooth/Compartir cercano.
+Play Protect bloquea en el móvil de la mamá: *Más detalles → Instalar de todos modos*. Le va a
+pasar a todos hasta estar en Play. **Y las reglas de las salas no estaban en producción**: se
+cambiaron en dos commits después del último despliegue. Desde hoy `npm run desplegar` pasa las
+reglas por el emulador y las sube con la web, siempre.
+
+**6.14** — botones como los de WhatsApp (SVG, no emoji) y **micrófonos libres**: interruptor
+del anfitrión, «Con permiso» / «Libres», enforzado en el token. Al recibir libres, el propio
+queda cerrado — como en WhatsApp.
+
+## El timbre (6.15)
+
+Alex: «VITAL que yo pueda hacer que le suene la llamada a los que voluntariamente están
+dentro del grupo de voz […] cada vez que yo, y sólo yo (o los administradores que yo señale),
+hagan la llamada». Eligió **las dos**: alarma a hora fija y llamada espontánea por push.
+
+| Pieza | Dónde | Cómo |
+|---|---|---|
+| Apuntarse | el propio móvil | se suscribe al tema `devocional`; sin lista de tokens en ningún servidor |
+| Llamar | Worker `/llamar` | verifica sesión, que quien llama **modera**, que la sala está abierta; **un** aviso al tema |
+| Sonar | `ServicioAvisos` → `ServicioAlarma` | aviso de datos, prioridad alta; suena con la maquinaria de las alarmas |
+| Entrar | `App.tsx` | «Te llaman al devocional» → Entrar / Ahora no; llamadas de más de 10 min se olvidan |
+| A hora fija | `BloqueRutina.sala` | «Ponerla en mi rutina» convierte la reunión en bloque; la alarma ofrece «Entrar al devocional» |
+
+### La única llave de Google que hay en Cloudflare
+
+`genuino-timbre@genuino-host.iam.gserviceaccount.com`, **recortada**: sólo puede enviar avisos.
+La clave entró por tubería directa a `wrangler secret put FCM_CUENTA`, sin tocar disco ni
+imprimirse. Alex lo decidió con el riesgo delante (lo peor: avisos falsos; se revoca en un
+minuto).
+
+⚠️ **Le falta el permiso**, y sólo Alex puede darlo: la cuenta de despliegue no tiene
+`setIamPolicy`. En Google Cloud → IAM → añadir `genuino-timbre@…` con el rol **Firebase Cloud
+Messaging API Admin**. Hasta entonces «Llamar» devuelve error del portero.
+
+### Comprobado
+
+**42** del Worker (con un Google y un FCM de mentira y una clave RSA real en el formato exacto
+de Google: quien no modera → 403 y ningún aviso; quien modera → un aviso al tema con sala,
+nombre y quién; el token de Google se pide una vez y se reutiliza) · **90** reglas (nadie ve si
+otro está apuntado; la lista sólo quien modera) · **23** de la decisión · Java compila con
+Messaging · web compila.
+
+**No probado todavía**: que un móvil suene de verdad. Necesita el permiso de arriba y dos
+teléfonos.
+
+## Pendiente
+
+- ⚠️ **El rol de FCM** para `genuino-timbre@…` (Alex, en la consola).
+- Regenerar el certificado de Agora (quedó en el chat).
+- El parte de las alarmas con la 6.12+.
+- 5 probadores de 12 para Play. Play Protect lo va a pedir a cada uno hasta entonces.
+- Lista de «quién puede llamar» desde la app (hoy: los que moderan, desde la consola).
+
+---
+
 # 🧭 27 de septiembre de 2026 — el portero en Cloudflare, y las salas publicadas
 
 ## 🔴 Google Cloud no opera en Venezuela

@@ -12,6 +12,7 @@ import {
 import { abrirEnlace } from "@/logica/enlaces";
 import { copiar } from "@/logica/compartir";
 import { Muro } from "./Muro";
+import { ComunidadDeVoz } from "./ComunidadDeVoz";
 import { SalasAbiertas } from "./SalasAbiertas";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
@@ -169,6 +170,9 @@ export function PantallaComunidad({
       {onEntrarEnSala ? (
         <SalasAbiertas onEntrar={onEntrarEnSala} onHayAlgo={setHaySalas} />
       ) : null}
+
+      {/* Apuntarse a que te suene. Se esconde sola si no hay cuenta. */}
+      <ComunidadDeVoz />
 
       {vacia ? (
         <Vacio>

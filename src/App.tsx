@@ -44,6 +44,7 @@ import { leerPerfil } from "@/logica/nube";
 import { pasarLaApp } from "@/logica/pasarApp";
 import { horaLocalDe, salaDeLaUrl, type Reunion } from "@/logica/comunidad";
 import { respaldarSiToca } from "@/logica/respaldoNube";
+import { atenderLlamada, llamadaPendiente, type LlamadaPendiente } from "@/logica/timbre";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
 
@@ -103,6 +104,16 @@ export default function App() {
    * en la pantalla de la comunidad, salir de esa pestaña desmontaría el
    * componente y colgaría la llamada — con treinta personas dentro.
    */
+  /**
+   * Una llamada al devocional que dejó el servicio nativo.
+   *
+   * El móvil ya sonó —o está sonando— con la maquinaria de las alarmas. Aquí
+   * sólo se enseña «Entrar» o «Ahora no». Se mira al arrancar y cada vez que la
+   * app vuelve a primer plano, que es cuando alguien toca la pantalla de la
+   * alarma para venir aquí.
+   */
+  const [llamada, setLlamada] = useState<LlamadaPendiente | null>(null);
+
   const [sala, setSala] = useState<{
     canal: string;
     /** El de la reunión publicada, por si hay que abrirla. */
@@ -140,6 +151,28 @@ export default function App() {
   const ahora = useReloj();
 
   useEffect(() => guardar(datos), [datos]);
+
+  useEffect(() => {
+    if (!esNativo()) return;
+    const mirar = async () => {
+      const l = await llamadaPendiente();
+      if (!l) return;
+      // Una llamada de hace más de diez minutos ya no es una llamada: se
+      // olvida sin enseñarla, o alguien abriría la app a mediodía y vería
+      // «te llaman» de las cuatro de la mañana.
+      if (Date.now() - l.cuando > 10 * 60_000) {
+        void atenderLlamada();
+        return;
+      }
+      setLlamada(l);
+    };
+    void mirar();
+    const alVolver = () => {
+      if (document.visibilityState === "visible") void mirar();
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, []);
 
   /**
    * La copia en la nube, sola y en silencio.
@@ -911,6 +944,48 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
         encima. Es lo correcto: si alguien esta en un devocional, el parte de una
         alarma de ayer puede esperar a que salga.
       */}
+      {/*
+        «Te llaman al devocional». Encima de todo, incluso de la sala: si ya
+        estás dentro y llega otra llamada a la misma sala, se descarta sola
+        abajo. El botón grande es entrar; el pequeño, no. A las tres de la
+        mañana no hay tiempo para más opciones.
+      */}
+      {llamada && (!sala || sala.canal !== llamada.canal) ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-fondo p-6">
+          <div className="w-full max-w-sm text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-tenue">
+              te llaman al devocional
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold leading-tight">{llamada.nombre}</h2>
+            <p className="mt-2 text-sm text-tenue">
+              {llamada.sono ? "Está empezando ahora." : "Te llamaron hace un rato. Puede que siga."}
+            </p>
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  const { canal, nombre } = llamada;
+                  setLlamada(null);
+                  void atenderLlamada();
+                  void entrarEnSala(canal, nombre);
+                }}
+                className="rounded-2xl bg-logro px-6 py-5 text-lg font-semibold text-fondo transition active:scale-[0.98]"
+              >
+                Entrar
+              </button>
+              <button
+                onClick={() => {
+                  setLlamada(null);
+                  void atenderLlamada();
+                }}
+                className="rounded-2xl border border-borde px-6 py-3 text-sm text-tenue transition active:scale-[0.98]"
+              >
+                Ahora no
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {sala ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-fondo">
           <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg p-4">

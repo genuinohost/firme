@@ -309,6 +309,32 @@ service cloud.firestore {
     }
 
 
+    // ------------------------------------------------------- la comunidad de voz
+    //
+    // Quién se apuntó a que le suene el móvil cuando el anfitrión llame.
+    //
+    // **Esto es un espejo, no el interruptor.** Lo que hace sonar un móvil es
+    // que él mismo se suscribió al tema `devocional` de Firebase; eso pasa en
+    // el teléfono y aquí no se ve. Esta lista existe para que cada uno vea si
+    // está y para que quien modera pueda contar cuántos son. Si un día esta
+    // lista y el tema se desincronizan, lo que manda es el tema.
+    //
+    // Cada uno escribe y borra sólo lo suyo. Leer lo propio, cualquiera; **la
+    // lista entera, sólo quien modera**: quién está apuntado a un grupo de
+    // oración es cosa de cada uno, no un dato público.
+    match /comunidad/voz/miembros/{uid} {
+      function miembroRazonable(d) {
+        return d.keys().hasOnly(['nombre', 'usuario', 'desde'])
+          && d.nombre is string && d.nombre.size() <= 40
+          && d.usuario is string && d.usuario.size() <= 20
+          && d.desde is number;
+      }
+      allow get: if esElMismo(uid);
+      allow list: if esModerador();
+      allow create, update: if esElMismo(uid) && miembroRazonable(request.resource.data);
+      allow delete: if esElMismo(uid);
+    }
+
     // --------------------------------------------------------------- el muro
     //
     // Las notas que alguien decidió publicar. **Nada llega aquí sin que su

@@ -347,6 +347,50 @@ await debe(
 );
 
 
+// ------------------------------------------------------- la comunidad de voz
+console.log("\nLa comunidad de voz");
+
+const miembro = (nombre, usuario) => ({ nombre, usuario, desde: 1 });
+
+await debe(
+  "cada uno se apunta a si mismo",
+  assertSucceeds(setDoc(doc(beto, "comunidad/voz/miembros/beto"), miembro("Beto", "beto"))),
+);
+await debe(
+  "nadie apunta a otro",
+  assertFails(setDoc(doc(curioso, "comunidad/voz/miembros/beto"), miembro("Beto", "beto"))),
+);
+await debe(
+  "cada uno ve si esta",
+  assertSucceeds(getDoc(doc(beto, "comunidad/voz/miembros/beto"))),
+);
+await debe(
+  "NADIE VE SI OTRO ESTA: quien esta en un grupo de oracion es cosa suya",
+  assertFails(getDoc(doc(curioso, "comunidad/voz/miembros/beto"))),
+);
+await debe(
+  "la lista entera solo la ve quien modera",
+  assertSucceeds(getDocs(collection(moderador, "comunidad/voz/miembros"))),
+);
+await debe(
+  "y quien no modera no puede listarla",
+  assertFails(getDocs(collection(curioso, "comunidad/voz/miembros"))),
+);
+await debe(
+  "no se cuelan campos: esto no es un perfil",
+  assertFails(
+    setDoc(doc(beto, "comunidad/voz/miembros/beto"), { ...miembro("Beto", "beto"), telefono: "x" }),
+  ),
+);
+await debe(
+  "salirse es un toque: cada uno se borra a si mismo",
+  assertSucceeds(deleteDoc(doc(beto, "comunidad/voz/miembros/beto"))),
+);
+await debe(
+  "y nadie saca a otro — ni quien modera, que para eso esta el tema",
+  assertFails(deleteDoc(doc(moderador, "comunidad/voz/miembros/ana"))),
+);
+
 // ------------------------------- las tres lecturas de las que vive el portero
 //
 // El portero de las salas corre en Cloudflare y lee Firestore **con el token de
