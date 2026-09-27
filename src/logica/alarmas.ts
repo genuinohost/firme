@@ -154,11 +154,34 @@ export function useAlarmas(
 } {
   const [disparo, setDisparo] = useState<Disparo | null>(null);
   const pospuestas = useRef<Map<string, number>>(new Map());
+
+  /**
+   * Las que llegaron mientras había otra en pantalla.
+   *
+   * ── El fallo que esto arregla ─────────────────────────────────────────
+   *
+   * Alex, el 27-09-2026: «cuando a una de las alarmas no me doy en Cumplido,
+   * es como que se traba, se queda en esa alarma y no avanza a la otra».
+   * Tenía razón, y era peor de lo que parecía.
+   *
+   * Aquí ponía `if (!activas || disparo) return;`: **mientras hubiera una
+   * alarma sin contestar, la app dejaba de mirar si tocaba otra**. Y como el
+   * margen de recuperación son tres minutos, todo lo que pasara desde el
+   * cuarto minuto no se mostraba, **no se registraba, y no salía como
+   * perdida** — porque nativamente sí había sonado. Desaparecía en silencio,
+   * que es la peor forma de fallar que tiene esta app.
+   *
+   * Ahora se sigue mirando siempre. Lo que llega mientras hay una en pantalla
+   * se apunta aquí y sale en cuanto se contesta la anterior. **No se pierde
+   * ninguna**: cada una es un bloque de la rutina que alguien tiene que marcar
+   * como cumplido o saltado, y esa decisión no la toma la app.
+   */
+  const cola = useRef<Disparo[]>([]);
   const fecha = claveFecha(ahora);
   const minuto = minutoActual(ahora);
 
   useEffect(() => {
-    if (!activas || disparo) return;
+    if (!activas) return;
     const disparadas = leerDisparadas(fecha);
 
     for (const suceso of sucesos) {
@@ -183,9 +206,19 @@ export function useAlarmas(
         if (retraso < 0 || retraso > MARGEN_RECUPERACION_MIN) continue;
 
         const nuevo: Disparo = { suceso, tipo, clave };
+        // Se apunta como disparada **aunque vaya a la cola**: si no, se
+        // volvería a detectar cada minuto y acabaría repetida.
         disparadas.add(clave);
         escribirDisparadas(fecha, disparadas);
         pospuestas.current.delete(clave);
+
+        if (disparo) {
+          // Hay otra en pantalla. Ésta espera su turno, sin sonar: el ruido ya
+          // lo está poniendo la de delante.
+          if (!cola.current.some((d) => d.clave === clave)) cola.current.push(nuevo);
+          return;
+        }
+
         setDisparo(nuevo);
 
         // En Android el ruido lo pone el servicio nativo, que repica por el
@@ -226,10 +259,25 @@ export function useAlarmas(
     void avisarSistema(nuevo, suceso.porque);
   }, [minuto, ajustes.volumen]);
 
+  /**
+   * Da paso a la siguiente de la cola, si hay.
+   *
+   * Sale la más vieja primero: son bloques de la rutina en el orden en que
+   * pasaron, y contestarlos al revés confunde.
+   */
+  const siguiente = useCallback(() => {
+    const queda = cola.current.shift() ?? null;
+    setDisparo(queda);
+    if (queda && !Capacitor.isNativePlatform()) {
+      if (queda.tipo === "inicio") sonar(queda.suceso.timbre, ajustes.volumen);
+      else sonar("pulso", ajustes.volumen * 0.6);
+    }
+  }, [ajustes.volumen]);
+
   const cerrar = useCallback(() => {
     parar();
-    setDisparo(null);
-  }, []);
+    siguiente();
+  }, [siguiente]);
 
   const posponer = useCallback(
     (minutos: number) => {
@@ -237,9 +285,9 @@ export function useAlarmas(
         pospuestas.current.set(disparo.clave, minutoActual(new Date()) + minutos);
       }
       parar();
-      setDisparo(null);
+      siguiente();
     },
-    [disparo],
+    [disparo, siguiente],
   );
 
   return { disparo, cerrar, posponer, probar };

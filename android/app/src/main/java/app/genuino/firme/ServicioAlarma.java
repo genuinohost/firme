@@ -99,6 +99,9 @@ public class ServicioAlarma extends Service {
     /** Cuanto repica como mucho, si nadie la para. */
     private static final long TOPE_MS = 5 * 60 * 1000L;
 
+    /** Cada cuanto el aviso vuelve a la cabeza de la bandeja. */
+    private static final long RECORDAR_CADA_MS = 15 * 1000L;
+
     /**
      * Suelo del volumen de alarma, en tanto por ciento del maximo.
      *
@@ -119,6 +122,26 @@ public class ServicioAlarma extends Service {
     private Runnable corte;
     private Runnable repique;
     private boolean sonando = false;
+
+    /**
+     * Vuelve a publicar el aviso cada pocos segundos mientras suena.
+     *
+     * <p><b>Por que.</b> Alex, el 27-09-2026: «me dicen que la notificacion de
+     * parar la alarma a veces se pierde entre otras notificaciones, y se hace
+     * dificil parar la alarma».
+     *
+     * <p>Android no deja decir «este aviso va primero». Lo que si hace es
+     * ordenar por lo mas reciente dentro de la misma importancia, asi que
+     * volver a publicarlo lo devuelve arriba del todo — y de paso vuelve a
+     * asomar flotante, que es la otra mitad de lo que pidio.
+     *
+     * <p>Que reaparezca cada poco seria molesto en cualquier otro aviso. Aqui
+     * no: hay una alarma sonando y lo unico que falta es el boton de pararla.
+     */
+    private Runnable recordatorio;
+
+    /** Lo ultimo que se publico, para poder republicarlo tal cual. */
+    private Notification ultimoAviso;
 
     @Override
     public IBinder onBind(Intent intencion) {
@@ -166,6 +189,23 @@ public class ServicioAlarma extends Service {
 
             corte = this::parar;
             mano.postDelayed(corte, TOPE_MS);
+            empezarARecordar();
+        } else {
+            /*
+              Ya estaba sonando y ha llegado OTRA alarma.
+
+              El corte de cinco minutos se puso cuando empezo la primera, asi
+              que la segunda heredaba lo que quedara de aquel: si llega en el
+              minuto cuatro y medio, se corta a los treinta segundos. Eso es
+              justo lo que Alex describio el 27-09-2026 como «se traba, se
+              queda en esa alarma y no avanza a la otra».
+
+              La segunda merece sus cinco minutos enteros, como cualquiera.
+            */
+            if (corte != null) mano.removeCallbacks(corte);
+            corte = this::parar;
+            mano.postDelayed(corte, TOPE_MS);
+            AlarmaExacta.anotarEnElUltimoDisparo(this, "encimaDeOtra", true);
         }
 
         return START_STICKY;
@@ -209,11 +249,16 @@ public class ServicioAlarma extends Service {
                 .setOngoing(true)
                 .setAutoCancel(false)
                 .setSilent(true) // el sonido lo pone el reproductor, no esto
+                // Coloreado y a pantalla completa: las dos cosas que hacen que
+                // no se confunda con los demas avisos de la bandeja.
+                .setColorized(true)
                 .setContentIntent(entrar)
                 .setFullScreenIntent(entrar, true)
                 .addAction(0, "Parar", pararla)
                 .addAction(0, "Posponer " + minutosDePosponer() + " min", posponerla(id, titulo, cuerpo, idSuceso))
                 .build();
+
+        ultimoAviso = aviso;
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -231,6 +276,33 @@ public class ServicioAlarma extends Service {
             if (gestor != null) gestor.notify(ID_AVISO, aviso);
             AlarmaExacta.anotarEnElUltimoDisparo(this, "sinPrimerPlano", e.getMessage());
         }
+    }
+
+    /**
+     * Cada quince segundos, el aviso vuelve arriba.
+     *
+     * <p>Quince y no menos: mas a menudo parpadearia sin darle tiempo a nadie a
+     * tocarlo. Mas y vuelve a enterrarse bajo lo que llegue.
+     *
+     * <p>Se publica con {@code notify} y no con {@code startForeground}: el
+     * servicio ya esta en primer plano y volver a arrancarlo no hace falta.
+     */
+    private void empezarARecordar() {
+        if (recordatorio != null) mano.removeCallbacks(recordatorio);
+        recordatorio = new Runnable() {
+            @Override
+            public void run() {
+                if (!sonando || ultimoAviso == null) return;
+                try {
+                    NotificationManager gestor = getSystemService(NotificationManager.class);
+                    if (gestor != null) gestor.notify(ID_AVISO, ultimoAviso);
+                } catch (Exception ignorada) {
+                    // Que no se pueda republicar no debe parar el ruido.
+                }
+                mano.postDelayed(this, RECORDAR_CADA_MS);
+            }
+        };
+        mano.postDelayed(recordatorio, RECORDAR_CADA_MS);
     }
 
     private void crearCanalMudo() {
@@ -471,6 +543,8 @@ public class ServicioAlarma extends Service {
         ReceptorAlarma.callarUltimoRecurso();
         if (corte != null) mano.removeCallbacks(corte);
         if (repique != null) mano.removeCallbacks(repique);
+        if (recordatorio != null) mano.removeCallbacks(recordatorio);
+        recordatorio = null;
 
         soltarReproductor();
         if (generador != null) {
