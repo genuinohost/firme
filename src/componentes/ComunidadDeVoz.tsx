@@ -1,4 +1,13 @@
 import { useEffect, useState } from "react";
+import type { EstadoDespertador } from "@/logica/despertador";
+import {
+  abrirAjustesDeLaApp,
+  abrirInicioAutomatico,
+  estadoDespertador,
+  hayInicioAutomatico,
+  pedirExencionBateria,
+  pedirPantallaCompleta,
+} from "@/logica/despertador";
 import { miUid, puedoModerar } from "@/logica/muro";
 import { leerPerfil } from "@/logica/nube";
 import {
@@ -34,6 +43,22 @@ export function ComunidadDeVoz() {
   const [cuantos, setCuantos] = useState<number | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
+  /**
+   * Lo que le falta a ESTE móvil para que la llamada se vea, no sólo suene.
+   *
+   * Joseito, 27-09-2026, el primer timbre de verdad: «me estaba sonando el
+   * teléfono, pero en ningún lado me aparecía nada visible. Tuve que buscar a
+   * mano entre las notificaciones qué era lo que sonaba». El sonido llegó; la
+   * pantalla no. En su Xiaomi faltaban los permisos de MIUI para que una app
+   * en segundo plano pueda poner una ventana encima.
+   *
+   * Se mira al apuntarse —que es cuando alguien acaba de aceptar que le
+   * suene— y se enseña sólo lo que falta, cada cosa con su botón. Igual que
+   * hizo la pantalla del despertador después de que Joseito se quejara de los
+   * siete pasos del candado.
+   */
+  const [despertador, setDespertador] = useState<EstadoDespertador | null>(null);
+  const [inicioAuto, setInicioAuto] = useState<{ hay: boolean; fabricante: string } | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -52,6 +77,7 @@ export function ComunidadDeVoz() {
       if (!vivo) return;
       if (perfil) setQuien({ nombre: perfil.nombre, usuario: perfil.usuario });
       setEstado(dentro ? "dentro" : "fuera");
+      if (dentro && hayTimbre()) void mirarElMovil();
       // Contar sólo lo puede quien modera; para los demás no es un dato que
       // necesiten, y las reglas no lo darían de todas formas.
       if (modero) setCuantos(await cuantosMiembros());
@@ -60,6 +86,15 @@ export function ComunidadDeVoz() {
       vivo = false;
     };
   }, []);
+
+  const mirarElMovil = async () => {
+    const [e, ia] = await Promise.all([
+      estadoDespertador().catch(() => null),
+      hayInicioAutomatico().catch(() => ({ hay: false, fabricante: "" })),
+    ]);
+    setDespertador(e);
+    setInicioAuto(ia);
+  };
 
   if (estado === "mirando" || estado === "sin-cuenta") return null;
 
@@ -79,6 +114,7 @@ export function ComunidadDeVoz() {
         await unirmeALaComunidad(quien);
         setEstado("dentro");
         setAviso("Dentro. Cuando el anfitrión llame, te sonará.");
+        if (hayTimbre()) void mirarElMovil();
       }
     } catch (e) {
       const m = String((e as { message?: string })?.message ?? e);
@@ -135,6 +171,84 @@ export function ComunidadDeVoz() {
       )}
 
       {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
+
+      {estado === "dentro" && despertador ? (
+        <ParaQueSeVea despertador={despertador} inicioAuto={inicioAuto} />
+      ) : null}
     </Tarjeta>
+  );
+}
+
+/**
+ * Lo que le falta a este móvil para que la llamada SE VEA, cada cosa con su
+ * botón. Si no falta nada, no se pinta nada: una lista de cosas ya hechas es
+ * ruido.
+ */
+function ParaQueSeVea({
+  despertador,
+  inicioAuto,
+}: {
+  despertador: EstadoDespertador;
+  inicioAuto: { hay: boolean; fabricante: string } | null;
+}) {
+  const fabricante = (inicioAuto?.fabricante ?? despertador.fabricante ?? "").toLowerCase();
+  const esXiaomi = /xiaomi|redmi|poco/.test(fabricante);
+
+  const faltan: { que: string; porque: string; boton: string; hacer: () => void }[] = [];
+
+  if (!despertador.puedePantallaCompleta) {
+    faltan.push({
+      que: "Dejar que encienda la pantalla",
+      porque: "Sin esto la llamada suena pero no sale en la pantalla: queda como una notificación más y hay que buscarla.",
+      boton: "Permitir pantalla completa",
+      hacer: () => void pedirPantallaCompleta(),
+    });
+  }
+  if (!despertador.exentaDeBateria) {
+    faltan.push({
+      que: "Sacar Genuino del ahorro de batería",
+      porque: "Con la app congelada por el ahorro, el aviso de la llamada puede no llegar nunca.",
+      boton: "Sacarla del ahorro de batería",
+      hacer: () => void pedirExencionBateria(),
+    });
+  }
+  if (inicioAuto?.hay) {
+    faltan.push({
+      que: "Inicio automático",
+      porque: "Sin esto, con la app cerrada el móvil no la deja despertarse cuando llega la llamada.",
+      boton: "Abrir inicio automático",
+      hacer: () => void abrirInicioAutomatico(),
+    });
+  }
+  if (esXiaomi) {
+    // MIUI tiene dos permisos propios que no existen en el Android normal y sin
+    // los cuales una app en segundo plano NO puede poner nada en pantalla. No
+    // hay forma de pedirlos con un dialogo: hay que ir a los ajustes de la app.
+    faltan.push({
+      que: "Dos permisos de Xiaomi",
+      porque:
+        "En Ajustes de la app → «Otros permisos»: activa «Mostrar ventanas emergentes en segundo plano» y «Mostrar en pantalla de bloqueo». Sin esos dos, en Xiaomi la llamada no se ve aunque suene.",
+      boton: "Abrir los ajustes de Genuino",
+      hacer: () => void abrirAjustesDeLaApp(),
+    });
+  }
+
+  if (faltan.length === 0) return null;
+
+  return (
+    <div className="mt-4 border-t border-borde pt-3">
+      <Etiqueta>para que la llamada se vea, no sólo suene</Etiqueta>
+      {faltan.map((f) => (
+        <div key={f.que} className="mt-3">
+          <p className="text-sm font-medium">{f.que}</p>
+          <p className="mt-1 text-xs leading-relaxed text-tenue">{f.porque}</p>
+          <div className="mt-2">
+            <Boton ancho onClick={f.hacer}>
+              {f.boton}
+            </Boton>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

@@ -8,6 +8,55 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 27 de septiembre de 2026 (noche) — el timbre sonó de verdad, y lo que Joseito vio
+
+## 🟢 Sonó
+
+Joseito grabó su móvil: **con la app cerrada, le sonó**, desbloqueó, tocó *Entrar* y entró a la
+sala de Alex como oyente. «Devocional · 2 dentro». La cadena entera del timbre —el móvil apuntado
+al tema, el Worker con la cuenta recortada, FCM, `ServicioAvisos`, `ServicioAlarma`, la pantalla
+«Te llaman»— funcionó a la primera llamada real.
+
+Medido en el audio del vídeo: sonido continuo del segundo 1 al 28, silencio justo al tocar
+*Entrar*, y después el audio de la sala.
+
+## Antes de eso: «Llamando» a nadie
+
+La primera llamada de Alex salió a un tema **vacío**: ni Joseito ni Nazdrely estaban
+apuntados. Google acepta un aviso a un tema aunque no haya nadie, y el botón repitió «Llamando»
+como éxito. Ahora el botón dice **«Llamando a N»**, y si N es cero lo dice antes de llamar.
+
+Nazdrely tiene cuenta y perfil desde el 18 y aun así no pudo apuntarse: lo que le falla es
+apuntar **su móvil** a los avisos de Google (Play Services / permiso de notificaciones). El
+mensaje era «mira tu conexión»; ahora distingue Google de la red.
+
+## Lo que Joseito vio, y las tres correcciones
+
+> «Me estaba sonando el teléfono, pero en ningún lado me aparecía una notificación ni nada
+> visible. Tuve que buscar a mano entre las notificaciones qué era lo que sonaba. Y suena
+> como una alarma, no como una llamada de un grupo: me aparece pausar o posponer 10 min.»
+
+| Lo que vio | Por qué | Arreglo (6.16) |
+|---|---|---|
+| Sólo una notificación enterrada, sin pantalla | En su Xiaomi faltan dos permisos de MIUI («ventanas emergentes en segundo plano» y «mostrar en pantalla de bloqueo»); sin ellos una app en segundo plano no puede poner nada encima, y la pantalla completa no sale | Al apuntarse, la app mira el móvil y pide **sólo lo que falta**, con botón: pantalla completa, ahorro de batería, inicio automático, y en Xiaomi los dos de MIUI |
+| «Parar / Posponer 10 min» | Era la notificación de las alarmas | Estilo de **llamada entrante** (`CallStyle`), el mismo del teléfono: arriba del todo, **Responder / Rechazar**, no se quita de un manotazo. «Ahora no» además olvida la llamada |
+| Suena a alarma | Tono de alarma | Para llamadas, **el tono de llamada** del móvil. Sigue por el flujo de alarma: suena en No molestar y en silencio |
+
+## Comprobado
+
+Java compila con los tres cambios; 43 del Worker; 90 reglas. **Sin probar todavía**: que con la
+pantalla apagada se encienda sola en el Xiaomi de Joseito — depende de que active los permisos
+que ahora la app le pide.
+
+## Pendiente
+
+- Que Joseito active los permisos y Alex vuelva a llamar con su pantalla apagada.
+- Nazdrely: actualizar Play Services y reintentar «Unirme».
+- Regenerar el certificado de Agora.
+- 5 probadores de 12 para Play.
+
+---
+
 # 🧭 27 de septiembre de 2026 (tarde y noche) — «Funciona PERFECTO», y el timbre
 
 ## 🟢 La primera voz que cruza el sistema entero

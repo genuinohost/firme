@@ -143,6 +143,13 @@ public class ServicioAlarma extends Service {
     /** Lo ultimo que se publico, para poder republicarlo tal cual. */
     private Notification ultimoAviso;
 
+    /** El suceso que esta sonando. Si empieza por «sala:», es una llamada. */
+    private String idSucesoActual;
+
+    private boolean esLlamadaActual() {
+        return idSucesoActual != null && idSucesoActual.startsWith("sala:");
+    }
+
     @Override
     public IBinder onBind(Intent intencion) {
         return null;
@@ -166,6 +173,7 @@ public class ServicioAlarma extends Service {
         String titulo = textoDe(intencion, "titulo", "Firme");
         String cuerpo = textoDe(intencion, "cuerpo", "Es la hora.");
         String idSuceso = textoDe(intencion, "idSuceso", "");
+        idSucesoActual = idSuceso;
 
         // Lo primero de todo, antes que el audio: Android mata el servicio si no
         // se pone en primer plano en cinco segundos.
@@ -237,7 +245,7 @@ public class ServicioAlarma extends Service {
                 this, 1, callar,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        Notification aviso = new NotificationCompat.Builder(this, CANAL_SERVICIO)
+        NotificationCompat.Builder constructor = new NotificationCompat.Builder(this, CANAL_SERVICIO)
                 .setSmallIcon(R.drawable.ic_stat_firme)
                 .setColor(0xFFC9A227)
                 .setContentTitle(titulo)
@@ -253,10 +261,43 @@ public class ServicioAlarma extends Service {
                 // no se confunda con los demas avisos de la bandeja.
                 .setColorized(true)
                 .setContentIntent(entrar)
-                .setFullScreenIntent(entrar, true)
-                .addAction(0, "Parar", pararla)
-                .addAction(0, "Posponer " + minutosDePosponer() + " min", posponerla(id, titulo, cuerpo, idSuceso))
-                .build();
+                .setFullScreenIntent(entrar, true);
+
+        /*
+          Los botones cambian si esto es una llamada y no una alarma.
+
+          El 27-09-2026 a Joseito le sono «te llaman al devocional» con la app
+          cerrada —funciono— y la notificacion le ofrecia «Parar» y «Posponer
+          10 min». Posponer una llamada no significa nada: dentro de diez
+          minutos el devocional va por la mitad. Una llamada se coge o no se
+          coge. Y «Parar» suena a apagar una alarma; aqui lo que se para es
+          decir que no.
+        */
+        boolean esLlamada = idSuceso != null && idSuceso.startsWith("sala:");
+        if (esLlamada) {
+            /*
+              Estilo de LLAMADA ENTRANTE, el mismo que usa el telefono.
+
+              Joseito, 27-09-2026: «me estaba sonando el telefono, pero en
+              ningun lado me aparecia una notificacion ni nada visible. Tuve
+              que buscar a mano entre las notificaciones que era lo que
+              sonaba». Una notificacion normal se entierra; una de tipo
+              llamada Android la pone arriba del todo, grande, con Responder y
+              Rechazar, y no se puede quitar de un manotazo. Es lo que la
+              gente reconoce como «me estan llamando».
+            */
+            androidx.core.app.Person quien = new androidx.core.app.Person.Builder()
+                    .setName(titulo)
+                    .setImportant(true)
+                    .build();
+            constructor.setStyle(NotificationCompat.CallStyle.forIncomingCall(quien, pararla, entrar))
+                    .setCategory(NotificationCompat.CATEGORY_CALL);
+        } else {
+            constructor.addAction(0, "Parar", pararla)
+                    .addAction(0, "Posponer " + minutosDePosponer() + " min",
+                            posponerla(id, titulo, cuerpo, idSuceso));
+        }
+        Notification aviso = constructor.build();
 
         ultimoAviso = aviso;
 
@@ -411,12 +452,24 @@ public class ServicioAlarma extends Service {
     }
 
     private Uri tonoDeAlarma() {
-        Uri[] candidatos = {
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-                Settings.System.DEFAULT_ALARM_ALERT_URI,
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-        };
+        // Para una llamada, primero el tono de LLAMADA del movil. Joseito,
+        // 27-09-2026: «suena como una alarma y no como una llamada de un
+        // grupo». Sigue yendo por el flujo de alarma —que No molestar deja
+        // pasar y que suena aunque el movil este en silencio—, pero con el
+        // sonido que la gente reconoce como «me estan llamando».
+        Uri[] candidatos = esLlamadaActual()
+                ? new Uri[] {
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+                        Settings.System.DEFAULT_RINGTONE_URI,
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                }
+                : new Uri[] {
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                        Settings.System.DEFAULT_ALARM_ALERT_URI,
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                };
         for (Uri u : candidatos) {
             if (u != null) return u;
         }
@@ -539,6 +592,15 @@ public class ServicioAlarma extends Service {
     private void parar() {
         sonando = false;
         SONANDO = false;
+        // Si lo que se para es una llamada, «Ahora no» desde la notificacion
+        // tiene que olvidarla tambien: si no, al abrir la app diez segundos
+        // despues volveria a salir «te llaman» de algo que ya se rechazo.
+        if (idSucesoActual != null && idSucesoActual.startsWith("sala:")) {
+            try {
+                getSharedPreferences(AlarmaExacta.PREFS, MODE_PRIVATE)
+                        .edit().remove(ServicioAvisos.CLAVE_LLAMADA).apply();
+            } catch (Exception ignorada) { }
+        }
         // Si el receptor llego a sonar por su cuenta, tambien se calla aqui.
         ReceptorAlarma.callarUltimoRecurso();
         if (corte != null) mano.removeCallbacks(corte);
