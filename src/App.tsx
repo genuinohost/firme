@@ -41,6 +41,7 @@ import { PantallaSala } from "@/componentes/PantallaSala";
 import { PantallaFallo } from "@/componentes/PantallaFallo";
 import { contarSolicitudes, miUid, publicarNota } from "@/logica/muro";
 import { leerPerfil } from "@/logica/nube";
+import { pasarLaApp } from "@/logica/pasarApp";
 import { respaldarSiToca } from "@/logica/respaldoNube";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
@@ -516,6 +517,21 @@ export default function App() {
                 titulo: "Avisar de un fallo",
                 detalle: "Si algo no funciona, cuéntalo con capturas",
                 onIr: () => setPestaña("fallo"),
+              },
+              // Mientras la app no esté en Google Play, se pasa a mano. Se manda
+              // el archivo mismo —no un enlace—, para que la otra persona no
+              // tenga que bajar treinta megas por su conexión.
+              {
+                id: "pasar",
+                icono: "↗",
+                titulo: "Pasarle la app a alguien",
+                detalle: "Por WhatsApp, Bluetooth o Compartir cercano. Sin descargar nada.",
+                onIr: () => {
+                  void pasarLaApp().then((que) => {
+                    if (que === "copiado") setAvisoMuro("Enlace copiado. Pégalo donde quieras.");
+                    else if (que === "fallo") setAvisoMuro("No se pudo compartir.");
+                  });
+                },
               },
               {
                 id: "porque",

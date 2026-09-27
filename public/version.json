@@ -1,15 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 54,
-  "nombre": "6.12",
+  "codigo": 55,
+  "nombre": "6.13",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "ARREGLADO: si no contestabas una alarma, la app se trababa en ella y las siguientes se perdian en silencio. Ahora esperan su turno y salen una a una.",
-    "La segunda alarma ya no hereda el tiempo de la primera: cada una repica sus cinco minutos.",
-    "El aviso para parar la alarma vuelve arriba cada quince segundos y va coloreado, para que no se entierre entre otras notificaciones.",
-    "Tocar una reunion programada ahora ABRE la sala si eres el anfitrion.",
-    "Arreglado entrar con Google desde la web: llevaba desde el principio sin dejar crear cuenta.",
-    "El paquete pesa la mitad: 31 MB en vez de 62."
+    "Nuevo en Mas: «Pasarle la app a alguien». Manda el archivo mismo por WhatsApp, Bluetooth o Compartir cercano, sin que la otra persona descargue nada.",
+    "Si al entrar a una sala falla el permiso del servidor, ahora lo dice; antes mandaba a mirar la conexion."
   ],
   "importante": false
 }
