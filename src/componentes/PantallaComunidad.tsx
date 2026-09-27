@@ -59,6 +59,7 @@ const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "
 
 export function PantallaComunidad({
   onEntrarEnSala,
+  onPonerEnRutina,
 }: {
   /**
    * Una reunion que es una sala de Genuino no se abre en el navegador: se entra.
@@ -66,6 +67,12 @@ export function PantallaComunidad({
    * la propia pantalla de la sala explica que esto es de la app.
    */
   onEntrarEnSala?: (canal: string, nombre?: string) => void;
+  /**
+   * Poner una reunión que es sala de Genuino en la rutina, para que suene a su
+   * hora como una alarma. Sólo tiene sentido con las salas propias: una
+   * reunión de Zoom no se puede «entrar» desde la alarma.
+   */
+  onPonerEnRutina?: (reunion: Reunion) => void;
 }) {
   const [comunidad, setComunidad] = useState<Comunidad>(() => leerGuardada());
   const [cargando, setCargando] = useState(false);
@@ -181,6 +188,9 @@ export function PantallaComunidad({
               reunion={r}
               ahora={ahora}
               onEntrar={() => abrir(r.url, r.nombre)}
+              onPonerEnRutina={
+                onPonerEnRutina && salaDeLaUrl(r.url) ? () => onPonerEnRutina(r) : undefined
+              }
             />
           ))}
         </section>
@@ -257,10 +267,12 @@ function FilaReunion({
   reunion,
   ahora,
   onEntrar,
+  onPonerEnRutina,
 }: {
   reunion: Reunion;
   ahora: Date;
   onEntrar: () => void;
+  onPonerEnRutina?: () => void;
 }) {
   const { estado, minutos } = estadoReunion(reunion, ahora);
   const enVivo = estado === "enVivo";
@@ -313,6 +325,14 @@ function FilaReunion({
           {esSala ? (enVivo ? "Entrar" : "Abrir") : enVivo ? "Entrar" : "Enlace"}
         </Boton>
       </div>
+      {onPonerEnRutina ? (
+        <button
+          onClick={onPonerEnRutina}
+          className="mt-2 text-xs text-acento transition hover:brightness-110"
+        >
+          Ponerla en mi rutina, que me suene a su hora
+        </button>
+      ) : null}
     </div>
   );
 }

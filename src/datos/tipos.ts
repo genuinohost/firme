@@ -44,6 +44,16 @@ export type BloqueRutina = {
   /** Minutos de aviso antes de la hora. 0 = sin aviso previo. */
   avisoPrevioMin: number;
   activo: boolean;
+  /**
+   * Si este bloque es un devocional en voz: el canal de la sala.
+   *
+   * Alex, el 27-09-2026, eligió que el devocional a hora fija suene **como una
+   * alarma**, con la maquinaria que ya funciona de madrugada, y que la llamada
+   * espontánea vaya aparte por push. Un bloque con `sala` es eso: a su hora
+   * suena, y la pantalla de la alarma ofrece entrar a la sala en vez de sólo
+   * «empiezo ahora».
+   */
+  sala?: string;
 };
 
 /**
@@ -181,4 +191,6 @@ export type Suceso = {
    * todo lo demás parecía roto.
    */
   plan?: string;
+  /** El canal de la sala, si este suceso es un devocional en voz. */
+  sala?: string;
 };

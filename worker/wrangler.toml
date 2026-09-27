@@ -26,6 +26,16 @@ AGORA_APP_ID = "1d30537aab4a4171b9649dba7f408565"
 VERSION_URL = "https://genuino-pro.web.app/version.json"
 RELEASES_URL = "https://github.com/genuinohost/firme/releases/latest/download"
 
+# Para hacer sonar los moviles (/llamar). El tema es al que se apunta cada
+# telefono al entrar a la comunidad; llamar es un solo mensaje a ese tema.
+FCM_TOKEN_URL = "https://oauth2.googleapis.com/token"
+FCM_URL = "https://fcm.googleapis.com/v1/projects/genuino-host/messages:send"
+FCM_TEMA = "devocional"
+
+# FCM_CUENTA **no va aqui**: es la cuenta de servicio recortada de Google
+# (genuino-timbre@…, solo puede enviar avisos). Entro por tuberia directa a
+# `wrangler secret put FCM_CUENTA` el 27-09-2026, sin tocar disco.
+
 # AGORA_APP_CERTIFICATE **no va aqui**. Es el que firma, y con el se podrian
 # abrir canales a nuestro nombre. Se pone una vez, y nunca toca un archivo:
 #

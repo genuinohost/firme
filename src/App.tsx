@@ -42,6 +42,7 @@ import { PantallaFallo } from "@/componentes/PantallaFallo";
 import { contarSolicitudes, miUid, publicarNota } from "@/logica/muro";
 import { leerPerfil } from "@/logica/nube";
 import { pasarLaApp } from "@/logica/pasarApp";
+import { horaLocalDe, salaDeLaUrl, type Reunion } from "@/logica/comunidad";
 import { respaldarSiToca } from "@/logica/respaldoNube";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita } from "@/componentes/piezas";
@@ -407,6 +408,42 @@ export default function App() {
     }
   };
 
+  /**
+   * Poner una reunión publicada en la rutina, como un bloque con sala.
+   *
+   * Es la mitad «a hora fija» del timbre: a su hora suena con la maquinaria
+   * de las alarmas —la que ya aguanta MIUI de madrugada— y la pantalla ofrece
+   * entrar. La hora se convierte a la de este móvil una vez, al ponerla: la
+   * rutina guarda horas locales, y un devocional a las 03:00 de Caracas es a
+   * las 09:00 en Madrid.
+   *
+   * Si ya estaba, no se duplica: se avisa y ya.
+   */
+  const ponerReunionEnRutina = (reunion: Reunion) => {
+    const canal = salaDeLaUrl(reunion.url);
+    if (!canal) return;
+    const id = `sala-${canal}`;
+    if (datos.rutina.some((b) => b.id === id)) {
+      setAvisoMuro("Ya está en tu rutina.");
+      return;
+    }
+    const bloque: BloqueRutina = {
+      id,
+      nombre: reunion.nombre,
+      hora: horaLocalDe(reunion),
+      duracionMin: reunion.duracionMin || 60,
+      dias: reunion.dias.length > 0 ? reunion.dias : [0, 1, 2, 3, 4, 5, 6],
+      categoria: "fe",
+      porque: reunion.descripcion ?? "Orar y leer la Palabra con los hermanos.",
+      timbre: "diana",
+      avisoPrevioMin: 5,
+      activo: true,
+      sala: canal,
+    };
+    setDatos((d) => ({ ...d, rutina: [...d.rutina, bloque] }));
+    setAvisoMuro(`Puesta en tu rutina a las ${bloque.hora}. Te sonará como una alarma.`);
+  };
+
   const cambiarAjustes = (ajustes: Ajustes) => setDatos((d) => ({ ...d, ajustes }));
   const cambiarRutina = (rutina: BloqueRutina[]) => setDatos((d) => ({ ...d, rutina }));
   const cambiarMotivos = (motivos: Motivo[]) => setDatos((d) => ({ ...d, motivos }));
@@ -485,6 +522,7 @@ export default function App() {
         {pestaña === "comunidad" ? (
           <PantallaComunidad
             onEntrarEnSala={(canal, nombre) => void entrarEnSala(canal, nombre)}
+            onPonerEnRutina={ponerReunionEnRutina}
           />
         ) : null}
 
@@ -902,6 +940,19 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
             registrar(disparo.suceso, "saltado", "Saltado desde la alarma", fechaHoy);
             cerrar();
           }}
+          onEntrarEnSala={
+            disparo.suceso.sala
+              ? () => {
+                  const canal = disparo.suceso.sala!;
+                  const nombre = disparo.suceso.nombre;
+                  void pararDespertador();
+                  // Entrar es cumplirlo: es lo que el bloque pedía.
+                  registrar(disparo.suceso, "cumplido", undefined, fechaHoy);
+                  cerrar();
+                  void entrarEnSala(canal, nombre);
+                }
+              : undefined
+          }
           onPosponer={(minutos) => {
             void pararDespertador();
             posponer(minutos);

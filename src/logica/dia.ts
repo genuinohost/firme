@@ -102,6 +102,7 @@ export function sucesosDelDia(datos: Datos, fecha: string): Suceso[] {
       timbre: b.timbre,
       avisoPrevioMin: b.avisoPrevioMin,
       registro: datos.registros[`${fecha}|${b.id}`] ?? null,
+      ...(b.sala ? { sala: b.sala } : {}),
     }));
 
   const deTareas: Suceso[] = datos.tareas

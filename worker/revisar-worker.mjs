@@ -80,6 +80,22 @@ let base = {};
 /** Las rutas que el portero pidió, para poder comprobarlas. */
 let pedidas = [];
 
+// ── Google y FCM de mentira, para el timbre ────────────────────────────────
+//
+// La cuenta de servicio recortada, generada aquí: una clave RSA de verdad en
+// el formato exacto que Google entrega. Así `fcm.js` firma el JWT igual que lo
+// firmará contra Google, y lo que se comprueba es lo que va a pasar.
+const { privateKey: claveTimbre } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+const CUENTA_TIMBRE = JSON.stringify({
+  type: "service_account",
+  client_email: "genuino-timbre@genuino-host.iam.gserviceaccount.com",
+  private_key: claveTimbre.export({ type: "pkcs8", format: "pem" }),
+});
+/** Lo que le llegó al FCM de mentira. */
+let enviados = [];
+/** Cuántas veces se pidió token a Google. */
+let tokensPedidos = 0;
+
 const texto = (s) => ({ stringValue: s });
 const numero = (n) => ({ integerValue: String(n) });
 const siNo = (b) => ({ booleanValue: b });
@@ -90,6 +106,43 @@ const servidor = createServer((req, res) => {
   if (url.pathname === "/claves") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ keys: [{ ...jwk, kid: KID, alg: "RS256", use: "sig" }] }));
+    return;
+  }
+
+  if (url.pathname === "/token") {
+    tokensPedidos++;
+    let cuerpo = "";
+    req.on("data", (c) => (cuerpo += c));
+    req.on("end", () => {
+      const jwt = new URLSearchParams(cuerpo).get("assertion") ?? "";
+      const partes = jwt.split(".");
+      const claims = partes.length === 3 ? JSON.parse(Buffer.from(partes[1], "base64url").toString()) : {};
+      // Google comprueba la firma y el emisor. Aquí se comprueba el emisor, que
+      // es lo que se puede comprobar sin ser Google.
+      if (claims.iss !== "genuino-timbre@genuino-host.iam.gserviceaccount.com") {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_grant" }));
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ access_token: "token-de-mentira", expires_in: 3600 }));
+    });
+    return;
+  }
+
+  if (url.pathname === "/fcm") {
+    let cuerpo = "";
+    req.on("data", (c) => (cuerpo += c));
+    req.on("end", () => {
+      if (req.headers.authorization !== "Bearer token-de-mentira") {
+        res.writeHead(401);
+        res.end();
+        return;
+      }
+      enviados.push(JSON.parse(cuerpo));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ name: "projects/genuino-host/messages/123" }));
+    });
     return;
   }
 
@@ -126,6 +179,10 @@ const entorno = {
   AGORA_APP_CERTIFICATE: CERTIFICADO,
   CLAVES_URL: `http://127.0.0.1:${PUERTO}/claves`,
   FIRESTORE_URL: `http://127.0.0.1:${PUERTO}/documentos`,
+  FCM_TOKEN_URL: `http://127.0.0.1:${PUERTO}/token`,
+  FCM_URL: `http://127.0.0.1:${PUERTO}/fcm`,
+  FCM_TEMA: "devocional",
+  FCM_CUENTA: CUENTA_TIMBRE,
 };
 
 const { default: portero } = await import("./src/index.js");
@@ -272,6 +329,68 @@ let deOyente = null;
   const r = await llamar({ canal: "llamada", token: tokenDe("beto") });
   debe("en una llamada de dos, el que recibe habla", r.estado === 200 && r.datos.habla === true);
 }
+
+// ── El timbre ──────────────────────────────────────────────────────────────
+console.log("\nEl timbre");
+
+async function llamarA(cuerpo) {
+  const r = await portero.fetch(
+    new Request("https://portero.genuino/llamar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://localhost" },
+      body: JSON.stringify(cuerpo),
+    }),
+    entorno,
+  );
+  return { estado: r.status, datos: await r.json() };
+}
+
+{
+  enviados = [];
+  const r = await llamarA({ canal: "devocional", token: tokenDe("beto"), nombre: "Devocional" });
+  debe("QUIEN NO MODERA NO LLAMA a nadie", r.estado === 403 && r.datos.error === "no-puedes-llamar");
+  debe("y no salió ningún aviso", enviados.length === 0);
+}
+{
+  base["moderadores/ana"] = { desde: numero(1) };
+  enviados = [];
+  const r = await llamarA({ canal: "devocional", token: tokenDe("ana"), nombre: "Devocional de la mañana" });
+  debe("quien modera SÍ llama", r.estado === 200 && r.datos.enviado === true, JSON.stringify(r.datos));
+  debe("y sale UN aviso, al tema", enviados.length === 1 && enviados[0]?.message?.topic === "devocional");
+  debe(
+    "el aviso lleva la sala, el nombre y quién llama",
+    enviados[0]?.message?.data?.canal === "devocional" &&
+      enviados[0]?.message?.data?.nombre === "Devocional de la mañana" &&
+      enviados[0]?.message?.data?.quien === "ana" &&
+      enviados[0]?.message?.data?.tipo === "llamada",
+  );
+  debe("es de datos, sin parte visible: lo pinta la app, no Android", !enviados[0]?.message?.notification);
+  debe("con prioridad alta y caducidad corta", enviados[0]?.message?.android?.priority === "high");
+  debe("se pidió UN token a Google, firmado por la cuenta recortada", tokensPedidos === 1);
+}
+{
+  enviados = [];
+  const antes = tokensPedidos;
+  await llamarA({ canal: "devocional", token: tokenDe("ana"), nombre: "Otra vez" });
+  debe("la segunda llamada reutiliza el token: no se pide otro", tokensPedidos === antes);
+}
+{
+  base["salas/devocional"].abierta = siNo(false);
+  enviados = [];
+  const r = await llamarA({ canal: "devocional", token: tokenDe("ana") });
+  debe("a una sala CERRADA no se llama", r.estado === 409 && enviados.length === 0);
+  base["salas/devocional"].abierta = siNo(true);
+}
+{
+  enviados = [];
+  const r = await llamarA({ canal: "no-existe", token: tokenDe("ana") });
+  debe("a una sala que no existe tampoco", r.estado === 404 && enviados.length === 0);
+}
+{
+  const r = await llamarA({ canal: "devocional", token: "" });
+  debe("sin sesión, nada", r.estado === 401);
+}
+delete base["moderadores/ana"];
 
 // ── Lo que rodea ───────────────────────────────────────────────────────────
 console.log("\nLo que rodea");

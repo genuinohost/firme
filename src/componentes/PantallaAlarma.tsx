@@ -19,6 +19,7 @@ export function PantallaAlarma({
   onPosponer,
   onSaltar,
   onCerrar,
+  onEntrarEnSala,
 }: {
   disparo: Disparo;
   ajustes: Ajustes;
@@ -27,6 +28,14 @@ export function PantallaAlarma({
   onCumplir: () => void;
   onPosponer: (minutos: number) => void;
   onSaltar: () => void;
+  /**
+   * Si esta alarma es un devocional en voz, entrar a la sala.
+   *
+   * Es el botón grande cuando existe: a las tres de la mañana, con la alarma
+   * encima, lo que hace falta es un solo toque que te meta en la sala. Marcar
+   * el bloque como cumplido lo hace la app al entrar — entrar es cumplirlo.
+   */
+  onEntrarEnSala?: () => void;
   onCerrar: () => void;
 }) {
   const { suceso, tipo } = disparo;
@@ -112,7 +121,12 @@ export function PantallaAlarma({
             </>
           ) : (
             <>
-              <Boton variante="logro" ancho onClick={onCumplir}>
+              {disparo.suceso.sala && onEntrarEnSala ? (
+                <Boton variante="logro" ancho onClick={onEntrarEnSala}>
+                  Entrar al devocional
+                </Boton>
+              ) : null}
+              <Boton variante={disparo.suceso.sala && onEntrarEnSala ? "normal" : "logro"} ancho onClick={onCumplir}>
                 Empiezo ahora
               </Boton>
               <Boton variante="normal" ancho onClick={() => onPosponer(ajustes.posponerMin)}>

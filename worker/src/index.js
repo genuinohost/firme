@@ -1,5 +1,6 @@
 import agoraToken from "agora-token";
 import { nombreDeSalaValido, puedeHablar } from "../../functions/decidir.js";
+import { llamarAlTema } from "./fcm.js";
 import { leerDocumento } from "./firestore.js";
 import { uidDelToken } from "./verificar.js";
 
@@ -179,16 +180,126 @@ async function servirElApk(peticion, entorno) {
   return new Response(apk.body, { status: apk.status, headers: cabeceras });
 }
 
+/**
+ * Hacer sonar los móviles de la comunidad: «te llaman al devocional».
+ *
+ * ── Quién puede ──────────────────────────────────────────────────────────
+ *
+ * Alex, el 27-09-2026: «VITAL que yo pueda hacer que le suene la llamada a los
+ * que voluntariamente están dentro del grupo de voz […] cada vez que yo, y sólo
+ * yo (o alguno de los otros administradores que yo señale), hagan la llamada».
+ *
+ * Los que pueden llamar son los que **moderan**: `moderadores/{uid}`, una
+ * lista que no se puede escribir desde la app y se da de alta desde la
+ * consola. Se comprueba leyendo ese documento **con el token de quien llama** —
+ * las reglas dejan a cada uno leer sólo el suyo, que es justo lo que hace
+ * falta aquí. Un desconocido que encuentre esta dirección se lleva un 403.
+ *
+ * Y sólo se puede llamar a una sala **abierta**: una llamada a una sala que no
+ * existe deja a treinta personas entrando a la nada.
+ *
+ * ── Un mensaje, miles de móviles ─────────────────────────────────────────
+ *
+ * No se lee ninguna lista de tokens: cada móvil se apuntó él solo al tema
+ * `devocional` al entrar a la comunidad, y aquí se manda un solo aviso al
+ * tema. Ver `fcm.js`.
+ */
+async function llamar(peticion, entorno, origen) {
+  let cuerpo;
+  try {
+    cuerpo = await peticion.json();
+  } catch {
+    return respuesta({ error: "cuerpo", porque: "No se entendió la petición." }, 400, origen);
+  }
+  const canal = String(cuerpo?.canal ?? "").trim();
+  const token = String(cuerpo?.token ?? "");
+  const nombre = String(cuerpo?.nombre ?? "Devocional").slice(0, 60);
+
+  if (!nombreDeSalaValido(canal)) {
+    return respuesta({ error: "nombre-invalido", porque: PORQUE["nombre-invalido"] }, 400, origen);
+  }
+
+  let uid;
+  try {
+    uid = await uidDelToken(token, { proyecto: entorno.PROYECTO, clavesUrl: entorno.CLAVES_URL });
+  } catch (e) {
+    console.log("token rechazado:", e?.message ?? e);
+    return respuesta({ error: "sin-sesion", porque: PORQUE["sin-sesion"] }, 401, origen);
+  }
+
+  const base = entorno.FIRESTORE_URL;
+  let modera, sala;
+  try {
+    [modera, sala] = await Promise.all([
+      leerDocumento(base, `moderadores/${uid}`, token),
+      leerDocumento(base, `salas/${canal}`, token),
+    ]);
+  } catch (e) {
+    console.log("firestore:", e?.message ?? e);
+    return respuesta(
+      { error: "sin-conexion", porque: "No se pudo comprobar quién llama. Vuelve a probar." },
+      502,
+      origen,
+    );
+  }
+
+  if (!modera) {
+    return respuesta(
+      { error: "no-puedes-llamar", porque: "Sólo quien lleva la comunidad puede llamar." },
+      403,
+      origen,
+    );
+  }
+  if (!sala) {
+    return respuesta({ error: "sala-no-existe", porque: PORQUE["sala-no-existe"] }, 404, origen);
+  }
+  if (sala.abierta !== true) {
+    return respuesta({ error: "sala-cerrada", porque: PORQUE["sala-cerrada"] }, 409, origen);
+  }
+
+  try {
+    await llamarAlTema({
+      fcmUrl: entorno.FCM_URL,
+      tokenUrl: entorno.FCM_TOKEN_URL,
+      cuentaJson: entorno.FCM_CUENTA,
+      tema: entorno.FCM_TEMA,
+      datos: { tipo: "llamada", canal, nombre, quien: uid },
+    });
+  } catch (e) {
+    console.log("fcm:", e?.message ?? e);
+    return respuesta(
+      { error: "no-se-pudo-llamar", porque: "No se pudo mandar la llamada. Vuelve a probar." },
+      502,
+      origen,
+    );
+  }
+
+  return respuesta({ enviado: true, canal, tema: entorno.FCM_TEMA }, 200, origen);
+}
+
 export default {
   async fetch(peticion, entorno) {
     const origen = peticion.headers.get("Origin") ?? "";
+    const ruta = new URL(peticion.url).pathname;
 
     // El paquete, antes que nada: es lo único que se pide con GET.
-    if (new URL(peticion.url).pathname === "/apk") {
+    if (ruta === "/apk") {
       if (peticion.method !== "GET" && peticion.method !== "HEAD") {
         return new Response("Sólo GET.", { status: 405 });
       }
       return servirElApk(peticion, entorno);
+    }
+
+    if (peticion.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: cabecerasCors(origen) });
+    }
+
+    // Hacer sonar los móviles. Mismo portero, otra puerta.
+    if (ruta === "/llamar") {
+      if (peticion.method !== "POST") {
+        return respuesta({ error: "metodo", porque: "Sólo POST." }, 405, origen);
+      }
+      return llamar(peticion, entorno, origen);
     }
 
     if (peticion.method === "OPTIONS") {
