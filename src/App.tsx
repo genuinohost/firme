@@ -103,6 +103,8 @@ export default function App() {
    */
   const [sala, setSala] = useState<{
     canal: string;
+    /** El de la reunión publicada, por si hay que abrirla. */
+    nombre?: string;
     quien: { uid: string; nombre: string; usuario: string; foto?: string };
   } | null>(null);
 
@@ -381,7 +383,7 @@ export default function App() {
    * foto de cada uno, y una lista de treinta identificadores no es una reunión.
    * Quien no tiene perfil todavía se entera aquí, que es cuando le importa.
    */
-  const entrarEnSala = async (canal: string) => {
+  const entrarEnSala = async (canal: string, nombre?: string) => {
     try {
       const uid = await miUid();
       const perfil = uid ? await leerPerfil(uid) : null;
@@ -391,6 +393,7 @@ export default function App() {
       }
       setSala({
         canal,
+        nombre,
         quien: {
           uid,
           nombre: perfil.nombre,
@@ -479,7 +482,9 @@ export default function App() {
         {pestaña === "mensaje" ? <PantallaMensaje /> : null}
 
         {pestaña === "comunidad" ? (
-          <PantallaComunidad onEntrarEnSala={(canal) => void entrarEnSala(canal)} />
+          <PantallaComunidad
+            onEntrarEnSala={(canal, nombre) => void entrarEnSala(canal, nombre)}
+          />
         ) : null}
 
         {pestaña === "mas" ? (
@@ -855,6 +860,7 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
           <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg p-4">
             <PantallaSala
               canal={sala.canal}
+              nombreSiHayQueAbrirla={sala.nombre}
               quienSoy={sala.quien}
               onSalir={() => setSala(null)}
             />

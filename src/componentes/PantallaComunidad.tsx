@@ -65,7 +65,7 @@ export function PantallaComunidad({
    * Si no se pasa —en la web, donde no hay voz— se abre como un enlace normal y
    * la propia pantalla de la sala explica que esto es de la app.
    */
-  onEntrarEnSala?: (canal: string) => void;
+  onEntrarEnSala?: (canal: string, nombre?: string) => void;
 }) {
   const [comunidad, setComunidad] = useState<Comunidad>(() => leerGuardada());
   const [cargando, setCargando] = useState(false);
@@ -92,10 +92,19 @@ export function PantallaComunidad({
    * el enlace para copiarlo. Antes esto era un `window.open` que dentro de la
    * app no hacía nada en absoluto: se tocaba un grupo y no pasaba nada.
    */
-  const abrir = async (url: string) => {
+  /**
+   * Abrir lo que se tocó.
+   *
+   * Si es una sala de Genuino se entra **con el nombre de la reunión**, no sólo
+   * con el canal. Ese nombre es lo que permite que el anfitrión la abra si
+   * todavía no existe: una reunión dice a qué hora hay devocional, y la sala es
+   * el sitio — alguien tiene que abrirlo, y el mejor momento para ofrecérselo es
+   * cuando toca la reunión a su hora.
+   */
+  const abrir = async (url: string, nombre?: string) => {
     const canal = salaDeLaUrl(url);
     if (canal && onEntrarEnSala) {
-      onEntrarEnSala(canal);
+      onEntrarEnSala(canal, nombre);
       return;
     }
     if (!(await abrirEnlace(url))) setSinAbrir(url);
@@ -167,7 +176,12 @@ export function PantallaComunidad({
         <section className="flex flex-col gap-2">
           <Etiqueta>reuniones en vivo</Etiqueta>
           {reunionesPuestas.map((r) => (
-            <FilaReunion key={r.id} reunion={r} ahora={ahora} onEntrar={() => abrir(r.url)} />
+            <FilaReunion
+              key={r.id}
+              reunion={r}
+              ahora={ahora}
+              onEntrar={() => abrir(r.url, r.nombre)}
+            />
           ))}
         </section>
       ) : null}
@@ -265,6 +279,9 @@ function FilaReunion({
     return dias;
   };
 
+  /** Si esta reunión pasa dentro de la app en vez de mandar a Zoom o Meet. */
+  const esSala = salaDeLaUrl(reunion.url) != null;
+
   return (
     <div
       className={`rounded-xl border p-3.5 transition ${
@@ -286,8 +303,14 @@ function FilaReunion({
             {horaLocalDe(reunion, ahora)} · {cuando()}
           </p>
         </div>
+        {/*
+          «Enlace» promete salir de la app, y para una sala de Genuino eso no es
+          verdad: el devocional pasa aquí dentro. Fuera de su hora dice «Abrir»
+          porque el anfitrión puede abrirla antes de tiempo, que es lo que pasa
+          cuando uno se adelanta a preparar.
+        */}
         <Boton variante={enVivo ? "logro" : "normal"} onClick={onEntrar}>
-          {enVivo ? "Entrar" : "Enlace"}
+          {esSala ? (enVivo ? "Entrar" : "Abrir") : enVivo ? "Entrar" : "Enlace"}
         </Boton>
       </div>
     </div>

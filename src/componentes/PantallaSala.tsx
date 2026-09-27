@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dentro, Sala } from "@/logica/sala";
 import {
+  abrirSala,
   alCaducarElToken,
   cambiarDePapel,
   darLaPalabra,
@@ -16,6 +17,7 @@ import {
   verQuienEsta,
   verQuienHabla,
 } from "@/logica/sala";
+import { puedoModerar } from "@/logica/muro";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -38,16 +40,32 @@ import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
  */
 export function PantallaSala({
   canal,
+  nombreSiHayQueAbrirla,
   quienSoy,
   onSalir,
 }: {
   canal: string;
+  /**
+   * Cómo se llamaría la sala si todavía no existe.
+   *
+   * Viene de la reunión publicada en `comunidad.json`. Una reunión dice **a qué
+   * hora** hay devocional; la sala es **el sitio**, y alguien tiene que abrirla.
+   * Hasta que esto existió, tocar una reunión a su hora contestaba «esa sala no
+   * existe», que es verdad y no sirve de nada: el anfitrión estaba delante,
+   * queriendo empezar, y la app le mandaba a buscar otro botón.
+   */
+  nombreSiHayQueAbrirla?: string;
   quienSoy: { uid: string; nombre: string; usuario: string; foto?: string };
   onSalir: () => void;
 }) {
   const [sala, setSala] = useState<Sala | null>(null);
   const [gente, setGente] = useState<Dentro[]>([]);
-  const [estado, setEstado] = useState<"entrando" | "dentro" | "fuera">("entrando");
+  const [estado, setEstado] = useState<
+    "entrando" | "dentro" | "fuera" | "sin-abrir"
+  >("entrando");
+  /** Si esta persona puede abrir la sala que falta. */
+  const [puedoAbrirla, setPuedoAbrirla] = useState(false);
+  const [abriendo, setAbriendo] = useState(false);
   const [error, setError] = useState("");
   const [habla, setHabla] = useState(false);
   const [esAnfitrion, setEsAnfitrion] = useState(false);
@@ -70,28 +88,60 @@ export function PantallaSala({
    */
   const palabraAnterior = useRef<boolean | null>(null);
 
+  /**
+   * Entrar de verdad. Se usa al llegar y después de abrir la sala que faltaba.
+   *
+   * Devuelve si se pudo, para que quien la llama sepa si seguir.
+   */
+  const entrar = async (sigoAqui: () => boolean) => {
+    try {
+      const r = await entrarEnSala(canal, quienSoy);
+      if (!sigoAqui()) {
+        // Se salió de la pantalla mientras entrábamos. Hay que soltar el audio
+        // o queda un micrófono abierto en una sala que nadie mira.
+        await salirDeSala();
+        return;
+      }
+      setHabla(r.habla);
+      setEsAnfitrion(r.esAnfitrion);
+      palabraAnterior.current = r.habla;
+      setEstado("dentro");
+    } catch (e) {
+      if (!sigoAqui()) return;
+      setError(comoSeDice(e));
+      setEstado("fuera");
+    }
+  };
+
   // ── entrar, y salir al irse ────────────────────────────────────────────
   useEffect(() => {
     let vivo = true;
+    const sigoAqui = () => vivo;
     void (async () => {
+      let laSala;
       try {
-        setSala(await leerSala(canal));
-        const r = await entrarEnSala(canal, quienSoy);
-        if (!vivo) {
-          // Se salió de la pantalla mientras entrábamos. Hay que soltar el
-          // audio o queda un micrófono abierto en una sala que nadie mira.
-          await salirDeSala();
-          return;
-        }
-        setHabla(r.habla);
-        setEsAnfitrion(r.esAnfitrion);
-        palabraAnterior.current = r.habla;
-        setEstado("dentro");
-      } catch (e) {
+        laSala = await leerSala(canal);
+      } catch {
         if (!vivo) return;
-        setError(comoSeDice(e));
+        setError("No se pudo mirar la sala. Mira tu conexión.");
         setEstado("fuera");
+        return;
       }
+      if (!vivo) return;
+      setSala(laSala);
+
+      // La sala no existe todavía. Si es una reunión programada y quien llega
+      // puede abrirla, se le ofrece en vez de darle un error: es exactamente el
+      // momento en que la quiere abrir.
+      if (!laSala) {
+        const puedo = await puedoModerar().catch(() => false);
+        if (!vivo) return;
+        setPuedoAbrirla(puedo && !!nombreSiHayQueAbrirla);
+        setEstado("sin-abrir");
+        return;
+      }
+
+      await entrar(sigoAqui);
     })();
     return () => {
       vivo = false;
@@ -211,6 +261,69 @@ export function PantallaSala({
   }
 
   if (estado === "entrando") return <Vacio>Entrando en la sala…</Vacio>;
+
+  // ── la sala de una reunión que todavía nadie ha abierto ────────────────
+  if (estado === "sin-abrir") {
+    return (
+      <Tarjeta className={puedoAbrirla ? "border-acento/50" : undefined}>
+        <Etiqueta>{nombreSiHayQueAbrirla ?? "la sala"}</Etiqueta>
+        {puedoAbrirla ? (
+          <>
+            <p className="mt-2 text-sm leading-relaxed">
+              Esta reunión todavía no está abierta. Ábrela y los hermanos la verán
+              en «Juntos» al momento.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-tenue">
+              Entrarás tú hablando y los demás escuchando. Para que alguien
+              comente, levanta la mano y tú le das la palabra.
+            </p>
+            <div className="mt-3 flex flex-col gap-2">
+              <Boton
+                variante="fuerte"
+                ancho
+                deshabilitado={abriendo}
+                onClick={async () => {
+                  setAbriendo(true);
+                  setError("");
+                  try {
+                    await abrirSala(canal, nombreSiHayQueAbrirla!, "devocional");
+                    setSala(await leerSala(canal));
+                    setEstado("entrando");
+                    // Ya no se puede volver atrás desde aquí, así que el guardia
+                    // es que la pantalla siga montada.
+                    await entrar(() => true);
+                  } catch {
+                    setError("No se pudo abrir la sala. Mira tu conexión.");
+                    setAbriendo(false);
+                  }
+                }}
+              >
+                {abriendo ? "Abriendo…" : "Abrir la reunión y entrar"}
+              </Boton>
+              <Boton ancho onClick={onSalir}>
+                Ahora no
+              </Boton>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-sm leading-relaxed">
+              Todavía no la han abierto. Vuelve cuando empiece — en cuanto el
+              anfitrión la abra, aparece en «Juntos».
+            </p>
+            <div className="mt-3">
+              <Boton ancho onClick={onSalir}>
+                Volver
+              </Boton>
+            </div>
+          </>
+        )}
+        {error ? (
+          <p className="mt-2 text-sm leading-relaxed text-fallo">{error}</p>
+        ) : null}
+      </Tarjeta>
+    );
+  }
 
   if (estado === "fuera") {
     return (

@@ -8,6 +8,87 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 27 de septiembre de 2026 — el portero en Cloudflare, y las salas publicadas
+
+## 🔴 Google Cloud no opera en Venezuela
+
+Al activar Blaze, la tarjeta rechazada: `OR_CCREU_01`. La causa **no es la tarjeta**. Venezuela
+ni siquiera aparece en la lista de países del formulario, y una dirección venezolana no pasa
+aunque se elija otro país. La de Binance además es prepagada, y Google Cloud no acepta
+prepagadas.
+
+No se arregla intentándolo otra vez. **El portero se mudó a un Worker de Cloudflare**: gratis,
+sin tarjeta, 100.000 peticiones al día. Un devocional de treinta gasta treinta.
+
+### Las dos decisiones que evitan guardar secretos de Google en Cloudflare
+
+**Comprobar quién llama.** En una Cloud Function la plataforma da el `uid` hecho; fuera hay que
+verificar el JWT a mano. Firma RS256 contra las claves públicas de Google, y **después** `iss`,
+`aud` y `exp`. Los dos pasos: Google firma los tokens de **todos** sus proyectos con las mismas
+claves, así que uno legítimo de un proyecto ajeno pasaría la firma.
+
+**Leer Firestore con el token de la propia persona**, no con una cuenta de servicio. Firestore
+aplica las reglas como si leyera ella. Así en Cloudflare no hay ninguna credencial nuestra, y el
+portero no puede ver nada que ella no viera. Lo que decide no es qué ve, sino qué firma.
+
+El precio: esas tres lecturas tienen que seguir permitidas. Hay tres pruebas con ese nombre en
+`revisar-reglas.mjs`, porque si alguien las cerrara por prudencia nadie entraría a ningún
+devocional y **ninguna otra prueba se enteraría** — las del Worker usan un Firestore de mentira.
+
+### Y no hay modo de «no comprobar»
+
+Sería lo cómodo para las pruebas y es justo el interruptor que acaba encendido en producción.
+En vez de eso, las pruebas **generan su propio par de claves RSA** y firman tokens de verdad.
+El código que corre en las pruebas es el mismo que corre de verdad, sin ramas.
+
+## Tres errores míos, encadenados
+
+1. **Le di los pasos al revés.** `wrangler secret put` guarda el secreto *dentro* del Worker, así
+   que no puede correr antes del primer despliegue. El error lo decía con todas las letras.
+2. **Le di una ruta de Git Bash** (`/c/Users/...`) y la pegó en el Símbolo del sistema.
+3. **Al limpiar `firebase.json` quité el emulador de autenticación**, que hace falta para el
+   flujo que yo mismo había documentado. Repuesto.
+
+## El certificado, expuesto
+
+Alex lo pegó en el chat. No es una emergencia —la conversación es suya— pero **queda pendiente
+regenerarlo en Agora** y volver a ponerlo con `wrangler secret put`.
+
+## Publicado
+
+- **Worker:** `https://genuino-portero.genuinohost.workers.dev`, con el certificado ya guardado.
+- **6.11 (53)** en GitHub Releases, y `version.json` anunciándola.
+- **`comunidad.json`** lleva la dirección del portero, así que mudarlo no cuesta una versión de
+  Play.
+
+## Tocar una reunión ahora la abre
+
+Una reunión dice **a qué hora** hay devocional; la sala es **el sitio**. Hasta hoy, tocar una
+reunión a su hora contestaba «esa sala no existe» — verdad, e inútil: el anfitrión estaba
+delante, queriendo empezar, y la app lo mandaba a buscar otro botón.
+
+Ahora, si la sala no existe y quien llega puede abrirla, se le ofrece ahí mismo. Y el botón ya
+no dice «Enlace», que prometía salir de la app.
+
+## El tamaño
+
+El APK pesa **62,6 MB** porque carga las cuatro arquitecturas. Por Play cada móvil se baja la
+suya, unos 20 MB. Si molesta instalarlo a mano, quitando las dos de emulador (x86) bajaría a
+unos 31.
+
+## Comprobado
+
+**28** del portero (firma rota, caducado, otro proyecto, sin firmar, expulsado, sala cerrada,
+roles, CORS) · **78** reglas · el APK se descarga (200) · los dos JSON dicen lo que deben.
+
+## Lo que falta
+
+- ⚠️ **Que suene.** Nada de esto se ha oído todavía. Hacen falta dos móviles.
+- Regenerar el certificado de Agora.
+- Fase 3: el timbre con la app cerrada.
+
+---
+
 # 🧭 24 de septiembre de 2026 (madrugada) — las salas de voz
 
 Alex, dos mensajes seguidos: «necesito poder llamar a mis amigos a través de la app» y luego

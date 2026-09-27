@@ -1,14 +1,15 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 52,
-  "nombre": "6.10",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.10.apk",
+  "codigo": 53,
+  "nombre": "6.11",
+  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.11.apk",
   "novedades": [
-    "Nuevo: devocionales en voz dentro de la app. Se abre desde Juntos y los hermanos entran ahi mismo.",
+    "Tocar una reunion programada ahora ABRE la sala si eres el anfitrion, en vez de decir que no existe.",
+    "El boton de una reunion de Genuino ya no dice «Enlace»: el devocional pasa dentro de la app.",
+    "Nuevo: devocionales en voz. Se abre desde Juntos y los hermanos entran ahi mismo.",
     "En un devocional se entra escuchando: levantas la mano y el anfitrion te da la palabra.",
-    "Ahora puedes llamar a un hermano desde su ficha, no solo escribirle.",
-    "La app te dice a quien buscar hoy, con el motivo y el boton para llamarle.",
-    "Tu rutina y tu historial se guardan solos en la nube si tienes cuenta. El diario no sube, como siempre."
+    "Ahora puedes llamar a un hermano desde su ficha, y la app te dice a quien buscar hoy.",
+    "Tu rutina y tu historial se guardan solos en la nube. El diario no sube, como siempre."
   ],
   "importante": false
 }
