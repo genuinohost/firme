@@ -6,6 +6,8 @@
     "enlaceApp": "https://genuino-pro.web.app"
   },
   "bienvenida": "Nadie persevera solo. Únete, anímate, y anima a otro.",
+  "_sobre_portero": "Donde vive el portero de las salas de voz: lo que firma quien entra a un devocional y quien puede hablar. Esta aqui y no dentro de la app para que mudarlo no cueste dias de revision de Google Play con el devocional sin dejar entrar a nadie. Si se borra, la app usa el de siempre.",
+  "portero": "https://genuino-portero.genuinohost.workers.dev",
   "_sobre_enlaces": "tipo puede ser whatsapp, telegram, instagram, tiktok, youtube, facebook o web. La app SEPARA los grupos (whatsapp y telegram) de las redes, y ESCONDE cualquier enlace que siga con PON_AQUI: mas vale que no salga a que lleve a una pagina rota. Cuando un grupo de WhatsApp se llene (1024 personas), abre otro y cambia la url aqui.",
   "enlaces": [
     {
@@ -47,7 +49,8 @@
       "hora": "03:00",
       "duracionMin": 60,
       "zona": "America/Caracas",
-      "url": "https://meet.google.com/PON_AQUI_TU_ENLACE"
+      "url": "genuino://sala/devocional-madrugada",
+      "_nota": "Una url 'genuino://sala/<canal>' abre la sala de voz DENTRO de la app en vez de mandar a Zoom o Meet. El canal solo admite letras, numeros, punto y guion."
     },
     {
       "id": "ensenanza-semanal",

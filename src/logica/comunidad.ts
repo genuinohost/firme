@@ -243,7 +243,7 @@ export function salaDeLaUrl(url: string): string | null {
  * **Google Cloud no opera en Venezuela**. El porqué completo está en
  * `docs/investigacion/salas-de-voz.md`.
  */
-const PORTERO_POR_DEFECTO = "https://genuino-portero.PENDIENTE.workers.dev";
+const PORTERO_POR_DEFECTO = "https://genuino-portero.genuinohost.workers.dev";
 
 /** A qué dirección se le piden los permisos de entrada. */
 export function dondeEstaElPortero(): string {
