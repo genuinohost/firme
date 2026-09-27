@@ -23,7 +23,21 @@ import { execFileSync } from "node:child_process";
 import { prepararCredenciales } from "./credenciales.mjs";
 
 const PROYECTO = "genuino-host";
-const TARGET = "hosting:firme";
+
+/**
+ * La web Y las reglas, siempre juntas.
+ *
+ * El 27-09-2026 la 6.12 salio con las salas de voz y las reglas de Firestore
+ * que las permiten se quedaron sin desplegar: se cambiaron en dos commits, se
+ * probaron en el emulador, y nadie corrio `desplegar-reglas`. Alex toco «Abrir»
+ * y la app le dijo «mira tu conexion» con la conexion perfecta.
+ *
+ * Desplegar unas reglas que no cambiaron no hace nada, asi que ir siempre
+ * juntas no cuesta. Lo que si cuesta es que dependan de la memoria de alguien.
+ * Y antes de subirlas pasan por `revisar-reglas`: esta en `firebase.json` como
+ * `predeploy`, y si una pregunta falla, no se despliega nada.
+ */
+const TARGET = "hosting:firme,firestore:rules";
 
 prepararCredenciales();
 

@@ -105,7 +105,11 @@
   },
   "firestore": {
     "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "indexes": "firestore.indexes.json",
+    "predeploy": [
+      "npm run revisar-reglas"
+    ],
+    "comment": "Las reglas se prueban en el emulador ANTES de subir, siempre. Si una pregunta de scripts/revisar-reglas.mjs falla, no se despliega nada: son lo unico que separa el WhatsApp y el diario de la gente de cualquiera con conexion."
   },
   "emulators": {
     "comment": "Para probar en local. Firestore: las reglas, con npm run revisar-reglas. Los dos juntos: la app entera contra emuladores con VITE_EMULADORES=1 en .env.local, que es la unica forma de mirar lo que hay detras de «haber entrado» sin usar la cuenta de verdad de nadie — el como esta en docs/investigacion/salas-de-voz.md. El portero de las salas vive en Cloudflare y tiene sus propias pruebas en worker/. Nada de esto toca produccion: los emuladores arrancan vacios y se apagan al acabar.",

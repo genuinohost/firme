@@ -121,9 +121,18 @@ export function PantallaSala({
       let laSala;
       try {
         laSala = await leerSala(canal);
-      } catch {
+      } catch (e) {
         if (!vivo) return;
-        setError("No se pudo mirar la sala. Mira tu conexión.");
+        // Se distingue el permiso de la red, y no es un detalle. El 27-09-2026
+        // Alex vio «mira tu conexión» con la conexión perfecta: lo que fallaba
+        // eran unas reglas de Firestore sin desplegar. Un mensaje que manda a
+        // mirar donde no está el fallo cuesta más que ninguno.
+        const codigo = (e as { code?: string })?.code ?? "";
+        setError(
+          codigo.includes("permission-denied")
+            ? "La app no tiene permiso para mirar esta sala. Avisa a quien lleva la app: es cosa del servidor, no tuya."
+            : "No se pudo mirar la sala. Mira tu conexión.",
+        );
         setEstado("fuera");
         return;
       }
