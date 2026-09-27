@@ -1,13 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 58,
-  "nombre": "6.16",
+  "codigo": 59,
+  "nombre": "6.17",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La llamada al devocional ahora SE VE como una llamada: arriba del todo, con Responder y Rechazar, sin «pausar» ni «posponer».",
-    "Y suena con el tono de llamada de tu movil, no con el de alarma. Sigue sonando aunque tengas No molestar o silencio.",
-    "Al apuntarte a la comunidad, la app mira tu movil y te pide solo lo que le falte para que la llamada se vea en pantalla — en Xiaomi hay dos permisos propios.",
-    "«Llamar a la comunidad» dice a cuantos les va a sonar, y avisa si nadie se ha apuntado."
+    "Una intro de un segundo al abrir la app: el logo llega y se posa, y se disuelve en Hoy. Se salta con un toque.",
+    "Cada pantalla entra suave al cambiar de pestana, y la marca dorada de abajo se desliza en vez de saltar.",
+    "Todo lo que se toca responde: los botones se hunden un pelo, el ✓ de cumplido celebra, y la racha sube contando.",
+    "Si tienes «reducir movimiento» en el movil, todo esto se apaga solo."
   ],
   "importante": false
 }

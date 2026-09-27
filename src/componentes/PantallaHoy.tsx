@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Ajustes, Motivo, Suceso } from "@/datos/tipos";
 import { estaVencido, faseDe, fechaLarga, finDe, minutoActual, sucesoEnCurso } from "@/logica/dia";
+import { useContador } from "@/logica/contador";
 import { elegirFrase } from "@/logica/elegirFrase";
 import { diaDe, faltaPara, type Aviso } from "@/logica/avisos";
 import { AreaTexto, Boton, Cita, Etiqueta, Punto, Tarjeta, Vacio, colorDe } from "./piezas";
@@ -73,6 +74,8 @@ export function PantallaHoy(props: Props) {
     fecha, fechaObjeto, esHoy, ahora, sucesos, ajustes, motivos, racha, alarma,
     onCumplir, onSaltar, onDeshacer, onCambiarDia, onNuevaTarea, onEditarTarea, onVerPorque,
   } = props;
+  // La racha sube contando, no de golpe: es lo que la app celebra.
+  const rachaContada = useContador(racha);
 
   const [saltando, setSaltando] = useState<Suceso | null>(null);
   const [excusa, setExcusa] = useState("");
@@ -124,7 +127,7 @@ export function PantallaHoy(props: Props) {
             </p>
           </div>
           <div className="shrink-0 text-right leading-none">
-            <span className="cifras text-3xl font-bold text-acento">{racha}</span>
+            <span className="cifras text-3xl font-bold text-acento">{rachaContada}</span>
             <div className="mt-1">
               <Etiqueta>{racha === 1 ? "día seguido" : "días seguidos"}</Etiqueta>
             </div>
@@ -203,8 +206,8 @@ export function PantallaHoy(props: Props) {
         </button>
       ) : null}
 
-      {/* La línea del día. */}
-      <section className="flex flex-col gap-2">
+      {/* La línea del día. Entra escalonada: cada bloque 45 ms después del anterior. */}
+      <section className="escalonado flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Etiqueta>el día</Etiqueta>
           <button onClick={onNuevaTarea} className="text-sm text-acento transition hover:brightness-125">
@@ -441,20 +444,20 @@ function FilaSuceso({
             cumplido ? "text-logro" : "text-fallo"
           } hover:bg-superficie-alta`}
         >
-          {cumplido ? "✓ hecho" : "saltado"}
+          <span className="pop inline-block">{cumplido ? "✓ hecho" : "saltado"}</span>
         </button>
       ) : (
         <div className="flex shrink-0 gap-1">
           <button
             onClick={onCumplir}
-            className="rounded-lg border border-borde px-2.5 py-1.5 text-xs transition hover:border-logro hover:text-logro"
+            className="toque rounded-lg border border-borde px-2.5 py-1.5 text-xs hover:border-logro hover:text-logro"
             aria-label={`Marcar ${suceso.nombre} como cumplido`}
           >
             ✓
           </button>
           <button
             onClick={onSaltar}
-            className="rounded-lg border border-borde px-2.5 py-1.5 text-xs text-tenue transition hover:border-fallo hover:text-fallo"
+            className="toque rounded-lg border border-borde px-2.5 py-1.5 text-xs text-tenue hover:border-fallo hover:text-fallo"
             aria-label={`Saltar ${suceso.nombre}`}
           >
             ✕

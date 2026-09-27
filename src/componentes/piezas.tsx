@@ -38,7 +38,7 @@ export function Boton({
       type={tipo}
       onClick={onClick}
       disabled={deshabilitado}
-      className={`rounded-xl border px-4 py-3 text-sm transition active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 ${estilos[variante]} ${ancho ? "w-full" : ""}`}
+      className={`toque rounded-xl border px-4 py-3 text-sm disabled:opacity-40 disabled:active:scale-100 ${estilos[variante]} ${ancho ? "w-full" : ""}`}
     >
       {children}
     </button>
@@ -53,7 +53,7 @@ export function Tarjeta({
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-borde bg-superficie p-4 ${className}`}>
+    <div className={`aparece rounded-2xl border border-borde bg-superficie p-4 ${className}`}>
       {children}
     </div>
   );

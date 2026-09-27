@@ -131,11 +131,143 @@ body {
   animation: temblor 0.4s ease-in-out;
 }
 
+/* ==========================================================================
+   El movimiento: una sola mano.
+
+   Alex, 27-09-2026: «cualquier mínima actividad que hagas debe tener alguna
+   reacción, alguna animación, todo sutil, todo suave, sin que se vea fuerte».
+
+   Tres reglas para que se sienta una sola mano y no diez:
+
+   1. UNA curva para todo lo que aparece o se mueve (--curva): arranca rápido y
+      frena suave, como algo que llega y se posa. Y UNA curva con rebote
+      (--rebote) reservada para lo que celebra: el ✓ de cumplido y poco más.
+   2. TRES tiempos, no veinte: 150 ms para responder al dedo, 260 ms para lo que
+      entra en pantalla, 420 ms para lo que celebra. Más lento se siente lento;
+      más rápido no se ve.
+   3. Solo `transform` y `opacity`. Son lo único que el móvil anima sin
+      recalcular la página, y la app corre dentro de un WebView en teléfonos
+      que no son nuevos. Un movimiento que tironea es peor que ninguno.
+
+   Y todo se apaga con «reducir movimiento»: hay gente a la que las
+   animaciones marean, y la app tiene que ser igual de buena para ellos.
+   ========================================================================== */
+:root {
+  --curva: cubic-bezier(0.22, 0.9, 0.25, 1);
+  --rebote: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-rapido: 150ms;
+  --t-medio: 260ms;
+  --t-lento: 420ms;
+}
+
+/* Lo que entra en pantalla: aparece y se posa. Sin fill-mode, como `entrar`,
+   para que si no llega a pintarse no se quede invisible. */
+@keyframes aparece {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.aparece {
+  animation: aparece var(--t-medio) var(--curva);
+}
+
+/* Una lista que entra escalonada: cada hijo, 45 ms después del anterior. A
+   partir del octavo entran todos a la vez — más allá no se ve y suma espera. */
+.escalonado > * {
+  animation: aparece var(--t-medio) var(--curva) backwards;
+}
+.escalonado > :nth-child(1) { animation-delay: 0ms; }
+.escalonado > :nth-child(2) { animation-delay: 45ms; }
+.escalonado > :nth-child(3) { animation-delay: 90ms; }
+.escalonado > :nth-child(4) { animation-delay: 135ms; }
+.escalonado > :nth-child(5) { animation-delay: 180ms; }
+.escalonado > :nth-child(6) { animation-delay: 225ms; }
+.escalonado > :nth-child(7) { animation-delay: 270ms; }
+.escalonado > :nth-child(n + 8) { animation-delay: 315ms; }
+
+/* El dedo: todo lo que se toca se hunde un pelo y vuelve. */
+.toque {
+  transition:
+    transform var(--t-rapido) var(--curva),
+    filter var(--t-rapido) var(--curva),
+    background-color var(--t-rapido) var(--curva),
+    border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva);
+}
+.toque:active {
+  transform: scale(0.96);
+}
+
+/* Celebrar: el ✓ crece un poco de más y se asienta. La única vez que se usa
+   el rebote, para que siga significando algo. */
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.pop {
+  animation: pop var(--t-lento) var(--rebote);
+}
+
+/* La marca de la barra de abajo: se desliza de una pestaña a otra en vez de
+   saltar. Ancho de una pestaña, movido por --pestaña. */
+.marca-barra {
+  transition: transform var(--t-medio) var(--curva);
+}
+
+/* --------------------------------------------------------------------------
+   La intro: un segundo, y a la app.
+
+   El logo llega y se posa; la palabra se recoge (las letras vienen separadas
+   y se juntan); y todo se disuelve en Hoy. Sobre el mismo fondo que la app,
+   para que del splash nativo a esto no haya salto. Ni loading ni barra:
+   la app ya está lista debajo, esto es un saludo.
+   -------------------------------------------------------------------------- */
+@keyframes intro-logo {
+  from { opacity: 0; transform: scale(0.88) translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes intro-marca {
+  from { opacity: 0; letter-spacing: 0.42em; }
+  to { opacity: 1; letter-spacing: 0.12em; }
+}
+@keyframes intro-lema {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 0.7; transform: none; }
+}
+@keyframes intro-fuera {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.intro-logo { animation: intro-logo 680ms var(--curva) both; }
+.intro-marca { animation: intro-marca 620ms var(--curva) 180ms both; }
+.intro-lema { animation: intro-lema 500ms var(--curva) 420ms both; }
+.intro-fuera { animation: intro-fuera 320ms var(--curva) both; }
+
 @media (prefers-reduced-motion: reduce) {
   .latido,
   .entrar,
-  .temblor {
+  .temblor,
+  .aparece,
+  .escalonado > *,
+  .pop,
+  .intro-logo,
+  .intro-marca,
+  .intro-lema,
+  .intro-fuera {
     animation: none;
+  }
+  .toque,
+  .marca-barra {
+    transition: none;
+  }
+  .toque:active {
+    transform: none;
   }
 }
 

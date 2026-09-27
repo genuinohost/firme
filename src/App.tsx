@@ -38,6 +38,7 @@ import { PantallaAlarma } from "@/componentes/PantallaAlarma";
 import { PantallaBloqueo } from "@/componentes/PantallaBloqueo";
 import { PantallaCuenta } from "@/componentes/PantallaCuenta";
 import { PantallaSala } from "@/componentes/PantallaSala";
+import { Intro, tocaSaludar } from "@/componentes/Intro";
 import { PantallaFallo } from "@/componentes/PantallaFallo";
 import { contarSolicitudes, miUid, publicarNota } from "@/logica/muro";
 import { leerPerfil } from "@/logica/nube";
@@ -113,6 +114,13 @@ export default function App() {
    * alarma para venir aquí.
    */
   const [llamada, setLlamada] = useState<LlamadaPendiente | null>(null);
+
+  /**
+   * El saludo de un segundo al arrancar. Sólo en frío —lo decide `Intro`— y
+   * nunca encima de una alarma sonando o de una llamada: a las cinco de la
+   * mañana, con el móvil repicando, lo último que hace falta es un logo.
+   */
+  const [saludando, setSaludando] = useState(() => tocaSaludar());
 
   const [sala, setSala] = useState<{
     canal: string;
@@ -506,7 +514,12 @@ export default function App() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col">
-      <main className="zona-segura-arriba flex-1 pb-24">
+      {/*
+        Cada pantalla entra: al cambiar de pestaña, el contenido nuevo aparece
+        y se posa. La clave es la pestaña, así que React desmonta la vieja y
+        monta la nueva, y la animación de entrada corre una vez por cambio.
+      */}
+      <main key={pestaña} className="zona-segura-arriba aparece flex-1 pb-24">
         <AvisoActualizacion />
 
         {pestaña === "hoy" ? (
@@ -779,6 +792,19 @@ export default function App() {
 
       {/* En las pantallas de dentro, «Más» queda marcada. */}
       <nav className="zona-segura-abajo fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-borde bg-fondo/95 backdrop-blur">
+        {/*
+          La marca dorada se DESLIZA de una pestaña a otra en vez de saltar.
+          Mide una pestaña de ancho y se mueve con transform, que es lo único
+          que el móvil anima sin recalcular nada.
+        */}
+        <div
+          className="marca-barra pointer-events-none absolute top-0 h-0.5 rounded-full bg-acento"
+          style={{
+            width: `${100 / PESTAÑAS.length}%`,
+            transform: `translateX(${Math.max(0, PESTAÑAS.findIndex((p) => p.id === seleccionada)) * 100}%)`,
+          }}
+          aria-hidden
+        />
         <div className="flex">
           {PESTAÑAS.map((p) => (
             <button
@@ -787,11 +813,16 @@ export default function App() {
                 setPestaña(p.id);
                 if (p.id === "hoy") setDesplazamiento(0);
               }}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-2.5 text-[10px] transition ${
-seleccionada === p.id ? "text-acento" : "text-tenue"
+              className={`toque flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-2.5 text-[10px] ${
+                seleccionada === p.id ? "text-acento" : "text-tenue"
               }`}
             >
-              <span className="text-lg leading-none" aria-hidden>
+              <span
+                className={`text-lg leading-none transition-transform duration-[var(--t-medio)] ease-[var(--curva)] ${
+                  seleccionada === p.id ? "scale-110" : ""
+                }`}
+                aria-hidden
+              >
                 {p.icono}
               </span>
               {p.nombre}
@@ -799,6 +830,8 @@ seleccionada === p.id ? "text-acento" : "text-tenue"
           ))}
         </div>
       </nav>
+
+      {saludando && !disparo && !llamada ? <Intro onFin={() => setSaludando(false)} /> : null}
 
       {tareaAbierta ? (
         <DialogoTarea
