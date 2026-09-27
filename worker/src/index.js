@@ -266,9 +266,20 @@ async function llamar(peticion, entorno, origen) {
       datos: { tipo: "llamada", canal, nombre, quien: uid },
     });
   } catch (e) {
-    console.log("fcm:", e?.message ?? e);
+    const motivo = String(e?.message ?? e);
+    console.log("fcm:", motivo);
+    // Un 403 de Google no se arregla reintentando: es que la cuenta del timbre
+    // no tiene el rol de enviar. Decir «vuelve a probar» ahi es mandar a alguien
+    // a mirar donde no esta el fallo — la misma leccion que «mira tu conexion».
+    const sinPermiso = /fcm-403|google-no-dio-token-40[13]/.test(motivo);
     return respuesta(
-      { error: "no-se-pudo-llamar", porque: "No se pudo mandar la llamada. Vuelve a probar." },
+      sinPermiso
+        ? {
+            error: "servidor-sin-permiso",
+            porque:
+              "El servidor todavia no tiene permiso de Google para llamar. Es un ajuste de quien lleva la app, no tuyo.",
+          }
+        : { error: "no-se-pudo-llamar", porque: "No se pudo mandar la llamada. Vuelve a probar." },
       502,
       origen,
     );

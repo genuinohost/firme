@@ -95,6 +95,8 @@ const CUENTA_TIMBRE = JSON.stringify({
 let enviados = [];
 /** Cuántas veces se pidió token a Google. */
 let tokensPedidos = 0;
+/** Si el FCM de mentira debe negar el envío como si faltara el rol. */
+let fcmSinPermiso = false;
 
 const texto = (s) => ({ stringValue: s });
 const numero = (n) => ({ integerValue: String(n) });
@@ -134,6 +136,12 @@ const servidor = createServer((req, res) => {
     let cuerpo = "";
     req.on("data", (c) => (cuerpo += c));
     req.on("end", () => {
+      // Para poder simular a Google negando el envio por falta de rol.
+      if (fcmSinPermiso) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: { status: "PERMISSION_DENIED" } }));
+        return;
+      }
       if (req.headers.authorization !== "Bearer token-de-mentira") {
         res.writeHead(401);
         res.end();
@@ -389,6 +397,18 @@ async function llamarA(cuerpo) {
 {
   const r = await llamarA({ canal: "devocional", token: "" });
   debe("sin sesión, nada", r.estado === 401);
+}
+{
+  // Lo que paso el 27-09-2026: la cuenta del timbre sin rol. El portero tiene
+  // que decir que es cosa del servidor, no «vuelve a probar».
+  fcmSinPermiso = true;
+  const r = await llamarA({ canal: "devocional", token: tokenDe("ana") });
+  debe(
+    "si Google niega el envio por falta de rol, se dice que es del servidor",
+    r.estado === 502 && r.datos.error === "servidor-sin-permiso",
+    JSON.stringify(r.datos),
+  );
+  fcmSinPermiso = false;
 }
 delete base["moderadores/ana"];
 
