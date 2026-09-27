@@ -236,6 +236,29 @@ export async function vigilarSesion(
  * funciona dentro de un WebView — se abre y se queda en blanco— así que no
  * vale con un solo camino.
  */
+/**
+ * Entrar con Google.
+ *
+ * ── `auth/unauthorized-domain`, y por qué sorprende ───────────────────────
+ *
+ * El 27-09-2026 un hermano no pudo crear su cuenta: la web publicada devolvía
+ * `auth/unauthorized-domain`. No era su cuenta ni su móvil.
+ *
+ * Firebase sólo deja iniciar sesión desde una lista de dominios, y autoriza
+ * solos los del **sitio por defecto** del proyecto: `genuino-host.web.app` y
+ * `genuino-host.firebaseapp.com`. Esta app **no vive ahí**: vive en
+ * `genuino-pro.web.app`, que es un sitio adicional del mismo proyecto — y a
+ * esos **no los autoriza nadie**. Así que la web estuvo desde el primer día sin
+ * poder dar de alta a nadie, y no se notó porque quien la probaba usaba el APK.
+ *
+ * El APK no se entera de esto por dos motivos: sirve desde `https://localhost`,
+ * que sí está autorizado, y además entra por la vía nativa de abajo, que no
+ * mira dominios.
+ *
+ * Los dominios se añadieron el 27-09-2026. Si algún día se publica en otro
+ * sitio, hay que añadirlo también: Autenticación → Configuración → Dominios
+ * autorizados.
+ */
 export async function entrarConGoogle(): Promise<Sesion> {
   const { auth } = await nube();
   const { GoogleAuthProvider, signInWithCredential, signInWithPopup } = await import(
