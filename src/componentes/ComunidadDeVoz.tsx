@@ -80,8 +80,13 @@ export function ComunidadDeVoz() {
         setEstado("dentro");
         setAviso("Dentro. Cuando el anfitrión llame, te sonará.");
       }
-    } catch {
-      setAviso("No se pudo. Mira tu conexión y vuelve a probar.");
+    } catch (e) {
+      const m = String((e as { message?: string })?.message ?? e);
+      setAviso(
+        m.startsWith("sin-avisos-de-google")
+          ? "Tu móvil no pudo apuntarse a los avisos de Google. Suele ser Google Play Services desactualizado o sin permiso de avisos para Genuino. Actualiza Play Services en Play Store y vuelve a probar."
+          : "No se pudo guardar. Mira tu conexión y vuelve a probar.",
+      );
     } finally {
       setOcupado(false);
     }

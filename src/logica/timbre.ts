@@ -87,7 +87,16 @@ export async function soyMiembro(): Promise<boolean> {
 export async function unirmeALaComunidad(quienSoy: { nombre: string; usuario: string }): Promise<void> {
   const uid = await miUid();
   if (!uid) throw new Error("sin-cuenta");
-  if (hayTimbre()) await nativo.unirse();
+  if (hayTimbre()) {
+    try {
+      await nativo.unirse();
+    } catch (e) {
+      // Se distingue del fallo de red porque se arregla en otro sitio: el
+      // 27-09-2026 Nazdrely no pudo apuntarse con cuenta, perfil y la 6.15, y
+      // «mira tu conexión» la habría mandado a mirar donde no estaba el fallo.
+      throw new Error("sin-avisos-de-google:" + String((e as { message?: string })?.message ?? e));
+    }
+  }
   const { setDoc } = await import("firebase/firestore");
   await setDoc(await refMiembro(uid), {
     nombre: quienSoy.nombre,
