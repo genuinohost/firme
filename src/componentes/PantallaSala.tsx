@@ -20,7 +20,7 @@ import {
   verSala,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
-import { llamarALaComunidad } from "@/logica/timbre";
+import { cuantosMiembros, llamarALaComunidad } from "@/logica/timbre";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -472,9 +472,26 @@ export function PantallaSala({
               onClick={async () => {
                 setLlamando(true);
                 setAvisoLlamada("");
+                // Cuantos van a sonar, ANTES de llamar. El 27-09-2026 Alex llamo
+                // a un tema vacio —Google acepta un aviso aunque nadie este
+                // apuntado— y el boton le dijo «Llamando» a nadie. Decir el
+                // numero convierte un silencio en un dato; y si es cero, no
+                // hay a quien llamar y se dice eso.
+                const cuantos = await cuantosMiembros();
+                if (cuantos === 0) {
+                  setAvisoLlamada(
+                    "Nadie se ha apuntado todavia a la comunidad. Que entren en Juntos y toquen «Unirme»; entonces si les sonara.",
+                  );
+                  setLlamando(false);
+                  return;
+                }
                 const r = await llamarALaComunidad(canal, sala?.nombre ?? "Devocional");
                 setAvisoLlamada(
-                  r.enviado ? "Llamando. Les está sonando ahora mismo." : r.porque,
+                  r.enviado
+                    ? cuantos == null
+                      ? "Llamando. Les esta sonando ahora mismo."
+                      : `Llamando a ${cuantos}. Les esta sonando ahora mismo.`
+                    : r.porque,
                 );
                 setLlamando(false);
               }}
