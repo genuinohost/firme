@@ -1,10 +1,25 @@
 /**
  * Publica una versión: sube el APK a GitHub Releases y avisa a los móviles.
  *
- * Firebase Hosting en su plan gratuito prohíbe los archivos ejecutables, así que
- * el APK vive en GitHub Releases —gratis, sin límite y sin caducidad— y en
+ * Firebase Hosting en su plan gratuito prohíbe los archivos ejecutables —lo dice
+ * con todas las letras: «Executable files are forbidden on the Spark billing
+ * plan»— así que el APK vive en GitHub Releases, gratis y sin caducidad, y en
  * Firebase queda solo `version.json`, que es lo que consultan los móviles ya
  * instalados para saber si hay algo nuevo.
+ *
+ * ── Pero el enlace NO apunta a GitHub ─────────────────────────────────────
+ *
+ * El 27-09-2026 Alex grabó su móvil: tocaba «Descargar la 6.12», se abría
+ * `github.com…` y **la pantalla se quedaba en negro**. Llevaba en la 6.7 desde
+ * siempre, así que ninguno de los arreglos de las alarmas le había llegado.
+ *
+ * GitHub no sirve el archivo desde `github.com`: redirige a
+ * `objects.githubusercontent.com`, otro dominio, y ése se cae desde Venezuela.
+ *
+ * Así que el enlace apunta al Worker de Cloudflare, que ya existía para las
+ * salas de voz: él lo trae de GitHub y lo reenvía. El móvil habla con un solo
+ * dominio, y quien se pelea con GitHub es Cloudflare, desde fuera. Admite
+ * reanudar, que con sesenta megas y una conexión mala no es un detalle.
  *
  *   node scripts/publicar-release.mjs "Novedad una" "Novedad dos"
  *
@@ -70,8 +85,10 @@ try {
   console.log(`  Release ${etiqueta} ya existía; archivo actualizado.`);
 }
 
-// El enlace estable a la última versión, que es al que apunta la app.
-const enlace = `https://github.com/${repo}/releases/latest/download/${nombreArchivo}`;
+// El enlace estable a la última versión, que es al que apunta la app. Va por el
+// Worker y no por GitHub; el porqué está arriba. El Worker lee de este mismo
+// `version.json` qué versión servir, así que esto no hay que tocarlo nunca.
+const enlace = "https://genuino-portero.genuinohost.workers.dev/apk";
 
 writeFileSync(
   "public/version.json",

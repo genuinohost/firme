@@ -20,6 +20,12 @@ CLAVES_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@sys
 # El App ID no es secreto: identifica el proyecto, no autoriza nada.
 AGORA_APP_ID = "1d30537aab4a4171b9649dba7f408565"
 
+# De donde sale el APK que sirve /apk. La version se lee de version.json, el
+# mismo archivo que consultan los moviles, asi que publicar una version nueva
+# no obliga a tocar este Worker.
+VERSION_URL = "https://genuino-pro.web.app/version.json"
+RELEASES_URL = "https://github.com/genuinohost/firme/releases/latest/download"
+
 # AGORA_APP_CERTIFICATE **no va aqui**. Es el que firma, y con el se podrian
 # abrir canales a nuestro nombre. Se pone una vez, y nunca toca un archivo:
 #

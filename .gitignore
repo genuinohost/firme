@@ -24,3 +24,4 @@ __pycache__/
 
 # Lo que deja wrangler al empaquetar el portero.
 worker/.wrangler/
+public/Genuino.apk

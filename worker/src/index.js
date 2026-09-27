@@ -96,9 +96,100 @@ const PORQUE = {
   "nombre-invalido": "Ese nombre de sala no es válido.",
 };
 
+/**
+ * Servir el APK, porque desde Venezuela no se puede bajar de GitHub.
+ *
+ * ── El fallo, en vídeo ────────────────────────────────────────────────────
+ *
+ * El 27-09-2026 Alex grabó su móvil: la app decía «hay una versión nueva»,
+ * tocaba «Descargar», se abría `github.com…` y **la página se quedaba en
+ * negro**. Seis segundos de pantalla vacía. Por eso seguía en la 6.7 y por eso
+ * ninguno de los arreglos de las alarmas le había llegado nunca.
+ *
+ * GitHub no sirve el archivo desde `github.com`: redirige a
+ * `objects.githubusercontent.com`, otro dominio, y ése se cae desde allí.
+ *
+ * ── Por qué aquí y no en Firebase ─────────────────────────────────────────
+ *
+ * Se intentó servirlo desde el propio sitio y Firebase lo niega con todas las
+ * letras: «Executable files are forbidden on the Spark billing plan». Y el plan
+ * de pago es justo el que no se pudo activar.
+ *
+ * Así que lo trae este Worker. El móvil habla con un solo dominio —el mismo que
+ * ya usa para entrar a las salas— y quien se pelea con GitHub es Cloudflare,
+ * desde fuera. No se guarda nada: se pide y se reenvía tal cual.
+ *
+ * ── De dónde saca qué versión ─────────────────────────────────────────────
+ *
+ * De `version.json`, el mismo archivo que consultan los móviles. Así publicar
+ * una versión nueva no obliga a tocar el Worker: se sube la release, se
+ * despliega la web, y esto ya sirve la nueva.
+ */
+async function servirElApk(peticion, entorno) {
+  let nombre;
+  try {
+    const r = await fetch(entorno.VERSION_URL, { cf: { cacheTtl: 60 } });
+    nombre = (await r.json())?.nombre;
+  } catch {
+    nombre = null;
+  }
+  if (!nombre) {
+    return new Response("No se pudo saber cuál es la última versión.", { status: 502 });
+  }
+
+  const archivo = `Genuino-${nombre}.apk`;
+  const deGithub = `${entorno.RELEASES_URL}/${archivo}`;
+
+  /*
+    Se deja pasar el `Range`, y no es un adorno.
+
+    Son sesenta megas por una conexión venezolana. Sin esto, una descarga que se
+    corta al 80 % empieza de cero, y la siguiente también — que es exactamente
+    la forma de no instalar nunca una actualización. Con esto, el navegador
+    reanuda por donde iba.
+  */
+  const aGithub = new Headers();
+  for (const cual of ["Range", "If-Range"]) {
+    const v = peticion.headers.get(cual);
+    if (v) aGithub.set(cual, v);
+  }
+
+  const apk = await fetch(deGithub, { headers: aGithub, redirect: "follow" });
+  if (!apk.ok || !apk.body) {
+    return new Response("No se pudo traer el paquete.", { status: 502 });
+  }
+
+  const cabeceras = new Headers({
+    "Content-Type": "application/vnd.android.package-archive",
+    // Sin esto, algunos navegadores lo abren en vez de guardarlo y se queda la
+    // pantalla en negro — que es justo el síntoma del que veníamos.
+    "Content-Disposition": `attachment; filename="${archivo}"`,
+    // Y esto es lo que le dice al navegador que puede reanudar.
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "public, max-age=3600",
+  });
+  for (const cual of ["Content-Length", "Content-Range", "ETag", "Last-Modified"]) {
+    const v = apk.headers.get(cual);
+    if (v) cabeceras.set(cual, v);
+  }
+
+  // Se reenvía el cuerpo tal cual, sin leerlo entero en memoria: son sesenta
+  // megas y un Worker no tiene sitio para eso. Y se conserva el 206, que es lo
+  // que distingue «aquí va el trozo que pediste» de «aquí va todo otra vez».
+  return new Response(apk.body, { status: apk.status, headers: cabeceras });
+}
+
 export default {
   async fetch(peticion, entorno) {
     const origen = peticion.headers.get("Origin") ?? "";
+
+    // El paquete, antes que nada: es lo único que se pide con GET.
+    if (new URL(peticion.url).pathname === "/apk") {
+      if (peticion.method !== "GET" && peticion.method !== "HEAD") {
+        return new Response("Sólo GET.", { status: 405 });
+      }
+      return servirElApk(peticion, entorno);
+    }
 
     if (peticion.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: cabecerasCors(origen) });

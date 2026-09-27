@@ -2,7 +2,7 @@
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
   "codigo": 54,
   "nombre": "6.12",
-  "enlace": "https://github.com/genuinohost/firme/releases/latest/download/Genuino-6.12.apk",
+  "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
     "ARREGLADO: si no contestabas una alarma, la app se trababa en ella y las siguientes se perdian en silencio. Ahora esperan su turno y salen una a una.",
     "La segunda alarma ya no hereda el tiempo de la primera: cada una repica sus cinco minutos.",
