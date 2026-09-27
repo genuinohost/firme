@@ -19,6 +19,23 @@ android {
         versionCode 54
         versionName "6.12"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // ------------------------------------------ que arquitecturas van
+        //
+        // Solo las dos de ARM. Las de x86 las usan unicamente los emuladores
+        // y ningun telefono de verdad, y cada una pesaba unos 15 MB de
+        // librerias de Agora: el APK universal salia a 62,6 MB.
+        //
+        // Importa por una razon concreta (27-09-2026): Alex no podia bajarlo.
+        // Sesenta megas por una conexion venezolana se cortan, y un APK
+        // cortado da «no se puede instalar». Cada mega de menos es una
+        // descarga mas que llega entera.
+        //
+        // Para el .aab de Play da igual: alli cada movil se baja solo su
+        // arquitectura. Esto recorta el APK que se instala a mano.
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a"
+        }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
