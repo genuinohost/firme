@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cargar, guardar, idNuevo } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
-import { aHora, claveFecha, desdeClave, finDe, minutoActual, sucesosDelDia } from "@/logica/dia";
+import { aHora, claveFecha, desdeClave, finDe, minutoActual, sucesosDelDia, tocaHoy } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, limpiarAvisosViejos, pedirPermisosNativos } from "@/logica/alarmasNativas";
 import { apuntarQueSeSalio, darPorAbierta, tocaPedirlo } from "@/logica/cerradura";
@@ -52,7 +52,7 @@ import {
   reapuntarmeSiEstoyDentro,
   type LlamadaPendiente,
 } from "@/logica/timbre";
-import { DialogoTarea } from "@/componentes/DialogoTarea";
+import { DialogoTarea, fechaLarga } from "@/componentes/DialogoTarea";
 import { Cita, vars } from "@/componentes/piezas";
 import { reducido, resorte } from "@/logica/resorte";
 
@@ -1041,6 +1041,13 @@ export default function App() {
                 : [...d.tareas, tarea],
             }));
             setTareaAbierta(null);
+            // Guardada para otro día: no aparece en el que se está viendo, así
+            // que se dice dónde quedó (y a qué hora sonará).
+            if (!tocaHoy(tarea, fecha)) {
+              setAvisoMuro(
+                `Guardada para el ${fechaLarga(tarea.fecha)}${tarea.hora ? `. Te sonará a las ${tarea.hora}` : ""}.`,
+              );
+            }
           }}
           onBorrar={() => {
             setDatos((d) => {

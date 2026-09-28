@@ -1,7 +1,7 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { dondeEstaElPortero } from "./comunidad";
 import { miUid } from "./muro";
-import { marcarAsistencia } from "./asistencia";
+import { leerMiAsistencia, marcarAsistencia } from "./asistencia";
 import type { Letra } from "./subgrupos";
 import { nube } from "./nube";
 
@@ -270,8 +270,18 @@ export async function abrirSala(
   if (!hayVoz()) throw new Error("solo-en-la-app");
   const uid = await miUid();
   if (!uid) throw new Error("sin-cuenta");
-  const { setDoc } = await import("firebase/firestore");
-  await setDoc(await refSala(canal), {
+  const { setDoc, getDoc } = await import("firebase/firestore");
+  const ref = await refSala(canal);
+  // La reunión del devocional usa siempre el mismo canal: si ya existía (la de
+  // ayer, cerrada), se reabre entera y se limpia lo que quedó dentro.
+  const previa = await getDoc(ref).catch(() => null);
+  const existia = !!previa?.exists();
+  if (existia) {
+    const x = previa!.data() as Partial<Sala>;
+    // Ya abierta y viva: no se toca. Reescribirla echaba a todos los de dentro.
+    if (x.abierta === true && Date.now() - Number(x.desde ?? 0) < SALA_DURA_MS) return;
+  }
+  await setDoc(ref, {
     nombre,
     anfitrion: uid,
     abierta: true,
@@ -282,6 +292,23 @@ export async function abrirSala(
     micLibre: false,
     ...(campana ? { campana } : {}),
   });
+  if (existia) await limpiarRestos(canal).catch(() => {});
+}
+
+/** Las fichas fantasma y los «me gusta» de la vez anterior, al reabrir. */
+async function limpiarRestos(canal: string): Promise<void> {
+  const { bd } = await nube();
+  const { collection, getDocs, writeBatch } = await import("firebase/firestore");
+  const uid = await miUid();
+  for (const sub of ["dentro", "gustos"]) {
+    const r = await getDocs(collection(bd, "salas", canal, sub));
+    // La propia ficha no: se está entrando.
+    const viejos = r.docs.filter((d) => !(sub === "dentro" && d.id === uid));
+    if (!viejos.length) continue;
+    const lote = writeBatch(bd);
+    viejos.forEach((d) => lote.delete(d.ref));
+    await lote.commit();
+  }
 }
 
 /**
@@ -676,8 +703,14 @@ export async function entrarEnSala(
   // Venir a un devocional es asistir: se apunta el día, sube la racha (o
   // arranca) y los dos números van a la ficha, donde los ven los demás. Si
   // falla, se entra igual: la asistencia no puede dejar a nadie fuera.
+  // En un subgrupo no se apunta (ya se vino al devocional), pero la racha se
+  // enseña igual: son las mismas personas del devocional de hoy.
   const asistencia =
-    sala?.tipo === "devocional" ? await marcarAsistencia(quienSoy).catch(() => null) : null;
+    sala?.tipo === "devocional"
+      ? await marcarAsistencia(quienSoy).catch(() => null)
+      : sala?.tipo === "subgrupo"
+        ? await leerMiAsistencia().catch(() => null)
+        : null;
 
   const entrada = await nativa.entrar({
     appId: permiso.appId,

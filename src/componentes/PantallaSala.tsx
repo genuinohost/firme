@@ -30,6 +30,7 @@ import {
   verQuienEsta,
   verQuienHabla,
   verSala,
+  SALA_DURA_MS,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
 import { abrirAjustesDeLaApp } from "@/logica/despertador";
@@ -49,6 +50,9 @@ import {
 } from "@/logica/devocionales";
 import { PegarDevocional } from "./PegarDevocional";
 import { EnSubgrupo, Subgrupos, marcarVuelta } from "./Subgrupos";
+import { contarGustos, darGusto, verGustos, type Gusto } from "@/logica/gustos";
+import { agregarOAceptar, escucharAmigos, type Amigo } from "@/logica/nube";
+import { leerBloqueados } from "@/logica/muro";
 import { TextoDevocional } from "./TextoDevocional";
 import { parar, sonar, vibrar } from "@/logica/sonido";
 import { cuantosMiembros, escucharMiembros, llamarALaComunidad } from "@/logica/timbre";
@@ -170,6 +174,25 @@ export function PantallaSala({
   const [calma, setCalma] = useState(false);
   /** Quien modera pegando el devocional del día desde la sala. */
   const [pegando, setPegando] = useState(false);
+  /**
+   * «Me gusta» y «Agregar» (6.26). Alex, 28-09-2026: «todos los miembros de
+   * una comunidad deben ser animados, de alguna manera, a agregarse
+   * mutuamente. Mientras alguien habla, debe estar la opción de darle me
+   * gusta y de agregar, además de lo que ya agregaste: la racha».
+   */
+  const [gustos, setGustos] = useState<Gusto[]>([]);
+  /** Mis amistades, en vivo: uid → en qué punto están. `null` mientras llegan. */
+  const [amigos, setAmigos] = useState<Map<string, Amigo["estado"]> | null>(null);
+  /** A quién bloqueé: ni se le ofrece agregar ni se anuncian sus «me gusta». */
+  const [bloqueados, setBloqueados] = useState<Set<string>>(() => new Set());
+  const avisoGustoHasta = useRef<number | null>(null);
+  /** «Agregar a todos» ya tocado: la tarjeta se queda para decir cómo fue. */
+  const [animoFijo, setAnimoFijo] = useState(false);
+  const bloqueadosAhora = useRef<Set<string>>(new Set());
+  /** Los corazones que suben ahora sobre un retrato. */
+  const [corazones, setCorazones] = useState<{ id: string; a: string }[]>([]);
+  /** «A X le gustó lo que dijiste»: un momento, y se va. */
+  const [avisoGusto, setAvisoGusto] = useState("");
   /** Ver el texto del trozo que se lee (para seguirlo), plegado por defecto. */
   const [verTexto, setVerTexto] = useState(false);
 
@@ -258,7 +281,19 @@ export function PantallaSala({
       // La sala no existe todavía. Si es una reunión programada y quien llega
       // puede abrirla, se le ofrece en vez de darle un error: es exactamente el
       // momento en que la quiere abrir.
-      if (!laSala) {
+      // La reunión de siempre (mismo canal cada día) cerrada —la de ayer— o
+      // pasada de su vida: se ofrece reabrirla, como si no existiera. Antes el
+      // portero decía «La sala está cerrada» y no había forma de abrirla.
+      // Cerrada HOY es que terminó (se entra y el portero lo dice); cerrada
+      // otro día, o vencida, es la de ayer.
+      const diaDe = (t: number) => new Date(t).toDateString();
+      const caducada =
+        !!laSala &&
+        laSala.tipo === "devocional" &&
+        !!nombreSiHayQueAbrirla &&
+        (Date.now() - laSala.desde >= SALA_DURA_MS ||
+          (!laSala.abierta && diaDe(laSala.desde) !== diaDe(Date.now())));
+      if (!laSala || caducada) {
         const puedo = await puedoModerar().catch(() => false);
         if (!vivo) return;
         setPuedoAbrirla(puedo && !!nombreSiHayQueAbrirla);
@@ -735,6 +770,84 @@ export function PantallaSala({
     );
     return () => clearTimeout(t);
   }, [estado, esAnfitrion, lectorFalta, hayQuienLea, lecturaViva?.desde, canal, reintentoVigia, !!sala?.subgrupos]);
+
+  // ── «me gusta» y amistades ───────────────────────────────────────────────
+  //
+  // Los «me gusta» de ESTA sesión de la sala (su `desde`: la reunión usa
+  // siempre el mismo canal). Los que llegan nuevos hacen subir un corazón, y a
+  // quien lo recibe se le dice. Un par se celebra una sola vez por sesión:
+  // quitarlo y volver a darlo no llena la sala de corazones.
+  const sesion = sala?.desde ?? 0;
+  useEffect(() => {
+    if (estado !== "dentro" || !sesion) return;
+    let base: Set<string> | null = null;
+    const celebrados = new Set<string>();
+    const temporizadores: number[] = [];
+    const deja = verGustos(canal, sesion, (lista) => {
+      if (base) {
+        for (const x of lista) {
+          const id = `${x.de}_${x.a}`;
+          if (base.has(id) || celebrados.has(id)) continue;
+          celebrados.add(id);
+          if (bloqueadosAhora.current.has(x.de)) continue;
+          const clave = `${id}-${x.cuando}`;
+          setCorazones((c) => [...c, { id: clave, a: x.a }]);
+          temporizadores.push(window.setTimeout(() => setCorazones((c) => c.filter((y) => y.id !== clave)), 1500));
+          if (x.a === quienSoy.uid) {
+            const quien = genteAhora.current.find((g) => g.uid === x.de)?.nombre ?? "Alguien";
+            setAvisoGusto(`❤️ A ${quien} le gustó lo que dijiste`);
+            // Uno nuevo alarga el aviso; no lo corta el temporizador del anterior.
+            if (avisoGustoHasta.current) window.clearTimeout(avisoGustoHasta.current);
+            avisoGustoHasta.current = window.setTimeout(() => setAvisoGusto(""), 4000);
+          }
+        }
+      } else {
+        base = new Set(lista.map((x) => `${x.de}_${x.a}`));
+      }
+      setGustos(lista);
+    });
+    return () => {
+      deja();
+      temporizadores.forEach((t) => window.clearTimeout(t));
+      if (avisoGustoHasta.current) window.clearTimeout(avisoGustoHasta.current);
+    };
+  }, [estado, canal, sesion]);
+
+  // Mis amistades en vivo: una solicitud que llega con la sala abierta se ve
+  // al momento («Aceptar»). Y los bloqueados, una vez.
+  useEffect(() => {
+    if (estado !== "dentro" || !quienSoy.uid) return;
+    void leerBloqueados()
+      .then(setBloqueados)
+      .catch(() => {});
+    return escucharAmigos(quienSoy.uid, setAmigos);
+  }, [estado, quienSoy.uid]);
+  bloqueadosAhora.current = bloqueados;
+
+  const cuantosGustos = useMemo(() => contarGustos(gustos), [gustos]);
+  const meGusta = (a: string) => gustos.some((x) => x.de === quienSoy.uid && x.a === a);
+  const tocarGusto = (a: string) =>
+    void darGusto(canal, sesion, quienSoy.uid, a, !meGusta(a)).catch(() =>
+      setError("No se pudo dar el «me gusta». Mira tu conexión."),
+    );
+  /** Agregar (o aceptar, si me lo pidió). Devuelve si salió. */
+  const agregar = async (g: Dentro): Promise<boolean> => {
+    try {
+      await agregarOAceptar(quienSoy, {
+        uid: g.uid,
+        nombre: g.nombre,
+        usuario: g.usuario,
+        ...(g.foto ? { foto: g.foto } : {}),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  /** Con quién comparto la sala y aún no somos nada (ni solicitud), sin los bloqueados. */
+  const porAgregar = amigos
+    ? gente.filter((g) => g.uid !== quienSoy.uid && !amigos.has(g.uid) && !bloqueados.has(g.uid))
+    : [];
 
   // ── me silenciaron ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -1233,6 +1346,13 @@ export function PantallaSala({
                       g.nombre.trim().charAt(0).toUpperCase() || "·"
                     )}
                   </span>
+                  {corazones
+                    .filter((c) => c.a === g.uid)
+                    .map((c) => (
+                      <span key={c.id} className="corazon-sube text-2xl" aria-hidden>
+                        ❤️
+                      </span>
+                    ))}
                   {typeof g.racha === "number" ? (
                     <span
                       className="absolute -right-2 -bottom-1 flex items-center rounded-full border border-acento/60 bg-fondo px-1.5 py-0.5 text-xs font-semibold text-acento shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
@@ -1245,10 +1365,27 @@ export function PantallaSala({
                 <span className="w-full truncate text-center text-xs">
                   {g.uid === quienSoy.uid ? "Tú" : g.nombre}
                 </span>
+                {/* Mientras habla: «me gusta» y «agregar», a la vista (6.26). */}
+                <AccionesDeHermano
+                  g={g}
+                  yo={quienSoy.uid}
+                  gustos={cuantosGustos.get(g.uid) ?? 0}
+                  meGusta={meGusta(g.uid)}
+                  amistad={amigos?.get(g.uid)}
+                  sinAgregar={!amigos || bloqueados.has(g.uid)}
+                  onGusto={() => tocarGusto(g.uid)}
+                  onAgregar={() => void agregar(g).then((ok) => !ok && setError(`No se pudo agregar a ${g.nombre}. Mira tu conexión.`))}
+                  apilado
+                />
               </div>
             );
           })}
         </div>
+      ) : null}
+      {avisoGusto ? (
+        <p className="aparece text-center text-sm text-acento" aria-live="polite">
+          {avisoGusto}
+        </p>
       ) : null}
 
       {/*
@@ -1755,6 +1892,23 @@ export function PantallaSala({
 
       <Tarjeta>
         <Etiqueta>en la sala</Etiqueta>
+        {/*
+          El ánimo a agregarse: con quién compartes la sala y aún no son amigos.
+          Un toque manda las solicitudes; cada uno acepta cuando quiera.
+        */}
+        {porAgregar.length > 0 || animoFijo ? (
+          <AnimoAgregarse
+            cuantos={porAgregar.length}
+            onTodos={async () => {
+              // Que la tarjeta siga montada para decir cómo fue: al salir bien,
+              // `porAgregar` se vacía y se iba sin despedirse.
+              setAnimoFijo(true);
+              let fallos = 0;
+              for (const g of porAgregar) if (!(await agregar(g))) fallos++;
+              return fallos;
+            }}
+          />
+        ) : null}
         <div className="mt-3 flex flex-col gap-1.5">
           {gente
             .slice()
@@ -1831,6 +1985,23 @@ export function PantallaSala({
                       </span>
                     ) : null}
                   </Fila>
+                  {/* En otra línea, bajo el nombre: en la misma, a 360 px el
+                      nombre y el estado se quedaban en «Ma…» y «mic…». */}
+                  <div className="-mt-1 mb-1 ml-12">
+                    <AccionesDeHermano
+                      g={g}
+                      yo={quienSoy.uid}
+                      gustos={cuantosGustos.get(g.uid) ?? 0}
+                      meGusta={meGusta(g.uid)}
+                      amistad={amigos?.get(g.uid)}
+                      sinAgregar={!amigos || bloqueados.has(g.uid)}
+                      onGusto={() => tocarGusto(g.uid)}
+                      onAgregar={() =>
+                        void agregar(g).then((ok) => !ok && setError(`No se pudo agregar a ${g.nombre}. Mira tu conexión.`))
+                      }
+                      compacto
+                    />
+                  </div>
 
                   {/* Lo que puede hacer el anfitrión, y sólo al tocar a alguien. */}
                   {tocando === g.uid ? (
@@ -2148,4 +2319,155 @@ function comoSeDice(e: unknown): string {
   }
   // Lo que venga del portero ya está en español y dice el motivo de verdad.
   return m || "No se pudo entrar.";
+}
+
+/**
+ * «Me gusta» y «Agregar» para una persona de la sala (6.26).
+ *
+ * El corazón cuenta los de todos y se enciende si es tuyo; se da o se quita.
+ * «Agregar» manda la solicitud de amistad de siempre; si esa persona ya te la
+ * mandó, «Aceptar»; si ya son amigos, 🤝. A uno mismo, sólo su cuenta.
+ */
+export function AccionesDeHermano({
+  g,
+  yo,
+  gustos,
+  meGusta,
+  amistad,
+  onGusto,
+  onAgregar,
+  compacto = false,
+  apilado = false,
+  sinAgregar = false,
+}: {
+  g: Dentro;
+  yo: string;
+  gustos: number;
+  meGusta: boolean;
+  amistad?: Amigo["estado"];
+  onGusto: () => void;
+  onAgregar: () => void;
+  compacto?: boolean;
+  /** En el retrato de quien habla: uno encima del otro, para caber en su columna. */
+  apilado?: boolean;
+  /** Sin botón de agregar: bloqueado, o todavía sin la lista de amistades. */
+  sinAgregar?: boolean;
+}) {
+  const soyYo = g.uid === yo;
+  const chico = compacto ? "h-8 px-2 text-xs" : "h-8 px-2.5 text-xs";
+  return (
+    <span
+      className={`flex shrink-0 ${apilado ? "mt-0.5 flex-col items-center gap-1" : `items-center ${compacto ? "gap-1" : "gap-1.5"}`}`}
+    >
+      {soyYo ? (
+        gustos > 0 ? (
+          <span className={`flex items-center gap-1 ${chico} text-acento`} aria-label={`${gustos} me gusta`}>
+            ❤️ {gustos}
+          </span>
+        ) : null
+      ) : (
+        <>
+          <button
+            onClick={onGusto}
+            className={`toque flex items-center gap-1 rounded-full border ${chico} ${
+              meGusta ? "border-acento/60 bg-acento/15 text-acento" : "border-borde text-tenue"
+            }`}
+            aria-pressed={meGusta}
+            aria-label={meGusta ? `Quitar el me gusta a ${g.nombre}` : `Me gusta lo que dice ${g.nombre}`}
+          >
+            {meGusta ? "❤️" : "🤍"}
+            {gustos > 0 ? <span className="cifras">{gustos}</span> : null}
+          </button>
+          {sinAgregar ? null : amistad === "aceptada" ? (
+            <span className={`flex items-center ${chico} text-tenue`} aria-label={`${g.nombre} ya es tu amigo`}>
+              🤝
+            </span>
+          ) : amistad === "enviada" ? (
+            <span className={`flex items-center ${chico} text-tenue`} aria-label="Solicitud enviada">
+              ✓
+            </span>
+          ) : (
+            <button
+              onClick={onAgregar}
+              className={`toque flex items-center rounded-full border border-borde ${chico} ${
+                amistad === "recibida" ? "border-logro/60 text-logro" : "text-tenue"
+              }`}
+              aria-label={amistad === "recibida" ? `Aceptar a ${g.nombre}` : `Agregar a ${g.nombre}`}
+            >
+              {amistad === "recibida" ? "Aceptar" : compacto ? "➕" : "➕ Agregar"}
+            </button>
+          )}
+        </>
+      )}
+    </span>
+  );
+}
+
+/**
+ * El ánimo a agregarse, arriba de la lista de la sala. Se puede cerrar por
+ * hoy: animar no es insistir.
+ */
+export function AnimoAgregarse({ cuantos, onTodos }: { cuantos: number; onTodos: () => Promise<number> }) {
+  const hoy = new Date().toDateString();
+  const [cerrado, setCerrado] = useState(() => {
+    try {
+      return localStorage.getItem("genuino.sala.animo") === hoy;
+    } catch {
+      return false;
+    }
+  });
+  const [mandando, setMandando] = useState(false);
+  const [hecho, setHecho] = useState(false);
+  const [fallidos, setFallidos] = useState(0);
+  const [alMandar, setAlMandar] = useState<number | null>(null);
+  if (cerrado) return null;
+  const n = alMandar ?? cuantos;
+  return (
+    <div className="mt-2 rounded-xl border border-acento/30 bg-acento/5 px-3 py-2 text-sm leading-relaxed">
+      {hecho && !fallidos ? (
+        <p>✓ Solicitudes enviadas. Cada uno te acepta cuando la vea.</p>
+      ) : hecho ? (
+        <p>
+          No se pudo con {fallidos} {fallidos === 1 ? "de ellos" : "de ellos"}: mira tu conexión y vuelve a probar con
+          el ➕ de cada uno.
+        </p>
+      ) : (
+        <>
+          <p>
+            Compartes el devocional con {n}{" "}
+            {n === 1 ? "hermano que aún no es tu amigo" : "hermanos que aún no son tus amigos"}. Agregarse es
+            acompañarse también entre semana.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <Boton
+              variante="fuerte"
+              deshabilitado={mandando}
+              onClick={async () => {
+                setAlMandar(cuantos);
+                setMandando(true);
+                setFallidos(await onTodos());
+                setMandando(false);
+                setHecho(true);
+              }}
+            >
+              {mandando ? "Mandando…" : n === 1 ? "Agregarlo" : "Agregar a todos"}
+            </Boton>
+            <Boton
+              variante="fantasma"
+              onClick={() => {
+                try {
+                  localStorage.setItem("genuino.sala.animo", hoy);
+                } catch {
+                  // Sin almacenamiento, se cierra sólo por ahora.
+                }
+                setCerrado(true);
+              }}
+            >
+              Ahora no
+            </Boton>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }

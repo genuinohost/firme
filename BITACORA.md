@@ -8,6 +8,71 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — 6.26: «me gusta» y «agregar» en la sala
+
+## Lo que pidió Alex
+
+> «Todos los miembros de una comunidad deben ser animados, de alguna manera, a agregarse
+> mutuamente. Mientras alguien habla, debe estar la opción de darle me gusta y de agregar, además
+> de lo que ya agregaste: la racha.»
+
+## Cómo quedó
+
+- **Me gusta** (`src/logica/gustos.ts`): un documento por pareja y sala
+  (`salas/{canal}/gustos/{de}_{a}`), que se da o se quita: nadie llena la sala de corazones a
+  toques. Cada uno cuenta los suyos; cuando llega uno nuevo, sube un corazón sobre el retrato de
+  quien habla, y a quien lo recibe se le dice «❤️ A X le gustó lo que dijiste».
+- **Agregar**: las solicitudes de amistad de siempre. Si esa persona ya te la mandó, «Aceptar»; si
+  ya son amigos, 🤝; si ya la mandaste, ✓.
+- Los dos, **en el retrato de quien habla** (con su racha 🔥) y **en cada fila** de la lista.
+- **El ánimo**: arriba de la lista, «Compartes el devocional con N hermanos que aún no son tus
+  amigos» con «Agregar a todos» y «Ahora no» (se cierra por ese día: animar no es insistir).
+
+## Cómo se comprobó
+
+`revisar-reglas` (182: sólo entre los de dentro, de esta sesión, con la sala abierta; reabrir la
+reunión cerrada o vencida, pero no una viva de otro), y en el
+navegador la lista a 375 px con nombres largos, la racha y cada estado de amistad.
+
+## ⚠️ La reunión del devocional no se podía volver a abrir
+
+Lo vio de paso la revisión. La reunión usa siempre el mismo canal (`devocional-madrugada`, en
+`public/comunidad.json`), y la sala de un día se queda **cerrada**. Al día siguiente, al tocar
+«Abrir», la app entraba sin más, el portero contestaba «La sala está cerrada» y no había forma de
+abrirla. Comprobado en la base el 28-09: `salas/devocional-madrugada` cerrada desde el 27-09.
+
+- **Hoy mismo**: se retiró ese documento (cerrado, vacío). El 29 a las 5:00 «Abrir» la crea nueva,
+  también con la 6.24/6.25.
+- **Para siempre (6.26)**: una reunión cerrada o pasada de sus 4 h se trata como «sin abrir» y se
+  ofrece reabrirla; la regla nueva deja a quien modera reescribirla (aunque la abriera otro), y al
+  reabrir se limpian las fichas fantasma y los «me gusta» de la vez anterior. **Sin la 6.26
+  instalada en el móvil del anfitrión, el 30-09 volvería a pasar.**
+
+## La revisión
+
+Dos revisores y un escéptico por hallazgo (20 agentes): 18, ninguno refutado. Lo gordo:
+- **«Agregar» fallaba** si el otro te pedía con la sala abierta: la lista de amistades se leía una
+  vez, y pedir sobre una solicitud ya recibida lo rechazaban las reglas, en bucle. Ahora
+  `agregarOAceptar` va en una transacción (pide, o acepta, o nada) y las amistades se escuchan en
+  vivo. «Agregar a todos» dice si alguna falló. No se ofrece agregar a quien bloqueaste.
+- **Reglas de «me gusta» flojas**: cualquiera podía escribir y leer. Ahora sólo entre quienes están
+  dentro de la sala abierta, de esta sesión (el `desde` de la sala), y los leen sólo los de dentro.
+- Quitar y volver a dar el «me gusta» ya no repite el corazón; los avisos no se pisan; los botones
+  van apilados en el retrato y en otra línea en la lista (a 360 px no cabían); la racha 🔥 se ve
+  también en los subgrupos.
+- Queda sin hacer: borrar los «me gusta» al borrar la cuenta (se limpian al reabrir la sala).
+
+## También: elegir el día de una tarea
+
+Alex, con una reunión el jueves 1 de octubre a las 10:30: «no tengo opción de escoger la fecha
+para esa tarea y su respectiva alarma». La tarea ya guardaba su fecha y las alarmas se programan
+con 14 días de antelación; faltaba elegirla. `DialogoTarea` tiene ahora «¿Qué día?» (Hoy, Mañana
+o el calendario) con la fecha en palabras («jueves 1 de octubre»), y al guardar para otro día sale
+«Guardada para el jueves 1 de octubre. Te sonará a las 10:30.». Probado en el navegador con su
+caso: se guarda con `fecha: 2026-10-01`, `hora: 10:30`.
+
+---
+
 # 🧭 28 de septiembre de 2026 — 6.25: los subgrupos
 
 ## Lo que pidió Alex

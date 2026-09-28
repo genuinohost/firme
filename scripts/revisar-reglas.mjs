@@ -1136,25 +1136,108 @@ await debe(
 
 // ── Los «me gusta» ────────────────────────────────────────────────────────
 console.log("\nLOS ME GUSTA");
+const SG = "sala-gustos";
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  const bd = libre.firestore();
+  await setDoc(doc(bd, "salas", SG), { nombre: "Gustos", anfitrion: "mod", abierta: true, desde: 5, tipo: "devocional" });
+  await setDoc(doc(bd, `salas/${SG}/dentro/ana`), dentroDe("ana"));
+  await setDoc(doc(bd, `salas/${SG}/dentro/beto`), dentroDe("beto"));
+});
+const gusto = (de, a, extra = {}) => ({ de, a, cuando: 1, sesion: 5, ...extra });
 await debe(
-  "cada uno da «me gusta» a otro, a nombre propio",
-  assertSucceeds(setDoc(doc(beto, `salas/${SALA}/gustos/beto_ana`), { de: "beto", a: "ana", cuando: 1 })),
+  "quien está dentro da «me gusta» a otro que está dentro",
+  assertSucceeds(setDoc(doc(beto, `salas/${SG}/gustos/beto_ana`), gusto("beto", "ana"))),
 );
 await debe(
-  "no a nombre de otro, ni a sí mismo, ni con otro nombre de documento",
+  "y lo vuelve a dar (reescribir el suyo)",
+  assertSucceeds(setDoc(doc(beto, `salas/${SG}/gustos/beto_ana`), gusto("beto", "ana", { cuando: 2 }))),
+);
+await debe(
+  "NADIE DE FUERA: ni quien no está dentro da, ni se le da a quien no está",
   Promise.all([
-    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/ana_beto`), { de: "ana", a: "beto", cuando: 1 })),
-    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/beto_beto`), { de: "beto", a: "beto", cuando: 1 })),
-    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/otro`), { de: "beto", a: "ana", cuando: 1 })),
-    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/beto_curioso`), { de: "beto", a: "curioso", cuando: 1, x: 1 })),
+    assertFails(setDoc(doc(curioso, `salas/${SG}/gustos/curioso_ana`), gusto("curioso", "ana"))),
+    assertFails(setDoc(doc(beto, `salas/${SG}/gustos/beto_curioso`), gusto("beto", "curioso"))),
   ]),
 );
 await debe(
-  "se quita el propio; el de otro, no",
+  "ni a nombre de otro, ni a sí mismo, ni con otro documento, ni de otra sesión",
+  Promise.all([
+    assertFails(setDoc(doc(beto, `salas/${SG}/gustos/ana_beto`), gusto("ana", "beto"))),
+    assertFails(setDoc(doc(beto, `salas/${SG}/gustos/beto_beto`), gusto("beto", "beto"))),
+    assertFails(setDoc(doc(beto, `salas/${SG}/gustos/otro`), gusto("beto", "ana"))),
+    assertFails(setDoc(doc(ana, `salas/${SG}/gustos/ana_beto`), gusto("ana", "beto", { sesion: 4 }))),
+    assertFails(setDoc(doc(ana, `salas/${SG}/gustos/ana_beto`), gusto("ana", "beto", { x: 1 }))),
+  ]),
+);
+await debe(
+  "los ven los de dentro; los de fuera, no",
+  Promise.all([
+    assertSucceeds(getDocs(collection(ana, `salas/${SG}/gustos`))),
+    assertFails(getDocs(collection(curioso, `salas/${SG}/gustos`))),
+  ]),
+);
+await debe(
+  "se quita el propio, y el anfitrión cualquiera; otro, no",
   (async () => {
-    await assertFails(deleteDoc(doc(ana, `salas/${SALA}/gustos/beto_ana`)));
-    await assertSucceeds(deleteDoc(doc(beto, `salas/${SALA}/gustos/beto_ana`)));
+    await assertFails(deleteDoc(doc(ana, `salas/${SG}/gustos/beto_ana`)));
+    await assertSucceeds(deleteDoc(doc(beto, `salas/${SG}/gustos/beto_ana`)));
+    await assertSucceeds(setDoc(doc(ana, `salas/${SG}/gustos/ana_beto`), gusto("ana", "beto")));
+    await assertSucceeds(deleteDoc(doc(moderador, `salas/${SG}/gustos/ana_beto`)));
   })(),
+);
+await debe(
+  "con la sala cerrada no se da",
+  (async () => {
+    await entorno.withSecurityRulesDisabled(async (libre) => {
+      await updateDoc(doc(libre.firestore(), "salas", SG), { abierta: false });
+    });
+    await assertFails(setDoc(doc(beto, `salas/${SG}/gustos/beto_ana`), gusto("beto", "ana")));
+  })(),
+);
+
+// ── Reabrir la reunión de siempre ─────────────────────────────────────────
+console.log("\nREABRIR LA REUNIÓN");
+const reabierta = { nombre: "Devocional", anfitrion: "mod", abierta: true, desde: Date.now(), tipo: "devocional", micLibre: false };
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  const bd = libre.firestore();
+  // La de ayer: cerrada, y abierta por otro anfitrión.
+  await setDoc(doc(bd, "salas", "reunion-cerrada"), { nombre: "Devocional", anfitrion: "ana", abierta: false, desde: 1, tipo: "devocional" });
+  // Una olvidada abierta hace más de 4 h.
+  await setDoc(doc(bd, "salas", "reunion-vieja"), { nombre: "Devocional", anfitrion: "ana", abierta: true, desde: 1, tipo: "devocional" });
+  // Una de hoy, abierta y en marcha.
+  await setDoc(doc(bd, "salas", "reunion-viva"), { nombre: "Devocional", anfitrion: "ana", abierta: true, desde: Date.now(), tipo: "devocional" });
+});
+await debe(
+  "quien modera reabre la reunión cerrada de ayer, aunque la abriera otro",
+  assertSucceeds(setDoc(doc(moderador, "salas", "reunion-cerrada"), reabierta)),
+);
+await debe(
+  "y la que se quedó abierta más de 4 horas",
+  assertSucceeds(setDoc(doc(moderador, "salas", "reunion-vieja"), reabierta)),
+);
+await debe(
+  "PERO NO SE QUEDA CON UNA REUNIÓN VIVA DE OTRO",
+  assertFails(setDoc(doc(moderador, "salas", "reunion-viva"), reabierta)),
+);
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  const bd = libre.firestore();
+  // La de hoy de otro anfitrión, que alguien cerró con él todavía dentro.
+  await setDoc(doc(bd, "salas", "reunion-quitada"), { nombre: "Devocional", anfitrion: "ana", abierta: false, desde: Date.now(), tipo: "devocional" });
+  await setDoc(doc(bd, "salas/reunion-quitada/dentro/ana"), dentroDe("ana"));
+  // Una llamada de dos, cerrada.
+  await setDoc(doc(bd, "salas", "llamada-cerrada"), { nombre: "Llamada", anfitrion: "ana", abierta: false, desde: 1, tipo: "llamada" });
+});
+await debe(
+  "NI CIERRA Y REABRE COMO SUYA LA REUNIÓN DE OTRO QUE SIGUE DENTRO",
+  assertFails(setDoc(doc(moderador, "salas", "reunion-quitada"), reabierta)),
+);
+await debe(
+  "ni convierte una llamada cerrada en un devocional",
+  assertFails(setDoc(doc(moderador, "salas", "llamada-cerrada"), reabierta)),
+);
+await debe(
+  "y quien no modera no reabre nada",
+  assertFails(setDoc(doc(beto, "salas", "reunion-cerrada"), { ...reabierta, anfitrion: "beto" })),
 );
 
 // ── Los subgrupos ─────────────────────────────────────────────────────────

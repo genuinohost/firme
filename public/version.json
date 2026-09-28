@@ -1,13 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 67,
-  "nombre": "6.25",
+  "codigo": 68,
+  "nombre": "6.26",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Subgrupos en el devocional: el anfitrion arma de 2 a 5 grupos de 2 a 5 personas, a mano o al azar, y elige cuanto duran (5 a 30 min o a medida).",
-    "Cada uno se va solo a su grupo, donde hablan todos; al acabar el tiempo, o cuando el anfitrion los reune, todos vuelven a la sala principal.",
-    "Con el movil bloqueado, un aviso te dice que termino tu grupo y al tocarlo vuelves.",
-    "La campana de las 6 suena tambien en los grupos, y el timbre del devocional ya no te saca de tu grupo."
+    "Mientras alguien habla en la sala: dale me gusta y agregalo como amigo; si ya te mando solicitud, Aceptar. Y una tarjeta te anima a agregar a los hermanos del devocional.",
+    "Las tareas ahora se pueden poner para otro dia (Hoy, Manana o el calendario), con su alarma.",
+    "La reunion del devocional se puede volver a abrir cada dia aunque la de ayer quedara cerrada.",
+    "La racha se ve tambien en los subgrupos."
   ],
   "importante": false
 }

@@ -132,6 +132,26 @@ export async function marcarAsistencia(
   return { racha, faltas };
 }
 
+/**
+ * La racha y las faltas de hoy, SIN apuntar la asistencia. Para los subgrupos:
+ * ir a un grupo no es venir otra vez, pero la racha 🔥 tiene que verse igual.
+ */
+export async function leerMiAsistencia(
+  diasReunion: number[] = [],
+  ahora = new Date(),
+): Promise<{ racha: number; faltas: number } | null> {
+  const uid = await miUid();
+  if (!uid) return null;
+  const { getDoc } = await import("firebase/firestore");
+  const previo = await getDoc(await refAsistencia(uid));
+  if (!previo.exists()) return null;
+  const dias = Array.isArray(previo.data().dias)
+    ? (previo.data().dias as unknown[]).filter((d): d is string => typeof d === "string")
+    : [];
+  if (!dias.length) return null;
+  return calcularAsistencia(dias, claveDia(ahora), diasReunion);
+}
+
 /** La lista entera, para quien modera: el control de asistencias. */
 export async function listarAsistencia(): Promise<Asistencia[]> {
   const { bd } = await nube();

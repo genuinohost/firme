@@ -50,7 +50,7 @@ export function minutoActual(ahora = new Date()): number {
  * Las fechas van en "AAAA-MM-DD", que se ordena bien comparando cadenas: no
  * hace falta convertirlas a Date ni preocuparse por husos horarios.
  */
-function tocaHoy(tarea: Tarea, fecha: string): boolean {
+export function tocaHoy(tarea: Tarea, fecha: string): boolean {
   if (tarea.fecha === fecha) return true;
   if (!tarea.repiteHasta) return false;
   if (fecha < tarea.fecha) return false;

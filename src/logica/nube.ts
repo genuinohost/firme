@@ -562,6 +562,81 @@ export async function pedirAmistad(yo: Perfil, otro: Perfil): Promise<void> {
   await lote.commit();
 }
 
+/**
+ * Agregar a alguien desde la sala: pedir, o aceptar si ya me lo pidió, o nada
+ * si ya está hecho. En la sala todos tocan «Agregar a todos» a la vez: si el
+ * otro me pide entre que miro y escribo, mi escritura sobre su copia (que ya
+ * existe) la niegan las reglas con permission-denied, que la transacción no
+ * reintenta sola. Así que se repite una vez a mano: la segunda lectura ya ve
+ * «recibida» y acepta.
+ *
+ * Devuelve qué se hizo.
+ */
+export async function agregarOAceptar(yo: Perfil, otro: Perfil): Promise<"pedida" | "aceptada" | "ya"> {
+  if (yo.uid === otro.uid) return "ya";
+  if (!yo.uid || !yo.usuario || !otro.uid || !otro.usuario) throw new Error("perfil-incompleto");
+  const { bd } = await nube();
+  const { doc, runTransaction } = await import("firebase/firestore");
+  const mia = doc(bd, "usuarios", yo.uid, "amigos", otro.uid);
+  const suya = doc(bd, "usuarios", otro.uid, "amigos", yo.uid);
+  const intento = () => runTransaction(bd, async (t) => {
+    const d = await t.get(mia);
+    const estado = d.exists() ? (d.data().estado as Amigo["estado"]) : null;
+    if (estado === "recibida") {
+      t.update(mia, { estado: "aceptada" });
+      t.update(suya, { estado: "aceptada" });
+      return "aceptada";
+    }
+    if (estado) return "ya";
+    const cuando = Date.now();
+    t.set(mia, {
+      estado: "enviada",
+      cuando,
+      nombre: otro.nombre,
+      usuario: otro.usuario,
+      ...(otro.foto ? { foto: otro.foto } : {}),
+    });
+    t.set(suya, {
+      estado: "recibida",
+      cuando,
+      nombre: yo.nombre,
+      usuario: yo.usuario,
+      ...(yo.foto ? { foto: yo.foto } : {}),
+    });
+    return "pedida" as const;
+  });
+  try {
+    return await intento();
+  } catch (e) {
+    if ((e as { code?: string })?.code === "permission-denied") return await intento();
+    throw e;
+  }
+}
+
+/** Mis amistades en vivo (uid → estado): para la sala, donde cambian mientras se está. */
+export function escucharAmigos(uid: string, alCambiar: (m: Map<string, Amigo["estado"]>) => void): () => void {
+  let fin: (() => void) | null = null;
+  let vivo = true;
+  void (async () => {
+    try {
+      const { bd } = await nube();
+      const { collection, onSnapshot } = await import("firebase/firestore");
+      if (!vivo) return;
+      fin = onSnapshot(
+        collection(bd, "usuarios", uid, "amigos"),
+        (r) => alCambiar(new Map(r.docs.map((d) => [d.id, (d.data().estado ?? "enviada") as Amigo["estado"]]))),
+        () => {},
+      );
+    } catch {
+      // Sin la lista, los botones de agregar no salen.
+    }
+  })();
+  return () => {
+    vivo = false;
+    fin?.();
+  };
+}
+
 export async function aceptarAmistad(yo: string, otro: string): Promise<void> {
   const { bd } = await nube();
   const { doc, writeBatch } = await import("firebase/firestore");

@@ -28,6 +28,20 @@ function dentroDeDias(fecha: string, dias: number): string {
   ).padStart(2, "0")}`;
 }
 
+/** Hoy, en "AAAA-MM-DD" local. */
+function hoyClave(): string {
+  const f = new Date();
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+}
+
+/** «jueves 1 de octubre», para que no haya dudas de qué día es. */
+export function fechaLarga(fecha: string): string {
+  const [a, m, d] = fecha.split("-").map(Number);
+  const f = new Date(a, m - 1, d);
+  // Por partes: todo junto, el navegador pone «jueves, 1 de octubre», con coma.
+  return `${f.toLocaleDateString("es", { weekday: "long" })} ${d} de ${f.toLocaleDateString("es", { month: "long" })}`;
+}
+
 export function DialogoTarea({
   fecha,
   tarea,
@@ -43,6 +57,14 @@ export function DialogoTarea({
   onCerrar: () => void;
 }) {
   const editando = tarea !== undefined;
+  const hoy = hoyClave();
+  /**
+   * Qué día. Alex, 28-09-2026, con una reunión el jueves 1 de octubre a las
+   * 10:30: «no tengo opción de escoger la fecha para esa tarea y su
+   * respectiva alarma». La tarea ya guardaba su fecha (y las alarmas se
+   * programan con dos semanas de antelación); faltaba poder elegirla.
+   */
+  const [dia, setDia] = useState(tarea?.fecha ?? fecha);
   const [nombre, setNombre] = useState(tarea?.nombre ?? "");
   const [conHora, setConHora] = useState(tarea ? tarea.hora !== null : true);
   const [hora, setHora] = useState(tarea?.hora ?? (() => desdeAhora(30)));
@@ -57,6 +79,11 @@ export function DialogoTarea({
       ? tarea.repiteHasta
       : dentroDeDias(tarea?.fecha ?? fecha, 7),
   );
+  /** Cambiar el día, y que el «hasta» de «varios días» no se quede atrás. */
+  const cambiarDia = (nuevo: string) => {
+    setDia(nuevo);
+    setHasta((h) => (h < nuevo ? dentroDeDias(nuevo, 7) : h));
+  };
   const [timbre, setTimbre] = useState<Timbre>(
     tarea?.timbre && tarea.timbre !== "ninguno" ? tarea.timbre : "pulso",
   );
@@ -78,7 +105,7 @@ export function DialogoTarea({
     <div className="velo fixed inset-0 z-40 flex justify-center overflow-y-auto bg-fondo/90 p-4 backdrop-blur-sm">
       <Tarjeta className="entrar mt-auto mb-0 h-fit w-full max-w-md !bg-superficie-alta sm:my-auto">
         <div className="flex items-center justify-between">
-          <Etiqueta>{editando ? "editar tarea" : "tarea de hoy"}</Etiqueta>
+          <Etiqueta>{editando ? "editar tarea" : dia === hoy ? "tarea de hoy" : "nueva tarea"}</Etiqueta>
           <button onClick={onCerrar} className="px-2 text-tenue transition hover:text-texto">
             ✕
           </button>
@@ -101,6 +128,37 @@ export function DialogoTarea({
               <BotonDictar valor={nombre} onTexto={setNombre} etiqueta="Dictar la tarea" />
             </div>
           </Campo>
+
+          <div>
+            <Etiqueta>¿qué día?</Etiqueta>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {[
+                { nombre: "Hoy", valor: hoy },
+                { nombre: "Mañana", valor: dentroDeDias(hoy, 1) },
+              ].map((o) => (
+                <button
+                  key={o.nombre}
+                  onClick={() => cambiarDia(o.valor)}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                    dia === o.valor ? "border-acento bg-acento/[0.08] text-acento" : "border-borde text-tenue"
+                  }`}
+                  aria-pressed={dia === o.valor}
+                >
+                  {o.nombre}
+                </button>
+              ))}
+              <input
+                type="date"
+                value={dia}
+                // Hacia atrás sólo si se edita una que ya era de antes.
+                min={editando && tarea.fecha < hoy ? tarea.fecha : hoy}
+                onChange={(e) => e.target.value && cambiarDia(e.target.value)}
+                className="rounded-lg border border-borde bg-superficie-alta px-2 py-1.5 text-sm outline-none focus:border-acento"
+                aria-label="Elegir la fecha"
+              />
+            </div>
+            <p className="mt-1.5 text-sm first-letter:uppercase">{fechaLarga(dia)}</p>
+          </div>
 
           <label className="flex items-center justify-between rounded-xl border border-borde px-3 py-2.5">
             <span className="text-sm">Con hora y alarma</span>
@@ -136,7 +194,13 @@ export function DialogoTarea({
                 {[2, 5, 15, 30, 60].map((min) => (
                   <button
                     key={min}
-                    onClick={() => setHora(desdeAhora(min))}
+                    // «Dentro de» es desde ahora: la tarea pasa a ser de hoy.
+                    // Una serie que ya empezó no se mueve: moverla borraba su
+                    // historial de los días anteriores.
+                    onClick={() => {
+                      setHora(desdeAhora(min));
+                      if (repeticion === "uno" || dia > hoy) cambiarDia(hoy);
+                    }}
                     className="rounded-full border border-borde px-2.5 py-1 text-xs text-tenue transition hover:border-acento hover:text-acento"
                   >
                     {min < 60 ? `${min} min` : "1 h"}
@@ -216,7 +280,7 @@ export function DialogoTarea({
                 <input
                   type="date"
                   value={hasta}
-                  min={tarea?.fecha ?? fecha}
+                  min={dia}
                   onChange={(e) => setHasta(e.target.value)}
                   className="rounded-lg border border-borde bg-superficie-alta px-2 py-1 text-sm outline-none focus:border-acento"
                 />
@@ -225,10 +289,12 @@ export function DialogoTarea({
 
             <p className="mt-1.5 text-xs leading-relaxed text-tenue">
               {repeticion === "uno"
-                ? "Solo aparece este día."
+                ? "Solo aparece ese día."
                 : repeticion === "siempre"
-                  ? "Aparecerá cada día, con su alarma, hasta que la borres."
-                  : `Aparecerá cada día desde hoy hasta el ${hasta}, con su alarma.`}
+                  ? `Aparecerá cada día${dia === hoy ? "" : ` desde el ${fechaLarga(dia)}`}, con su alarma, hasta que la borres.`
+                  : `Aparecerá cada día desde ${dia === hoy ? "hoy" : `el ${fechaLarga(dia)}`} hasta el ${fechaLarga(
+                      hasta < dia ? dia : hasta,
+                    )}, con su alarma.`}
             </p>
           </div>
         </div>
@@ -242,7 +308,7 @@ export function DialogoTarea({
               onClick={() =>
                 onGuardar({
                   id: tarea?.id ?? idNuevo(),
-                  fecha: tarea?.fecha ?? fecha,
+                  fecha: dia,
                   nombre: nombre.trim(),
                   hora: conHora ? hora : null,
                   duracionMin,
@@ -250,11 +316,11 @@ export function DialogoTarea({
                   timbre: conHora ? timbre : "ninguno",
                   ...(repeticion === "uno"
                     ? {}
-                    : { repiteHasta: repeticion === "siempre" ? "siempre" : hasta }),
+                    : { repiteHasta: repeticion === "siempre" ? "siempre" : hasta < dia ? dia : hasta }),
                 })
               }
             >
-              {editando ? "Guardar" : "Añadir al día"}
+              {editando ? "Guardar" : dia === hoy ? "Añadir al día" : `Añadir al ${fechaLarga(dia).split(" ")[0]} ${Number(dia.slice(8))}`}
             </Boton>
           </div>
           {editando && onBorrar ? (

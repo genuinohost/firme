@@ -309,6 +309,23 @@ service cloud.firestore {
       allow update: if esElMismo(resource.data.anfitrion)
         && request.resource.data.anfitrion == resource.data.anfitrion
         && salaRazonable(request.resource.data);
+      // Y REABRIRLA quien modera, si está cerrada o pasó su vida (4 h): la
+      // reunión del devocional usa siempre el mismo canal, y la de ayer se
+      // quedaba cerrada para siempre (el portero no deja entrar a una sala
+      // cerrada, y sólo su anfitrión de ayer podía reescribirla). Se reescribe
+      // entera, con quien la abre de anfitrión.
+      //
+      // Cerrada, sí, pero sólo si su anfitrión ya no está dentro: si no, un
+      // moderador podía cerrar la reunión viva de otro y reabrirla como suya.
+      allow update: if esModerador()
+        && resource.data.tipo == 'devocional'
+        && (request.time.toMillis() - resource.data.desde > 4 * 3600 * 1000
+          || (resource.data.abierta == false
+            && !exists(/databases/$(database)/documents/salas/$(canal)/dentro/$(resource.data.anfitrion))))
+        && request.resource.data.anfitrion == request.auth.uid
+        && request.resource.data.abierta == true
+        && request.resource.data.tipo == 'devocional'
+        && salaRazonable(request.resource.data);
       // Y CERRARLA, cualquier moderador: una sala que su anfitrión olvidó
       // abierta —se le apagó el móvil— sigue facturando en Agora hasta que
       // alguien la cierre. Sólo `abierta`, y sólo a false: nada más se toca.
@@ -426,17 +443,34 @@ service cloud.firestore {
       // me gusta y de agregar». Uno por pareja y sala (`{de}_{a}`): se da o se
       // quita, y nadie llena la sala de corazones a toques. Sólo a nombre
       // propio, y a otro.
+      //
+      // Y sólo entre quienes están DENTRO de la sala abierta, y de esta sesión
+      // (`sesion` = el `desde` de la sala): un expulsado o quien no está no
+      // puede llenar la sala de corazones, y los de ayer no cuentan hoy. Lo leen
+      // sólo los de dentro (y quien la lleva): quién le dio «me gusta» a quién
+      // no es de nadie más.
       match /gustos/{id} {
-        allow read: if haEntrado();
-        allow create: if haEntrado()
-          && request.resource.data.keys().hasOnly(['de', 'a', 'cuando'])
-          && request.resource.data.de == request.auth.uid
-          && request.resource.data.a is string
-          && request.resource.data.a.size() > 0 && request.resource.data.a.size() <= 128
-          && request.resource.data.a != request.auth.uid
-          && request.resource.data.cuando is number
-          && id == request.auth.uid + '_' + request.resource.data.a;
-        allow delete: if haEntrado() && resource.data.de == request.auth.uid;
+        function dentroAqui(uid) {
+          return exists(/databases/$(database)/documents/salas/$(canal)/dentro/$(uid));
+        }
+        function gustoRazonable(d) {
+          let sala = get(/databases/$(database)/documents/salas/$(canal)).data;
+          return d.keys().hasOnly(['de', 'a', 'cuando', 'sesion'])
+            && d.de == request.auth.uid
+            && d.a is string && d.a.size() > 0 && d.a.size() <= 128
+            && d.a != request.auth.uid
+            && d.cuando is number
+            && d.sesion == sala.desde
+            && sala.abierta == true
+            && id == request.auth.uid + '_' + d.a
+            && dentroAqui(request.auth.uid)
+            && dentroAqui(d.a);
+        }
+        allow read: if haEntrado() && (dentroAqui(request.auth.uid) || esAnfitrion() || esModerador());
+        // Crear, y también reescribir el propio (volver a darlo, o el de ayer).
+        allow create: if haEntrado() && gustoRazonable(request.resource.data);
+        allow update: if haEntrado() && resource.data.de == request.auth.uid && gustoRazonable(request.resource.data);
+        allow delete: if haEntrado() && (resource.data.de == request.auth.uid || esAnfitrion());
       }
 
       // --------------------------------------------------------- los expulsados
