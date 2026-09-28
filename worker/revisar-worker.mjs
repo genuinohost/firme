@@ -362,6 +362,10 @@ let deOyente = null;
   debe("y se reconoce como anfitrión", r.datos.esAnfitrion === true);
   debe("el token empieza por la versión 007 de Agora", String(r.datos.token).startsWith("007"));
   debe("la cuenta del token es la suya", r.datos.cuenta === "ana");
+  debe(
+    "y trae la hora del portero, para ver videos a la par",
+    typeof r.datos.ahora === "number" && Math.abs(r.datos.ahora - Date.now()) < 5000 && typeof r.datos.llegada === "number" && r.datos.llegada <= r.datos.ahora,
+  );
   const p = privilegiosDe(r.datos.token);
   debe(
     "el anfitrión habla la hora entera: no pierde la voz a mitad del devocional",

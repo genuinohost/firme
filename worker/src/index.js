@@ -329,6 +329,9 @@ async function llamar(peticion, entorno, origen) {
 
 export default {
   async fetch(peticion, entorno) {
+    // En Workers el reloj se congela hasta la primera E/S: esto es la hora
+    // exacta de llegada (para que el móvil mida su desfase como NTP).
+    const llegada = Date.now();
     const origen = peticion.headers.get("Origin") ?? "";
     const ruta = new URL(peticion.url).pathname;
 
@@ -508,6 +511,10 @@ export default {
         habla,
         esAnfitrion,
         caduca: ahora + VALE_SEGUNDOS,
+        // La hora de aquí, en milisegundos: con ella cada móvil corrige su
+        // reloj para ver un video a la par que los demás («ver juntos»).
+        ahora: Date.now(),
+        llegada,
         // Cuándo deja de valer la palabra, para que la app sepa renovarla.
         ...(hablaPoco ? { caducaPalabra: ahora + PALABRA_SEGUNDOS } : {}),
       },

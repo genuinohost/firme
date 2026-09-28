@@ -1195,6 +1195,29 @@ await debe(
   })(),
 );
 
+// ── Ver juntos ────────────────────────────────────────────────────────────
+console.log("\nVER JUNTOS");
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  await setDoc(doc(libre.firestore(), "salas", "sala-video"), { nombre: "Video", anfitrion: "mod", abierta: true, desde: 1, tipo: "devocional" });
+});
+const video = (extra = {}) => ({ id: "dQw4w9WgXcQ", estado: "play", pos: 12.5, en: 1, ...extra });
+await debe(
+  "el anfitrión pone un video de YouTube para todos",
+  assertSucceeds(updateDoc(doc(moderador, "salas", "sala-video"), { video: video() })),
+);
+await debe(
+  "otro no lo pone ni lo mueve",
+  assertFails(updateDoc(doc(ana, "salas", "sala-video"), { video: video({ estado: "pausa" }) })),
+);
+await debe(
+  "ni un identificador que no es de YouTube, ni un estado raro, ni campos de más",
+  Promise.all([
+    assertFails(updateDoc(doc(moderador, "salas", "sala-video"), { video: video({ id: "https://malo.com/x" }) })),
+    assertFails(updateDoc(doc(moderador, "salas", "sala-video"), { video: video({ estado: "rebobina" }) })),
+    assertFails(updateDoc(doc(moderador, "salas", "sala-video"), { video: video({ url: "x" }) })),
+  ]),
+);
+
 // ── Reabrir la reunión de siempre ─────────────────────────────────────────
 console.log("\nREABRIR LA REUNIÓN");
 const reabierta = { nombre: "Devocional", anfitrion: "mod", abierta: true, desde: Date.now(), tipo: "devocional", micLibre: false };

@@ -50,6 +50,7 @@ import {
 } from "@/logica/devocionales";
 import { PegarDevocional } from "./PegarDevocional";
 import { EnSubgrupo, Subgrupos, marcarVuelta } from "./Subgrupos";
+import { VerJuntos } from "./VerJuntos";
 import { contarGustos, darGusto, verGustos, type Gusto } from "@/logica/gustos";
 import { agregarOAceptar, escucharAmigos, type Amigo } from "@/logica/nube";
 import { leerBloqueados } from "@/logica/muro";
@@ -849,6 +850,19 @@ export function PantallaSala({
     ? gente.filter((g) => g.uid !== quienSoy.uid && !amigos.has(g.uid) && !bloqueados.has(g.uid))
     : [];
 
+  // ── el video suena: micrófonos cerrados ─────────────────────────────────
+  //
+  // Un micrófono abierto con el altavoz reenviaría el video a todos, con eco.
+  // Mientras suena se cierra —el de cada uno, también si alguien lo abre o se
+  // lo abre un cambio de papel—; para hablar, se pausa. Al acabar no se abre
+  // solo: abrirlo es un gesto de cada uno.
+  const videoSuena = sala?.tipo !== "llamada" && sala?.video?.estado === "play";
+  useEffect(() => {
+    if (estado !== "dentro" || !videoSuena || !microAbierto) return;
+    setMicroAbierto(false);
+    void miMicro(false);
+  }, [estado, videoSuena, microAbierto]);
+
   // ── me silenciaron ───────────────────────────────────────────────────────
   useEffect(() => {
     if (estado !== "dentro" || !yo?.silenciado) return;
@@ -1131,6 +1145,13 @@ export function PantallaSala({
         />
       ) : null}
       {/*
+        «Ver juntos» con video (6.27): ANTES del letrero de la lectura, que es
+        pegajoso y taparía el reproductor al bajar (YouTube no deja nada encima).
+      */}
+      {sala && sala.tipo !== "llamada" && sala.video ? (
+        <VerJuntos canal={canal} sala={sala} esAnfitrion={esAnfitrion} />
+      ) : null}
+      {/*
         El letrero de la lectura por turnos, arriba y pegado mientras se baja.
 
         Alex, 28-09-2026: «debe salir un letrero sutil arriba para que la
@@ -1227,6 +1248,11 @@ export function PantallaSala({
             </div>
           )}
         </div>
+      ) : null}
+
+      {/* «Ver juntos» sin video: la tarjeta para ponerlo (sólo el anfitrión). */}
+      {sala && sala.tipo !== "llamada" && !sala.video ? (
+        <VerJuntos canal={canal} sala={sala} esAnfitrion={esAnfitrion} />
       ) : null}
 
       <Tarjeta>
