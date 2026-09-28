@@ -48,6 +48,7 @@ import {
   type Orden,
 } from "@/logica/devocionales";
 import { PegarDevocional } from "./PegarDevocional";
+import { EnSubgrupo, Subgrupos, marcarVuelta } from "./Subgrupos";
 import { TextoDevocional } from "./TextoDevocional";
 import { parar, sonar, vibrar } from "@/logica/sonido";
 import { cuantosMiembros, escucharMiembros, llamarALaComunidad } from "@/logica/timbre";
@@ -77,6 +78,8 @@ export function PantallaSala({
   finPrevisto,
   quienSoy,
   onSalir,
+  onIrA,
+  padre,
 }: {
   canal: string;
   /**
@@ -96,6 +99,10 @@ export function PantallaSala({
   finPrevisto?: string;
   quienSoy: { uid: string; nombre: string; usuario: string; foto?: string };
   onSalir: () => void;
+  /** Pasar a otra sala sin salir de la voz: a un subgrupo, o de vuelta al devocional. */
+  onIrA?: (destino: { canal: string; nombre: string; padre?: string }) => void;
+  /** Si se viene a un subgrupo: su devocional, adonde volver si algo falla. */
+  padre?: string;
 }) {
   const [sala, setSala] = useState<Sala | null>(null);
   const [gente, setGente] = useState<Dentro[]>([]);
@@ -200,11 +207,16 @@ export function PantallaSala({
       // Quien no es el anfitrión entra con el micrófono cerrado aunque pueda
       // hablar (micrófonos libres): abrirlo es un gesto suyo, no un ruido al
       // llegar tarde a mitad de la lectura.
-      if (!r.esAnfitrion) {
+      // Tampoco el anfitrión que entra «a escuchar» un subgrupo: llega a un
+      // grupo que ya está hablando.
+      if (!r.esAnfitrion || r.tipo === "subgrupo") {
         setMicroAbierto(false);
         void miMicro(false);
       } else {
+        // Y se fija también en el motor: el silencio de la visita a un grupo
+        // se quedaba puesto al volver, con la pantalla diciendo «abierto».
         setMicroAbierto(r.habla);
+        void miMicro(r.habla);
       }
       // Sin permiso del micrófono se entra igual, a escuchar. Si se iba a
       // hablar (anfitrión, micrófonos libres), se dice y se da el botón.
@@ -459,7 +471,11 @@ export function PantallaSala({
       salaEstuvoAbierta.current = true;
       return;
     }
-    if (!salaEstuvoAbierta.current || esAnfitrion) return;
+    if (!salaEstuvoAbierta.current) return;
+    // Un subgrupo que se cierra es que vuelven todos: de vuelta al devocional
+    // (lo hace la tarjeta del subgrupo). También el anfitrión, si estaba de visita.
+    if (sala?.tipo === "subgrupo") return;
+    if (esAnfitrion) return;
     void salirDeSala();
     setError("El anfitrión terminó el devocional. Gracias por venir.");
     setEstado("fuera");
@@ -491,7 +507,7 @@ export function PantallaSala({
     String((e as { code?: string })?.code ?? "").includes("permission-denied") ? "permiso" : "red";
 
   useEffect(() => {
-    if (estado !== "dentro") return;
+    if (estado !== "dentro" || sala?.tipo !== "devocional") return;
     return escucharOrden(
       (o) => {
         setOrdenLectura(o);
@@ -499,9 +515,10 @@ export function PantallaSala({
       },
       (e) => setOrdenFallo(falloDe(e)),
     );
-  }, [estado, reintento]);
+  }, [estado, reintento, sala?.tipo]);
 
-  const diaLectura = sala?.lectura?.dia ?? (esAnfitrion ? diaDelPlan() : null);
+  const diaLectura =
+    sala?.tipo !== "devocional" ? null : (sala?.lectura?.dia ?? (esAnfitrion ? diaDelPlan() : null));
   useEffect(() => {
     if (estado !== "dentro" || diaLectura == null) return;
     setDevLectura((d) => (d?.dia === diaLectura ? d : undefined));
@@ -689,7 +706,9 @@ export function PantallaSala({
   useEffect(() => {
     // Sólo dentro: con la sala «fuera» (se cayó la red) no se toca nada, y el
     // aviso de desconexión no se tapa con uno de turnos.
-    if (estado !== "dentro" || !esAnfitrion || !lectorFalta || !hayQuienLea) return;
+    // Y quieto con los subgrupos en marcha: los lectores están en sus grupos, no
+    // se han ido, y a la vuelta la lectura sigue donde estaba.
+    if (estado !== "dentro" || !esAnfitrion || !lectorFalta || !hayQuienLea || sala?.subgrupos) return;
     const t = setTimeout(
       () => {
         const { lectura: l, orden, puedeLeer: puede } = alDia.current;
@@ -715,7 +734,7 @@ export function PantallaSala({
       lectorFalta === "fuera" ? 20_000 : lectorFalta === "caido" ? 5_000 : 3_000,
     );
     return () => clearTimeout(t);
-  }, [estado, esAnfitrion, lectorFalta, hayQuienLea, lecturaViva?.desde, canal, reintentoVigia]);
+  }, [estado, esAnfitrion, lectorFalta, hayQuienLea, lecturaViva?.desde, canal, reintentoVigia, !!sala?.subgrupos]);
 
   // ── me silenciaron ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -894,12 +913,24 @@ export function PantallaSala({
   }
 
   if (estado === "fuera") {
-    const termino = error.startsWith("El anfitrión");
+    const alDevocional = sala?.padre ?? padre;
+    // Viniendo de un subgrupo, sólo «terminó el devocional» es terminar: un
+    // grupo cerrado, vencido, o que te sacaran de él, se arregla volviendo a
+    // la sala principal. Sin grupo, «La sala está cerrada» al volver sí lo es.
+    const termino =
+      error.startsWith("El anfitrión terminó") ||
+      (!alDevocional && (error.startsWith("El anfitrión") || error === "La sala está cerrada."));
     const seCayo = error.startsWith("Se perdió la conexión");
     return (
       <Tarjeta className={termino ? "border-acento/40" : "border-fallo/40"}>
         <Etiqueta>
-          {termino ? "la reunión terminó" : seCayo ? "fuera de la sala" : "no se pudo entrar"}
+          {termino
+            ? "la reunión terminó"
+            : seCayo
+              ? "fuera de la sala"
+              : alDevocional
+                ? "fuera del grupo"
+                : "no se pudo entrar"}
         </Etiqueta>
         <p className="mt-2 text-sm leading-relaxed">{error}</p>
         <div className="mt-3 flex flex-col gap-2">
@@ -908,8 +939,22 @@ export function PantallaSala({
               Abrir los ajustes de Genuino
             </Boton>
           ) : null}
+          {alDevocional && onIrA && !termino ? (
+            // Si falla la entrada a un subgrupo, no se sale de todo: se vuelve
+            // al devocional (y no se reenvía al grupo en bucle).
+            <Boton
+              variante="fuerte"
+              ancho
+              onClick={() => {
+                marcarVuelta(canal);
+                onIrA({ canal: alDevocional, nombre: "Devocional" });
+              }}
+            >
+              Volver a la sala principal
+            </Boton>
+          ) : null}
           <Boton ancho onClick={onSalir}>
-            Volver
+            {alDevocional && onIrA && !termino ? "Salir del devocional" : "Volver"}
           </Boton>
         </div>
       </Tarjeta>
@@ -964,6 +1009,14 @@ export function PantallaSala({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Dentro de un subgrupo: cuál, con quién, cuánto queda, y volver. */}
+      {sala?.tipo === "subgrupo" && sala.padre ? (
+        <EnSubgrupo
+          sala={sala}
+          gente={gente}
+          onVolver={() => onIrA?.({ canal: sala.padre!, nombre: "Devocional" })}
+        />
+      ) : null}
       {/*
         El letrero de la lectura por turnos, arriba y pegado mientras se baja.
 
@@ -1065,7 +1118,8 @@ export function PantallaSala({
 
       <Tarjeta>
         <Etiqueta>
-          {sala?.tipo === "llamada" ? "llamada" : "devocional"} · {gente.length}{" "}
+          {sala?.tipo === "llamada" ? "llamada" : sala?.tipo === "subgrupo" ? "subgrupo" : "devocional"} ·{" "}
+          {gente.length}{" "}
           {gente.length === 1 ? "dentro" : "dentro"}
         </Etiqueta>
         <h2 className="mt-1 text-xl font-semibold">{sala?.nombre ?? "Una sala"}</h2>
@@ -1082,6 +1136,10 @@ export function PantallaSala({
         >
           {yo?.silenciado
             ? "El anfitrión cerró tu micrófono. Cuando te lo abra, podrás hablar."
+            : sala?.tipo === "subgrupo" && habla
+              ? microAbierto
+                ? "Se te está oyendo en el grupo."
+                : "Aquí hablan todos: abre tu micrófono cuando quieras."
             : habla
               ? microAbierto
                 ? sonando.yo
@@ -1097,7 +1155,7 @@ export function PantallaSala({
           «Hoy sólo escucho» 👂: la lectura por turnos se lo salta. En el grupo
           es el 👂🏻 de la lista; aquí lo decide cada uno, con un toque.
         */}
-        {!esAnfitrion && sala?.tipo !== "llamada" && ordenLectura ? (
+        {!esAnfitrion && sala?.tipo === "devocional" && ordenLectura ? (
           <button
             onClick={() =>
               void soloEscucho(canal, !yo?.escucha).catch(() => setError("No se pudo cambiar. Mira tu conexión."))
@@ -1118,7 +1176,7 @@ export function PantallaSala({
           </button>
         ) : null}
 
-        {!esAnfitrion && sala?.tipo !== "llamada" && (ordenFallo === "permiso" || devFallo === "permiso") ? (
+        {!esAnfitrion && sala?.tipo === "devocional" && (ordenFallo === "permiso" || devFallo === "permiso") ? (
           <p className="mt-2 text-xs leading-relaxed text-tenue">
             Para leer por turnos y ver el texto hay que estar en la comunidad: Juntos → comunidad de voz → Unirme.
           </p>
@@ -1212,7 +1270,7 @@ export function PantallaSala({
         abre, llama, y espera a que entren. Lo decide el portero: si quien
         toca no modera, vuelve con su motivo escrito.
       */}
-      {esAnfitrion && sala?.tipo !== "llamada" ? (
+      {esAnfitrion && sala?.tipo === "devocional" ? (
         <Tarjeta className="border-acento/50">
           <Etiqueta>la comunidad</Etiqueta>
           <p className="mt-2 text-sm leading-relaxed">
@@ -1260,7 +1318,7 @@ export function PantallaSala({
         </Tarjeta>
       ) : null}
 
-      {esAnfitrion && sala?.tipo !== "llamada" ? (
+      {esAnfitrion && sala?.tipo === "devocional" ? (
         <Tarjeta>
           <Etiqueta>micrófonos de los demás</Etiqueta>
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -1287,13 +1345,25 @@ export function PantallaSala({
         </Tarjeta>
       ) : null}
 
+      {/* Los subgrupos: armarlos (anfitrión) o ir al tuyo (los demás). */}
+      {sala?.tipo === "devocional" && onIrA ? (
+        <Subgrupos
+          canal={canal}
+          sala={sala}
+          gente={gente}
+          miUid={quienSoy.uid}
+          esAnfitrion={esAnfitrion}
+          onIrA={onIrA}
+        />
+      ) : null}
+
       {/*
         La lectura por turnos, para el anfitrión. Se reparte el devocional del
         día, trozo a trozo, en el orden de la lista, entre quienes están dentro
         con su cuenta vinculada y no dijeron «sólo escucho». El que lee dice
         «Terminé» y pasa solo; aquí están el resto de los mandos.
       */}
-      {esAnfitrion && sala?.tipo !== "llamada" ? (
+      {esAnfitrion && sala?.tipo === "devocional" ? (
         <Tarjeta>
           <Etiqueta>lectura por turnos</Etiqueta>
           {!ordenLectura && ordenFallo ? (
@@ -1584,7 +1654,7 @@ export function PantallaSala({
         terminó. Yo debo tener el poder de apagarla y encenderla cuando quiera».
         La hora la elige él; «Sonar ahora» la hace sonar en todos al momento.
       */}
-      {esAnfitrion && sala?.tipo !== "llamada" ? (
+      {esAnfitrion && sala?.tipo === "devocional" ? (
         <Tarjeta>
           <Etiqueta>la campana</Etiqueta>
           <p className="mt-2 text-sm leading-relaxed">
@@ -1642,7 +1712,7 @@ export function PantallaSala({
         corta la llamada a cada uno; silenciar a todos, para el cierre en
         oración. Terminar pide dos toques: no hay vuelta atrás.
       */}
-      {esAnfitrion ? (
+      {esAnfitrion && sala?.tipo !== "subgrupo" ? (
         <Tarjeta className="border-fallo/30">
           <Etiqueta>al terminar</Etiqueta>
           <p className="mt-2 text-sm leading-relaxed">
@@ -1813,7 +1883,7 @@ export function PantallaSala({
               );
             })}
         </div>
-        {conLaPalabra.length === 1 && gente.length > 3 ? (
+        {conLaPalabra.length === 1 && gente.length > 3 && sala?.tipo === "devocional" ? (
           <p className="mt-3 text-xs leading-relaxed text-tenue">
             Sólo habla el anfitrión. Los demás escuchan hasta que él dé la palabra —
             treinta micrófonos abiertos no son un devocional.
@@ -1887,7 +1957,7 @@ export function PantallaSala({
           </BotonRedondo>
         )}
 
-        {habla && !esAnfitrion ? (
+        {habla && !esAnfitrion && sala?.tipo !== "subgrupo" ? (
           <BotonRedondo
             etiqueta={yo?.mano ? "Bajar la mano" : "Pedir la palabra"}
             activo={!!yo?.mano}
@@ -1910,7 +1980,16 @@ export function PantallaSala({
           peligro
           estrecho={habla && !esAnfitrion}
           onClick={() => {
-            if (esAnfitrion && sala?.abierta && gente.every((g) => g.uid === quienSoy.uid)) {
+            // Con los grupos fuera está solo, y es lo normal: no se cierra (a la
+            // vuelta encontrarían la sala cerrada). Un grupo tampoco lo cierra
+            // su visita: lo cierran el tiempo o «Traer a todos».
+            if (
+              esAnfitrion &&
+              sala?.abierta &&
+              !sala?.subgrupos &&
+              sala?.tipo !== "subgrupo" &&
+              gente.every((g) => g.uid === quienSoy.uid)
+            ) {
               void cerrarSala(canal).catch(() => {});
             }
             onSalir();

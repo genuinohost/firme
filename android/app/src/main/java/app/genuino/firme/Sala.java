@@ -283,6 +283,10 @@ public class Sala extends Plugin {
             op.autoSubscribeAudio = true;
             op.publishMicrophoneTrack = habla;
 
+            // El motor es el mismo de la sala anterior: un silencio puesto alli
+            // (la visita del anfitrion a un subgrupo) se arrastraba. Cada entrada
+            // empieza de cero y la web decide despues.
+            motor.muteLocalAudioStream(false);
             int r = motor.joinChannelWithUserAccount(token, canal, cuenta, op);
             if (r != 0) {
                 llamada.reject("no-se-pudo-entrar:" + r);
@@ -294,7 +298,14 @@ public class Sala extends Plugin {
             hablaAhora = habla;
             // Y el servicio, para que salir de la app no saque de la sala. De
             // tipo microfono solo si hay permiso: sin el, Android 14 lo mata.
-            ServicioSala.arrancar(getContext(), nombre, habla && tieneMicrofono());
+            // Si Android no deja arrancarlo (se bloqueo el movil justo al
+            // cambiar de sala, a un subgrupo), ya se esta dentro del canal: no
+            // es un fallo de la entrada. Se arranca al volver a la app.
+            try {
+                ServicioSala.arrancar(getContext(), nombre, habla && tieneMicrofono());
+            } catch (Exception ignorado) {
+                // handleOnResume
+            }
 
             JSObject ok = new JSObject();
             ok.put("habla", habla);
@@ -446,11 +457,13 @@ public class Sala extends Plugin {
         // Hace falta si se paso a hablar con la pantalla apagada: el servicio se
         // quedo como reproduccion y, en Android 14, el microfono grabaria
         // silencio hasta subirlo.
-        if (motor != null && nombreActual != null && hablaAhora && tieneMicrofono()) {
+        // Y si el servicio no llego a arrancar (movil bloqueado al entrar), se
+        // arranca ahora: sin el, salir de la app sacaria de la sala.
+        if (motor != null && nombreActual != null) {
             try {
-                ServicioSala.arrancar(getContext(), nombreActual, true);
+                ServicioSala.arrancar(getContext(), nombreActual, hablaAhora && tieneMicrofono());
             } catch (Exception ignorado) {
-                // Sigue como reproduccion; se oye todo igual.
+                // Sigue como estaba; se oye todo igual.
             }
         }
     }

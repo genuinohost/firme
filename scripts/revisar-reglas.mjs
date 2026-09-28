@@ -28,6 +28,7 @@ import {
 import { readFileSync } from "node:fs";
 import {
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -1130,6 +1131,122 @@ await debe(
   (async () => {
     await assertSucceeds(deleteDoc(doc(ana, `salas/${SALA}/dentro/ana`)));
     await assertSucceeds(setDoc(doc(ana, `salas/${SALA}/dentro/ana`), dentroDe("ana", { escucha: true })));
+  })(),
+);
+
+// ── Los «me gusta» ────────────────────────────────────────────────────────
+console.log("\nLOS ME GUSTA");
+await debe(
+  "cada uno da «me gusta» a otro, a nombre propio",
+  assertSucceeds(setDoc(doc(beto, `salas/${SALA}/gustos/beto_ana`), { de: "beto", a: "ana", cuando: 1 })),
+);
+await debe(
+  "no a nombre de otro, ni a sí mismo, ni con otro nombre de documento",
+  Promise.all([
+    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/ana_beto`), { de: "ana", a: "beto", cuando: 1 })),
+    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/beto_beto`), { de: "beto", a: "beto", cuando: 1 })),
+    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/otro`), { de: "beto", a: "ana", cuando: 1 })),
+    assertFails(setDoc(doc(beto, `salas/${SALA}/gustos/beto_curioso`), { de: "beto", a: "curioso", cuando: 1, x: 1 })),
+  ]),
+);
+await debe(
+  "se quita el propio; el de otro, no",
+  (async () => {
+    await assertFails(deleteDoc(doc(ana, `salas/${SALA}/gustos/beto_ana`)));
+    await assertSucceeds(deleteDoc(doc(beto, `salas/${SALA}/gustos/beto_ana`)));
+  })(),
+);
+
+// ── Los subgrupos ─────────────────────────────────────────────────────────
+console.log("\nLOS SUBGRUPOS");
+const GRUPO = `${SALA}~a1`;
+const grupo = (extra = {}) => ({
+  nombre: "Grupo A",
+  anfitrion: "mod",
+  abierta: true,
+  desde: 1,
+  tipo: "subgrupo",
+  micLibre: true,
+  padre: SALA,
+  miembros: ["ana", "carla"],
+  hasta: 0,
+  ...extra,
+});
+const reparto = (extra = {}) => ({
+  desde: 1,
+  hasta: 0,
+  grupos: [
+    { letra: "A", canal: GRUPO, miembros: ["ana", "carla"] },
+    { letra: "B", canal: `${SALA}~b1`, miembros: ["beto", "dora"] },
+  ],
+  nombres: { ana: "Ana", carla: "Carla", beto: "Beto", dora: "Dora" },
+  ...extra,
+});
+await debe(
+  "el anfitrión abre un subgrupo y apunta el reparto en su devocional",
+  (async () => {
+    await assertSucceeds(setDoc(doc(moderador, "salas", GRUPO), grupo()));
+    await assertSucceeds(updateDoc(doc(moderador, "salas", SALA), { subgrupos: reparto() }));
+  })(),
+);
+await debe(
+  "otro no reparte la sala de nadie",
+  assertFails(updateDoc(doc(ana, "salas", SALA), { subgrupos: reparto() })),
+);
+await debe(
+  "ni más de 5 grupos, ni un subgrupo sin lista de quién entra",
+  Promise.all([
+    assertFails(
+      updateDoc(doc(moderador, "salas", SALA), {
+        subgrupos: reparto({ grupos: Array.from({ length: 6 }, (_, i) => ({ letra: "A", canal: `x${i}`, miembros: [] })) }),
+      }),
+    ),
+    assertFails(
+      setDoc(
+        doc(moderador, "salas", `${SALA}~c1`),
+        Object.fromEntries(Object.entries(grupo()).filter(([k]) => k !== "miembros")),
+      ),
+    ),
+  ]),
+);
+await debe(
+  "un miembro entra en su grupo",
+  assertSucceeds(setDoc(doc(ana, `salas/${GRUPO}/dentro/ana`), dentroDe("ana"))),
+);
+await debe(
+  "QUIEN NO ES DEL GRUPO NO SE APUNTA EN ÉL",
+  assertFails(setDoc(doc(beto, `salas/${GRUPO}/dentro/beto`), dentroDe("beto"))),
+);
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  // El anfitrión, con su perfil: se entra con el nombre propio.
+  await setDoc(doc(libre.firestore(), "usuarios", "mod"), perfil("Mod", "mod"));
+});
+await debe(
+  "el anfitrión entra a escuchar cualquier grupo",
+  assertSucceeds(setDoc(doc(moderador, `salas/${GRUPO}/dentro/mod`), dentroDe("mod", { nombre: "Mod" }))),
+);
+await debe(
+  "en una sala sin lista de miembros entra cualquiera (el devocional de siempre)",
+  (async () => {
+    await assertSucceeds(deleteDoc(doc(beto, `salas/${SALA}/dentro/beto`)).catch(() => {}));
+    await assertSucceeds(setDoc(doc(beto, `salas/${SALA}/dentro/beto`), dentroDe("beto")));
+  })(),
+);
+await debe(
+  "A QUIEN ECHARON DEL DEVOCIONAL NO SE APUNTA EN SUS GRUPOS",
+  (async () => {
+    await entorno.withSecurityRulesDisabled(async (libre) => {
+      await setDoc(doc(libre.firestore(), `salas/${SALA}/expulsados/ana`), { cuando: 1 });
+      await deleteDoc(doc(libre.firestore(), `salas/${GRUPO}/dentro/ana`));
+    });
+    await assertFails(setDoc(doc(ana, `salas/${GRUPO}/dentro/ana`), dentroDe("ana")));
+  })(),
+);
+await debe(
+  "traer a todos de vuelta: se cierra el grupo y se borra el reparto",
+  (async () => {
+    await assertSucceeds(updateDoc(doc(moderador, "salas", GRUPO), { abierta: false }));
+    await assertSucceeds(updateDoc(doc(moderador, "salas", SALA), { subgrupos: deleteField() }));
   })(),
 );
 

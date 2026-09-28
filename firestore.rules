@@ -239,11 +239,25 @@ service cloud.firestore {
       }
 
       function salaRazonable(d) {
-        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre', 'campana', 'lectura'])
+        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre', 'campana', 'lectura',
+                                 'padre', 'miembros', 'hasta', 'subgrupos'])
           && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
           && d.abierta is bool
           && d.desde is number
-          && d.tipo in ['devocional', 'llamada']
+          && d.tipo in ['devocional', 'llamada', 'subgrupo']
+          // Un subgrupo: de qué devocional sale, quién entra y hasta cuándo.
+          && (d.tipo != 'subgrupo' || ('padre' in d && 'miembros' in d))
+          && (!('padre' in d) || (d.padre is string && d.padre.size() > 0 && d.padre.size() <= 64))
+          && (!('miembros' in d) || (d.miembros is list && d.miembros.size() <= 30))
+          && (!('hasta' in d) || d.hasta is number)
+          // Y en el devocional, el reparto en marcha: como mucho 5 grupos.
+          && (!('subgrupos' in d) || (
+            d.subgrupos is map
+            && d.subgrupos.keys().hasOnly(['desde', 'hasta', 'grupos', 'nombres'])
+            && d.subgrupos.desde is number
+            && d.subgrupos.hasta is number
+            && d.subgrupos.grupos is list && d.subgrupos.grupos.size() >= 1 && d.subgrupos.grupos.size() <= 5
+            && d.subgrupos.nombres is map && d.subgrupos.nombres.size() <= 60))
           // Micrófonos libres. Vive en la sala y no en cada ficha porque es una
           // decisión del anfitrión sobre todos, y la sala sólo la escribe él.
           && (!('micLibre' in d) || d.micLibre is bool)
@@ -367,8 +381,21 @@ service cloud.firestore {
             && (!('foto' in d) || d.foto == p.get('foto', ''));
         }
 
+        // Un subgrupo es de sus miembros (y de su anfitrión, que entra a
+        // escuchar). Una sala sin lista de miembros es de todos.
+        function puedeEntrarAqui() {
+          let s = get(/databases/$(database)/documents/salas/$(canal)).data;
+          return (s.get('miembros', null) == null
+              || request.auth.uid in s.miembros
+              || s.anfitrion == request.auth.uid)
+            // Y a quien echaron del devocional, tampoco en sus grupos.
+            && (s.get('padre', '') == ''
+              || !exists(/databases/$(database)/documents/salas/$(s.padre)/expulsados/$(request.auth.uid)));
+        }
+
         // Entrar es a nombre propio, en silencio, y si no te han expulsado.
         allow create: if esElMismo(quien)
+          && puedeEntrarAqui()
           && dentroRazonable(request.resource.data)
           && esMiFicha(request.resource.data)
           && request.resource.data.palabra == false
@@ -391,6 +418,25 @@ service cloud.firestore {
 
         // Salirse, o que el anfitrión te saque.
         allow delete: if esElMismo(quien) || esAnfitrion();
+      }
+
+      // ------------------------------------------------------------ los «me gusta»
+      //
+      // Alex, 28-09-2026: «mientras alguien habla, debe estar la opción de darle
+      // me gusta y de agregar». Uno por pareja y sala (`{de}_{a}`): se da o se
+      // quita, y nadie llena la sala de corazones a toques. Sólo a nombre
+      // propio, y a otro.
+      match /gustos/{id} {
+        allow read: if haEntrado();
+        allow create: if haEntrado()
+          && request.resource.data.keys().hasOnly(['de', 'a', 'cuando'])
+          && request.resource.data.de == request.auth.uid
+          && request.resource.data.a is string
+          && request.resource.data.a.size() > 0 && request.resource.data.a.size() <= 128
+          && request.resource.data.a != request.auth.uid
+          && request.resource.data.cuando is number
+          && id == request.auth.uid + '_' + request.resource.data.a;
+        allow delete: if haEntrado() && resource.data.de == request.auth.uid;
       }
 
       // --------------------------------------------------------- los expulsados

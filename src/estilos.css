@@ -862,3 +862,34 @@ body {
   background: var(--color-borde);
   border-radius: 4px;
 }
+
+/* --------------------------------------------------------------------------
+   El corazón que sube cuando alguien da «me gusta» a quien habla (6.26).
+   Sube y se desvanece en un segundo y medio; con «menos movimiento» sólo se
+   ve un momento, quieto.
+   -------------------------------------------------------------------------- */
+@keyframes corazon-sube {
+  0% {
+    transform: translate(-50%, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -8px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -56px) scale(0.9);
+    opacity: 0;
+  }
+}
+.corazon-sube {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  pointer-events: none;
+  animation: corazon-sube 1.4s var(--r-firme) forwards;
+}
+:root[data-movimiento="menos"] .corazon-sube {
+  animation: none;
+  transform: translate(-50%, -12px);
+}

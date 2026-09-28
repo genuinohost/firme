@@ -8,6 +8,63 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — 6.25: los subgrupos
+
+## Lo que pidió Alex
+
+> «Quiero que la comunidad de devocionales se pueda dividir en subgrupos pequeños para
+> actividades puntuales. Yo elijo los miembros del subgrupo, pero también debo tener la opción de
+> que el sistema los coloque al azar. Serán grupos de 2 a 5, según la cantidad de conectados.
+> Siempre debemos procurar que sean desde 2 a 5 subgrupos.»
+
+## Cómo quedó
+
+- **Dos límites a la vez**: de 2 a 5 grupos, de 2 a 5 personas (`src/logica/subgrupos.ts`). Caben
+  de 4 a 25; con 10 salen 5 + 5 (su ejemplo), con 11, 4 + 4 + 3 (parejo, nunca 5 + 5 + 1). Con más
+  de 25 manda el número de grupos, que es lo que él dijo «siempre», y la app avisa de que alguno
+  pasa de 5.
+- **El anfitrión los arma** en la sala del devocional (tarjeta «subgrupos»): elige cuántos (con el
+  sugerido dicho en palabras), «🎲 Al azar» o a mano tocando la letra de cada uno, si se incluye él,
+  y cuánto duran (5 a 30 min). «Enviar a los grupos» crea de una vez una sala por grupo.
+- **Cada grupo es una sala de voz propia** (`tipo: "subgrupo"`): sólo entran sus miembros y el
+  anfitrión (reglas y portero), y hablan todos.
+- **Los demás** ven su grupo y con quién, y a los 5 segundos se van solos (con la pantalla
+  encendida: cambiar de canal con el móvil bloqueado obliga a Android a arrancar el servicio de voz
+  desde segundo plano). Dentro, «vuelven en mm:ss» y «Volver a la sala principal». A la hora, o si
+  el anfitrión los trae de vuelta, vuelven solos. Quien vuelve antes no es reenviado.
+- **El anfitrión** ve los grupos en marcha, entra a escuchar cualquiera y «Traer a todos de vuelta».
+
+- **Duración a medida** (Alex, mismo día: «debo tener la capacidad de configurar cuánto tiempo
+  duran los subgrupos, por ejemplo 5 min, y de ahí vuelven todos»): 5/10/15/20/30 o los minutos
+  que se escriban (1-60). Y «Reunir a todos en la sala principal» los trae antes.
+- **Con el móvil bloqueado** no se cambia de canal (Android no deja arrancar el servicio de voz en
+  segundo plano): a la hora de fin suena un aviso de Android programado al entrar en el grupo
+  (`src/logica/avisoGrupo.ts`, id propio que la rutina no borra); al tocarlo, la app vuelve sola.
+
+## Las revisiones
+
+Primera (tres revisores y un escéptico por hallazgo, 31 agentes): 28, ninguno refutado. Lo gordo:
+el «Salir» del anfitrión (solo, con todos en los grupos) cerraba el devocional; «Terminar para
+todos» no cerraba los grupos; el timbre de ese devocional sacaba a la gente de su grupo; el
+vigilante de la lectura reasignaba turnos con los lectores en los grupos; los grupos salían en
+«sonando ahora»; un expulsado del devocional entraba en sus grupos; nombres de canal que se
+repetían cada 28 minutos; «Incluirme» inalcanzable con 4; la campana de las 6 no sonaba en los
+grupos (ahora se copia). Todo aplicado.
+
+Segunda, sobre esos arreglos (10 agentes): 4 más. Un grupo cerrado se tomaba por «terminó el
+devocional» y sacaba de todo (el portero ahora dice «grupo-terminado»); el anfitrión volvía de un
+grupo con el micro silenciado en el motor (cada entrada empieza sin silencio); el aviso con el
+móvil bloqueado; el campo de minutos que convertía «25» en 60.
+
+## Cómo se comprobó
+
+`revisar-subgrupos` (21), `revisar-reglas` (171: el reparto, quién entra en un grupo, más de 5
+grupos no, el expulsado del devocional), `revisar-portero` (59: quien no es del grupo no entra, el
+grupo vencido, el expulsado), y en el navegador la tarjeta del anfitrión (11 personas: 4 + 4 + 3),
+la del participante y el traslado a los 5 segundos.
+
+---
+
 # 🧭 28 de septiembre de 2026 — 6.24: los devocionales en la app, y la lectura por turnos
 
 ## Qué hay

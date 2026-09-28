@@ -124,6 +124,8 @@ const PORQUE = {
   "sala-no-existe": "Esa sala no existe.",
   "sala-cerrada": "La sala está cerrada.",
   expulsado: "No puedes entrar en esta sala.",
+  "no-es-tu-grupo": "Este grupo es de otros. El tuyo sale en la sala principal.",
+  "grupo-terminado": "Este grupo ya terminó. Vuelve a la sala principal.",
   "nombre-invalido": "Ese nombre de sala no es válido.",
 };
 
@@ -414,11 +416,44 @@ export default {
       return respuesta({ error: "sala-no-existe", porque: PORQUE["sala-no-existe"] }, 404, origen);
     }
     if (!sigueAbierta(sala)) {
-      return respuesta({ error: "sala-cerrada", porque: PORQUE["sala-cerrada"] }, 409, origen);
+      // Un grupo cerrado no es el devocional cerrado: se dice distinto, y la
+      // app devuelve a la sala principal en vez de dar la reunión por terminada.
+      const cual = sala.tipo === "subgrupo" ? "grupo-terminado" : "sala-cerrada";
+      return respuesta({ error: cual, porque: PORQUE[cual] }, 409, origen);
     }
     if (expulsado) {
       // Se dice sin rodeos y sin sermón. Quien está fuera merece saberlo.
       return respuesta({ error: "expulsado", porque: PORQUE.expulsado }, 403, origen);
+    }
+
+    // Un subgrupo es de sus miembros (y del anfitrión, que entra a escuchar).
+    // Las reglas ya no dejan apuntarse en su lista a nadie más; esto cierra
+    // además el canal de voz, que es lo que de verdad se oye.
+    if (sala.tipo === "subgrupo") {
+      if (sala.anfitrion !== uid && !(Array.isArray(sala.miembros) && sala.miembros.includes(uid))) {
+        return respuesta({ error: "no-es-tu-grupo", porque: PORQUE["no-es-tu-grupo"] }, 403, origen);
+      }
+      // Pasada su hora (con dos minutos de margen), el grupo ya no renueva la
+      // voz: quien se quedó con la pantalla apagada no factura cuatro horas.
+      if (typeof sala.hasta === "number" && sala.hasta > 0 && Date.now() > sala.hasta + 120_000) {
+        return respuesta({ error: "grupo-terminado", porque: PORQUE["grupo-terminado"] }, 409, origen);
+      }
+      // Y quien fue expulsado del devocional tampoco entra en sus grupos.
+      if (typeof sala.padre === "string" && sala.padre) {
+        let fuera = null;
+        try {
+          fuera = await leerDocumento(base, `salas/${sala.padre}/expulsados/${uid}`, token);
+        } catch (e) {
+          // Como las otras lecturas: sin poder comprobarlo, no se firma.
+          console.log("firestore:", e?.message ?? e);
+          return respuesta(
+            { error: "sin-conexion", porque: "No se pudo comprobar la sala. Vuelve a probar." },
+            502,
+            origen,
+          );
+        }
+        if (fuera) return respuesta({ error: "expulsado", porque: PORQUE.expulsado }, 403, origen);
+      }
     }
 
     // ── Si habla ──────────────────────────────────────────────────────────

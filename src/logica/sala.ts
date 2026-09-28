@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 import { dondeEstaElPortero } from "./comunidad";
 import { miUid } from "./muro";
 import { marcarAsistencia } from "./asistencia";
+import type { Letra } from "./subgrupos";
 import { nube } from "./nube";
 
 /**
@@ -84,7 +85,24 @@ export type Sala = {
   anfitrion: string;
   abierta: boolean;
   desde: number;
-  tipo: "devocional" | "llamada";
+  /**
+   * «subgrupo»: un grupo pequeño que sale de un devocional para una actividad
+   * (ver `subgrupos.ts`). Tiene su propio canal, sólo entran sus miembros y
+   * todos hablan.
+   */
+  tipo: "devocional" | "llamada" | "subgrupo";
+  /** Sólo en un subgrupo: el canal del devocional del que salió, adonde se vuelve. */
+  padre?: string;
+  /** Sólo en un subgrupo: quién puede entrar (y el anfitrión). */
+  miembros?: string[];
+  /** Sólo en un subgrupo: cuándo vuelven todos (ms; 0 = sin límite). */
+  hasta?: number;
+  /**
+   * Sólo en un devocional: los subgrupos en marcha. Cada móvil ve aquí a qué
+   * grupo va y con quién; los nombres van también, porque quien ya se fue a
+   * su grupo no está en la lista de esta sala.
+   */
+  subgrupos?: Subgrupos;
   /**
    * Micrófonos libres: todos pueden abrir el suyo sin pedir la palabra.
    *
@@ -114,6 +132,15 @@ export type Sala = {
    * persona sepa que le toca; también quién es el próximo».
    */
   lectura?: Lectura;
+};
+
+export type Subgrupos = {
+  desde: number;
+  /** Cuándo vuelven (ms; 0 = sin límite). */
+  hasta: number;
+  grupos: { letra: Letra; canal: string; miembros: string[] }[];
+  /** uid → nombre, de todos los repartidos. */
+  nombres: Record<string, string>;
 };
 
 export type Lectura = {
@@ -255,6 +282,102 @@ export async function abrirSala(
     micLibre: false,
     ...(campana ? { campana } : {}),
   });
+}
+
+/**
+ * El canal de un subgrupo. Único cada vez (una marca de tiempo corta), para no
+ * heredar la lista ni los expulsados de otra ronda; y dentro de los 64
+ * caracteres de Agora (el canal de un devocional tiene como mucho 51).
+ */
+export function canalDeSubgrupo(padre: string, letra: Letra, ahora = Date.now()): string {
+  // Seis cifras en base 36 del reloj: no se repiten en 25 días (con cuatro, cada
+  // 28 minutos, y una ronda podía heredar la lista y los expulsados de otra).
+  return `${padre.slice(0, 50)}~${letra.toLowerCase()}${ahora.toString(36).slice(-6)}`;
+}
+
+/**
+ * Partir el devocional en subgrupos. Sólo su anfitrión (reglas).
+ *
+ * De una vez, en un lote: se crean las salas de los grupos —del mismo
+ * anfitrión, con los micrófonos libres y la lista de quién entra— y se apunta
+ * el reparto en la sala principal, que es lo que ve cada móvil para irse.
+ */
+export async function abrirSubgrupos(
+  canal: string,
+  grupos: { letra: Letra; miembros: string[] }[],
+  minutos: number,
+  nombres: Record<string, string>,
+  /** La campana del devocional: se copia, para que a las 6 suene también en los grupos. */
+  campana?: Sala["campana"],
+): Promise<void> {
+  const uid = await miUid();
+  if (!uid) throw new Error("sin-cuenta");
+  const { writeBatch, doc } = await import("firebase/firestore");
+  const { bd } = await nube();
+  const ahora = Date.now();
+  const hasta = minutos > 0 ? ahora + minutos * 60_000 : 0;
+  const lote = writeBatch(bd);
+  const conCanal = grupos.map((g) => ({ ...g, canal: canalDeSubgrupo(canal, g.letra, ahora) }));
+  for (const g of conCanal) {
+    lote.set(doc(bd, "salas", g.canal), {
+      nombre: `Grupo ${g.letra}`,
+      anfitrion: uid,
+      abierta: true,
+      desde: ahora,
+      tipo: "subgrupo",
+      // En un grupo de 2 a 5 no hay nada que moderar: hablan todos.
+      micLibre: true,
+      padre: canal,
+      miembros: g.miembros,
+      hasta,
+      ...(campana ? { campana } : {}),
+    });
+  }
+  const usados = new Set(grupos.flatMap((g) => g.miembros));
+  lote.update(doc(bd, "salas", canal), {
+    subgrupos: {
+      desde: ahora,
+      hasta,
+      grupos: conCanal.map((g) => ({ letra: g.letra, canal: g.canal, miembros: g.miembros })),
+      nombres: Object.fromEntries(Object.entries(nombres).filter(([u]) => usados.has(u))),
+    } satisfies Subgrupos,
+  });
+  await conPlazo(lote.commit());
+}
+
+/**
+ * Esperar una escritura, pero no para siempre. Sin conexión, Firestore deja el
+ * lote en cola y la promesa no se resuelve ni falla: «Enviando…» se quedaba
+ * así sin decir nada. A los 15 s se dice que no hay conexión (el lote sigue en
+ * cola y se aplica solo al volver la red).
+ */
+function conPlazo<T>(p: Promise<T>, ms = 15_000): Promise<T> {
+  return new Promise((bien, mal) => {
+    const t = setTimeout(() => mal(new Error("sin-conexion")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        bien(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        mal(e);
+      },
+    );
+  });
+}
+
+/**
+ * Traer a todos de vuelta: se cierran las salas de los grupos (cada móvil que
+ * esté en una vuelve solo a la principal) y se borra el reparto.
+ */
+export async function cerrarSubgrupos(canal: string, subgrupos: Subgrupos): Promise<void> {
+  const { writeBatch, doc, deleteField } = await import("firebase/firestore");
+  const { bd } = await nube();
+  const lote = writeBatch(bd);
+  for (const g of subgrupos.grupos) lote.update(doc(bd, "salas", g.canal), { abierta: false });
+  lote.update(doc(bd, "salas", canal), { subgrupos: deleteField() });
+  await conPlazo(lote.commit());
 }
 
 /** Poner, mover o apagar la campana. Sólo el anfitrión, y lo garantizan las reglas. */
@@ -483,14 +606,28 @@ export async function silenciar(canal: string, aQuien: string, si: boolean): Pro
  * lista, y su app suelta el audio y sale sola.
  */
 export async function terminarParaTodos(canal: string): Promise<void> {
-  await cerrarSala(canal);
+  // Con subgrupos en marcha, se terminan también: si no, quien está en un grupo
+  // volvía a una sala cerrada, y quien tenía la pantalla apagada seguía en su
+  // canal (y facturando) hasta mirar el móvil. Se vacía también su lista, que
+  // es lo que corta a cada uno aunque tenga la pantalla apagada.
+  const sala = await leerSala(canal).catch(() => null);
+  const canales = [canal, ...(sala?.subgrupos?.grupos.map((g) => g.canal) ?? [])];
   const { bd } = await nube();
-  const { collection, getDocs, writeBatch } = await import("firebase/firestore");
-  const dentro = await getDocs(collection(bd, "salas", canal, "dentro"));
-  if (dentro.empty) return;
-  const lote = writeBatch(bd);
-  dentro.docs.forEach((d) => lote.delete(d.ref));
-  await lote.commit();
+  const { collection, doc, getDocs, writeBatch, updateDoc, deleteField } = await import("firebase/firestore");
+  if (sala?.subgrupos) {
+    const lote = writeBatch(bd);
+    for (const g of sala.subgrupos.grupos) lote.update(doc(bd, "salas", g.canal), { abierta: false });
+    await lote.commit().catch(() => {});
+  }
+  await cerrarSala(canal);
+  if (sala?.subgrupos) await updateDoc(doc(bd, "salas", canal), { subgrupos: deleteField() }).catch(() => {});
+  for (const c of canales) {
+    const dentro = await getDocs(collection(bd, "salas", c, "dentro"));
+    if (dentro.empty) continue;
+    const lote = writeBatch(bd);
+    dentro.docs.forEach((d) => lote.delete(d.ref));
+    await lote.commit();
+  }
 }
 
 /** Sacar a alguien, y que no pueda volver. */
@@ -521,7 +658,7 @@ export function enQueSalaEstoy(): string | null {
 export async function entrarEnSala(
   canal: string,
   quienSoy: { nombre: string; usuario: string; foto?: string },
-): Promise<{ habla: boolean; esAnfitrion: boolean; micLibre: boolean; microfono: boolean }> {
+): Promise<{ habla: boolean; esAnfitrion: boolean; micLibre: boolean; microfono: boolean; tipo?: Sala["tipo"] }> {
   if (!hayVoz()) throw new Error("solo-en-la-app");
   const uid = await miUid();
   if (!uid) throw new Error("sin-cuenta");
@@ -583,6 +720,7 @@ export async function entrarEnSala(
     esAnfitrion: permiso.esAnfitrion,
     micLibre: sala?.micLibre === true,
     microfono: entrada.microfono !== false,
+    tipo: sala?.tipo,
   };
 }
 
@@ -725,12 +863,15 @@ export async function salasAbiertas(): Promise<Sala[]> {
   // sala más vieja está cerrada aunque nadie la cerrara — y sin esto las
   // salas olvidadas de cada día se comían los veinte huecos de la lista y la
   // de hoy podía no salir. Un rango sobre un solo campo no pide índice.
+  // Cuarenta y no veinte: los subgrupos (hasta cinco por ronda) también entran
+  // en el rango, y se quitan aquí. No son salas a las que se entre desde Juntos:
+  // se va a ellos desde su devocional.
   const r = await getDocs(
-    query(collection(bd, "salas"), where("desde", ">", Date.now() - SALA_DURA_MS), limit(20)),
+    query(collection(bd, "salas"), where("desde", ">", Date.now() - SALA_DURA_MS), limit(40)),
   );
   return r.docs
     .map((d) => ({ canal: d.id, ...(d.data() as Omit<Sala, "canal">) }))
-    .filter((s) => s.abierta === true)
+    .filter((s) => s.abierta === true && s.tipo !== "subgrupo")
     .sort((a, b) => b.desde - a.desde);
 }
 

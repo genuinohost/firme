@@ -315,6 +315,43 @@ console.log("\nSi entra");
   delete base["salas/devocional/expulsados/curioso"];
 }
 
+// ── Los subgrupos ──────────────────────────────────────────────────────────
+console.log("\nLos subgrupos");
+{
+  const lista = (...xs) => ({ arrayValue: { values: xs.map(texto) } });
+  base["salas/devocional~a1"] = {
+    nombre: texto("Grupo A"),
+    anfitrion: texto("ana"),
+    abierta: siNo(true),
+    desde: numero(Date.now()),
+    tipo: texto("subgrupo"),
+    micLibre: siNo(true),
+    padre: texto("devocional"),
+    miembros: lista("beto", "carla"),
+  };
+  let r = await llamar({ canal: "devocional~a1", token: tokenDe("beto") });
+  debe("un miembro entra en su grupo", r.estado === 200, JSON.stringify(r.datos));
+  debe("…y habla: en un grupo hablan todos", r.datos.habla === true);
+  r = await llamar({ canal: "devocional~a1", token: tokenDe("curioso") });
+  debe("QUIEN NO ES DEL GRUPO NO ENTRA", r.estado === 403 && r.datos.error === "no-es-tu-grupo");
+  r = await llamar({ canal: "devocional~a1", token: tokenDe("ana") });
+  debe("el anfitrión entra a escuchar cualquier grupo", r.estado === 200 && r.datos.esAnfitrion === true);
+  base["salas/devocional/expulsados/beto"] = { cuando: numero(1) };
+  r = await llamar({ canal: "devocional~a1", token: tokenDe("beto") });
+  debe("A QUIEN ECHARON DEL DEVOCIONAL TAMPOCO ENTRA EN SUS GRUPOS", r.estado === 403 && r.datos.error === "expulsado");
+  delete base["salas/devocional/expulsados/beto"];
+  base["salas/devocional~a1"].hasta = numero(Date.now() - 5 * 60_000);
+  r = await llamar({ canal: "devocional~a1", token: tokenDe("beto") });
+  debe("pasada su hora, el grupo ya no renueva la voz", r.estado === 409 && r.datos.error === "grupo-terminado");
+  base["salas/devocional~a1"].hasta = numero(Date.now() + 10 * 60_000);
+  r = await llamar({ canal: "devocional~a1", token: tokenDe("beto") });
+  debe("…y antes de su hora, sí", r.estado === 200);
+  base["salas/devocional~a1"].abierta = siNo(false);
+  r = await llamar({ canal: "devocional~a1", token: tokenDe("beto") });
+  debe("un grupo cerrado (todos de vuelta) ya no deja entrar, y lo dice como grupo", r.estado === 409 && r.datos.error === "grupo-terminado");
+  delete base["salas/devocional~a1"];
+}
+
 // ── Si habla ───────────────────────────────────────────────────────────────
 console.log("\nSi habla");
 

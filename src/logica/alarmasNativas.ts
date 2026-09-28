@@ -1,3 +1,4 @@
+import { ID_AVISO_GRUPO } from "./avisoGrupo";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import type { Datos } from "@/datos/tipos";
@@ -46,7 +47,10 @@ export async function limpiarAvisosViejos(): Promise<number> {
   try {
     const pendientes = await LocalNotifications.getPending();
     if (pendientes.notifications.length === 0) return 0;
-    await LocalNotifications.cancel({ notifications: pendientes.notifications });
+    await LocalNotifications.cancel({
+      // El aviso de fin de subgrupo no es de la rutina: se deja.
+      notifications: pendientes.notifications.filter((n) => n.id !== ID_AVISO_GRUPO),
+    });
     return pendientes.notifications.length;
   } catch {
     return 0;
@@ -188,7 +192,10 @@ export async function reprogramar(datos: Datos, ahora = new Date()): Promise<Res
 
     const pendientes = await LocalNotifications.getPending();
     if (pendientes.notifications.length > 0) {
-      await LocalNotifications.cancel({ notifications: pendientes.notifications });
+      await LocalNotifications.cancel({
+      // El aviso de fin de subgrupo no es de la rutina: se deja.
+      notifications: pendientes.notifications.filter((n) => n.id !== ID_AVISO_GRUPO),
+    });
     }
 
     const avisos = avisosPendientes(datos, ahora, DIAS_POR_DELANTE).slice(0, MAXIMO_AVISOS);

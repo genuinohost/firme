@@ -163,6 +163,8 @@ export default function App() {
     nombre?: string;
     /** A qué hora local acaba: con eso nace la campana de la sala. */
     fin?: string;
+    /** Si es un subgrupo: el devocional del que salió (el timbre de ese devocional no le saca de su grupo). */
+    padre?: string;
     quien: { uid: string; nombre: string; usuario: string; foto?: string };
   } | null>(null);
 
@@ -257,7 +259,9 @@ export default function App() {
    * la pantalla y el tono seguía cinco minutos encima del audio de la sala.
    */
   useEffect(() => {
-    if (llamada && sala && sala.canal === llamada.canal) {
+    // También si estás en un subgrupo de ese devocional: el timbre te sacaba
+    // de tu grupo para llevarte a la sala de la que saliste.
+    if (llamada && sala && (sala.canal === llamada.canal || sala.padre === llamada.canal)) {
       setLlamada(null);
       void atenderLlamada();
     }
@@ -1175,7 +1179,7 @@ export default function App() {
         abajo. El botón grande es entrar; el pequeño, no. A las tres de la
         mañana no hay tiempo para más opciones.
       */}
-      {llamada && (!sala || sala.canal !== llamada.canal) ? (
+      {llamada && (!sala || (sala.canal !== llamada.canal && sala.padre !== llamada.canal)) ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-fondo p-6">
           <div className="w-full max-w-sm text-center">
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-tenue">
@@ -1219,11 +1223,20 @@ export default function App() {
         <div className="fixed inset-0 z-50 overflow-y-auto bg-fondo">
           <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg p-4">
             <PantallaSala
+              // Otra sala es otra pantalla: al pasar a un subgrupo (o volver)
+              // se sale de un canal y se entra en el otro desde cero.
+              key={sala.canal}
               canal={sala.canal}
               nombreSiHayQueAbrirla={sala.nombre}
               finPrevisto={sala.fin}
               quienSoy={sala.quien}
               onSalir={() => setSala(null)}
+              padre={sala.padre}
+              onIrA={(destino) =>
+                setSala((s) =>
+                  s ? { ...s, canal: destino.canal, nombre: destino.nombre, fin: undefined, padre: destino.padre } : s,
+                )
+              }
             />
           </div>
         </div>
