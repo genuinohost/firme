@@ -79,8 +79,26 @@ try {
     "--notes", cuerpo,
   );
   console.log(`  Release ${etiqueta} creada.`);
-} catch {
-  // Si ya existía, se reemplaza el archivo en vez de fallar.
+} catch (fallo) {
+  // ¿Falló porque ya existía, o porque se cayó la subida? Antes se daba por
+  // hecho lo primero y se pasaba a `upload`, que con la release sin crear
+  // contestaba «release not found» — y el error de verdad (la subida de
+  // 33 MB que se cortó, el 27-09-2026) no salía por ningún sitio. Se pregunta.
+  let existe = false;
+  try {
+    gh("release", "view", etiqueta, "--repo", repo);
+    existe = true;
+  } catch {
+    // No existe: fue la subida.
+  }
+  if (!existe) {
+    rmSync(nombreArchivo, { force: true });
+    console.error(`No se pudo crear la release ${etiqueta}:`);
+    console.error(String(fallo?.stderr ?? fallo?.message ?? fallo).trim());
+    console.error("`version.json` se queda como estaba. Vuelve a lanzarlo cuando haya conexión.");
+    process.exit(1);
+  }
+  // Ya existía: se reemplaza el archivo en vez de fallar.
   gh("release", "upload", etiqueta, nombreArchivo, "--repo", repo, "--clobber");
   console.log(`  Release ${etiqueta} ya existía; archivo actualizado.`);
 }
