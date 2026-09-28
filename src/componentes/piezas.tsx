@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { compartirFrase, type ResultadoCompartir } from "@/logica/compartir";
 import { alternar, estaGuardada } from "@/logica/favoritas";
 import { CATEGORIAS, type Categoria } from "@/datos/tipos";
@@ -86,24 +86,28 @@ export function Etiqueta({
   );
 }
 
-const DIGITOS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+/** Tres vueltas de 0 a 9: la del medio es la que se ve; las otras dos dan
+    sitio para pasar de 9 a 0 (y de 0 a 9) sin desandar la tira entera. */
+const TIRA = Array.from({ length: 30 }, (_, i) => String(i % 10));
 
 /**
  * Un número que RUEDA, como un cuentakilómetros.
  *
- * Cada dígito es una columna de 1em con la tira 0-9 detrás; al cambiar, la
- * tira se desplaza con `transform` y se pasa un poco antes de asentarse
- * (`.rodillo-tira` en estilos.css). Sólo transform: un móvil viejo lo mueve
- * sin recalcular nada, aunque ruede cada segundo en la cuenta atrás.
+ * Cada dígito es una columna de 1em con una tira de dígitos detrás; al
+ * cambiar, la tira se desplaza con `transform` y se pasa un poco antes de
+ * asentarse (`.rodillo-tira` en estilos.css). Sólo transform: un móvil viejo
+ * lo mueve sin recalcular nada, aunque ruede cada segundo en la cuenta atrás.
  *
  * La clave de cada columna cuenta DESDE LA DERECHA: al pasar de 9 a 10 la
  * columna de las unidades conserva su identidad y rueda, y la nueva —las
  * decenas— entra apareciendo. Lo que no es dígito (los dos puntos de «12:34»)
  * se pinta quieto.
  *
- * De 9 a 0 la tira vuelve hacia atrás en vez de dar la vuelta completa (eso
- * pediría una tira doble). En la racha pasa una vez cada diez días y en la
- * cuenta atrás se ve como el giro rápido de un contador: está bien así.
+ * Y rueda **por el camino corto**: de 9 a 0 sigue hacia delante un paso, no
+ * vuelve nueve hacia atrás; en una cuenta atrás, de 0 a 9 sigue hacia atrás.
+ * Para eso la tira lleva tres vueltas y cada columna recuerda su posición
+ * (`Columna`); cuando se sale de la vuelta del medio, salta a la equivalente
+ * sin transición, que es el truco de todos los cuentakilómetros de pantalla.
  */
 export function Rodillo({
   valor,
@@ -121,27 +125,81 @@ export function Rodillo({
       : valor;
   const letras = texto.split("");
   return (
-    <span className={`rodillo ${className}`} aria-label={texto} role="text">
+    <span className={`rodillo ${className}`}>
+      <span className="sr-only">{texto}</span>
       {letras.map((c, i) =>
         /\d/.test(c) ? (
-          <span key={letras.length - i} className="rodillo-col aparece" aria-hidden>
-            <span
-              className="rodillo-tira"
-              style={{ transform: `translateY(-${Number(c) * 10}%)` }}
-            >
-              {DIGITOS.map((d) => (
-                <span key={d} className="rodillo-digito">
-                  {d}
-                </span>
-              ))}
-            </span>
-          </span>
+          <Columna key={letras.length - i} digito={Number(c)} />
         ) : (
           <span key={`s${letras.length - i}`} className="rodillo-digito" aria-hidden>
             {c}
           </span>
         ),
       )}
+    </span>
+  );
+}
+
+/** La posición equivalente en la vuelta del medio de la tira (10 a 19). */
+const alMedio = (p: number) => (((p % 10) + 10) % 10) + 10;
+
+/** Una columna del rodillo: recuerda dónde está y va por el camino corto. */
+function Columna({ digito }: { digito: number }) {
+  // La posición en la tira, en dígitos. Arranca en la vuelta del medio.
+  const [pos, setPos] = useState(10 + digito);
+  const anterior = useRef(digito);
+  const posActual = useRef(pos);
+  posActual.current = pos;
+  const tira = useRef<HTMLSpanElement>(null);
+
+  // Fuera de la vuelta del medio: al acabar de rodar, saltar a la posición
+  // equivalente sin que se vea (mismo dígito). El salto se aplica a mano,
+  // sin transición y forzando el reflow entre medias: así el navegador lo
+  // pinta de golpe aunque la pestaña esté detrás (un requestAnimationFrame
+  // no correría ahí), y React después sólo confirma el mismo valor.
+  const recolocar = () => {
+    const p = posActual.current;
+    if (p >= 10 && p < 20) return;
+    const m = alMedio(p);
+    const el = tira.current;
+    if (el) {
+      el.style.transition = "none";
+      el.style.transform = `translateY(${-m}em)`;
+      void el.offsetHeight;
+      el.style.transition = "";
+    }
+    posActual.current = m;
+    setPos(m);
+  };
+
+  useEffect(() => {
+    if (anterior.current === digito) return;
+    // El paso más corto entre los dos dígitos, entre -5 y +4.
+    const paso = ((digito - anterior.current + 15) % 10) - 5;
+    anterior.current = digito;
+    // Si se quedó fuera del medio —la pantalla estuvo apagada y no llegó el
+    // transitionend—, se parte del medio: así nunca se sale de la tira.
+    setPos((p) => alMedio(p) + paso);
+    // Y por si el transitionend tampoco llega esta vez, se recoloca igual.
+    const id = window.setTimeout(recolocar, 900);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [digito]);
+
+  return (
+    <span className="rodillo-col aparece" aria-hidden>
+      <span
+        ref={tira}
+        className="rodillo-tira"
+        style={{ transform: `translateY(${-pos}em)` }}
+        onTransitionEnd={recolocar}
+      >
+        {TIRA.map((d, i) => (
+          <span key={i} className="rodillo-digito">
+            {d}
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
