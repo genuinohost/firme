@@ -18,14 +18,18 @@
     "revisar-planes": "vite-node scripts/revisar-planes.ts",
     "capturas": "node scripts/capturas-tienda.mjs",
     "revisar-paises": "vite-node scripts/revisar-paises.ts",
-    "revisar": "npm run revisar-planes && npm run revisar-rachas && npm run revisar-areas && npm run revisar-dictado && npm run revisar-paises && npm run revisar-banco",
+    "revisar": "npm run revisar-planes && npm run revisar-rachas && npm run revisar-areas && npm run revisar-dictado && npm run revisar-paises && npm run revisar-banco && npm run revisar-asistencia && npm run revisar-turnos && npm run revisar-subgrupos && npm run revisar-partido",
     "revisar-reglas": "npx firebase emulators:exec --only firestore --project genuino-pruebas \"node scripts/revisar-reglas.mjs\"",
     "desplegar-reglas": "node scripts/desplegar-reglas.mjs",
     "fallos": "node scripts/fallos.mjs",
     "capturas-tablet": "node scripts/capturas-tablet.mjs",
     "revisar-portero": "npm --prefix worker run revisar",
     "desplegar-portero": "npm --prefix worker run desplegar",
-    "revisar-asistencia": "vite-node scripts/revisar-asistencia.ts"
+    "revisar-asistencia": "vite-node scripts/revisar-asistencia.ts",
+    "revisar-turnos": "vite-node scripts/revisar-turnos.ts",
+    "revisar-nombres": "node scripts/revisar-nombres.mjs",
+    "revisar-subgrupos": "vite-node scripts/revisar-subgrupos.ts",
+    "revisar-partido": "vite-node scripts/devocionales/revisar-partido.ts"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.1",

@@ -879,6 +879,260 @@ await debe(
   ),
 );
 
+// ── El devocional: el archivo, el orden de lectura y los turnos ────────────
+console.log("\nEL DEVOCIONAL");
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  const bd = libre.firestore();
+  // Ana está en la comunidad; Curioso no.
+  await setDoc(doc(bd, "comunidad/voz/miembros/ana"), { nombre: "Ana", usuario: "ana", desde: 1 });
+  await setDoc(doc(bd, "devocionales/caminemos-2026/dias/271"), {
+    dia: 271,
+    tema: "¿Dónde estás guardando tesoros?",
+    trozos: [{ tipo: "pasaje", ref: "Isaías 13:1-5", texto: "1 Profecía sobre Babilonia…" }],
+  });
+});
+await debe(
+  "la comunidad lee el devocional del día",
+  assertSucceeds(getDoc(doc(ana, "devocionales/caminemos-2026/dias/271"))),
+);
+await debe(
+  "quien modera también",
+  assertSucceeds(getDoc(doc(moderador, "devocionales/caminemos-2026/dias/271"))),
+);
+await debe(
+  "QUIEN NO ESTÁ EN LA COMUNIDAD NO LO LEE: lleva la Biblia con derechos, como el grupo",
+  assertFails(getDoc(doc(curioso, "devocionales/caminemos-2026/dias/271"))),
+);
+const diaPegado = (extra = {}) => ({
+  dia: 272,
+  fecha: "2026-09-29",
+  tema: "¿Una pregunta?",
+  capitulos: ["Isaías 16"],
+  trozos: [{ tipo: "pasaje", ref: "Isaías 16:1-5", texto: "1 …" }],
+  subido: 1,
+  ...extra,
+});
+await debe(
+  "quien modera pega el devocional de un día desde la app",
+  assertSucceeds(setDoc(doc(moderador, "devocionales/caminemos-2026/dias/272"), diaPegado())),
+);
+await debe(
+  "y lo corrige, con «lo que aprendí hoy»",
+  assertSucceeds(
+    setDoc(doc(moderador, "devocionales/caminemos-2026/dias/272"), diaPegado({ aprendi: "Hoy aprendí…", subido: 2 })),
+  ),
+);
+await debe(
+  "un miembro no escribe el archivo",
+  assertFails(setDoc(doc(ana, "devocionales/caminemos-2026/dias/273"), diaPegado({ dia: 273 }))),
+);
+await debe(
+  "ni quien modera con una forma que no es la de un día",
+  Promise.all([
+    assertFails(setDoc(doc(moderador, "devocionales/caminemos-2026/dias/274"), diaPegado({ dia: 274, trozos: [] }))),
+    assertFails(setDoc(doc(moderador, "devocionales/caminemos-2026/dias/275"), diaPegado())),
+    assertFails(setDoc(doc(moderador, "devocionales/caminemos-2026/dias/276"), diaPegado({ dia: 276, x: 1 }))),
+    assertFails(setDoc(doc(moderador, "devocionales/caminemos-2026/dias/277"), { dia: 277 })),
+  ]),
+);
+await debe(
+  "ni en otro plan",
+  assertFails(setDoc(doc(moderador, "devocionales/otro-plan/dias/272"), diaPegado())),
+);
+await debe(
+  "borrar un día, nadie desde la app",
+  assertFails(deleteDoc(doc(moderador, "devocionales/caminemos-2026/dias/272"))),
+);
+
+const orden = (extra = {}) => ({
+  lista: [
+    { id: "e1", nombre: "Beto", uid: "beto" },
+    { id: "e2", nombre: "Ana", uid: "ana" },
+    { id: "e3", nombre: "Carla", uid: "carla" },
+    { id: "e4", nombre: "Mod", uid: "mod" },
+  ],
+  ancla: { fecha: "2026-09-28", puesto: 0 },
+  actualizado: 1,
+  ...extra,
+});
+await debe(
+  "quien modera pone el orden de lectura",
+  assertSucceeds(setDoc(doc(moderador, "comunidad/voz/lectura/orden"), orden())),
+);
+await debe(
+  "la comunidad lo lee; quien no está, no",
+  Promise.all([
+    assertSucceeds(getDoc(doc(ana, "comunidad/voz/lectura/orden"))),
+    assertFails(getDoc(doc(curioso, "comunidad/voz/lectura/orden"))),
+  ]),
+);
+await debe(
+  "un miembro no cambia el orden",
+  assertFails(setDoc(doc(ana, "comunidad/voz/lectura/orden"), orden())),
+);
+await debe(
+  "un orden sin ancla del comentario no vale",
+  assertFails(setDoc(doc(moderador, "comunidad/voz/lectura/orden"), { lista: [], actualizado: 1 })),
+);
+
+// Ana está dentro de la sala; Carla es de la comunidad y está en la lista,
+// pero no ha entrado: así, lo único que falla es eso.
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  await setDoc(doc(libre.firestore(), `salas/${SALA}/dentro/ana`), dentroDe("ana"));
+  await setDoc(doc(libre.firestore(), "comunidad/voz/miembros/carla"), { nombre: "Carla", usuario: "carla", desde: 1 });
+});
+
+const lectura = (extra = {}) => ({
+  plan: "caminemos-2026",
+  dia: 271,
+  trozo: 0,
+  total: 4,
+  puesto: 0,
+  lector: "e1",
+  lectorUid: "beto",
+  desde: 1,
+  ...extra,
+});
+await debe(
+  "el anfitrión empieza la lectura por turnos",
+  assertSucceeds(updateDoc(doc(moderador, "salas", SALA), { lectura: lectura() })),
+);
+await debe(
+  "el que lee NO se lo pasa a quien no está en la sala (se quedaba atascada)",
+  assertFails(
+    updateDoc(doc(beto, "salas", SALA), {
+      lectura: lectura({ trozo: 1, puesto: 2, lector: "e3", lectorUid: "carla" }),
+    }),
+  ),
+);
+await debe(
+  "ni a alguien que no es el de ese puesto de la lista",
+  Promise.all([
+    assertFails(
+      updateDoc(doc(beto, "salas", SALA), { lectura: lectura({ trozo: 1, puesto: 1, lector: "e2", lectorUid: "beto" }) }),
+    ),
+    assertFails(
+      updateDoc(doc(beto, "salas", SALA), { lectura: lectura({ trozo: 1, puesto: 0, lector: "e2", lectorUid: "ana" }) }),
+    ),
+  ]),
+);
+await debe(
+  "ni cambia el total ni el plan",
+  Promise.all([
+    assertFails(
+      updateDoc(doc(beto, "salas", SALA), {
+        lectura: lectura({ trozo: 1, total: 9, puesto: 1, lector: "e2", lectorUid: "ana" }),
+      }),
+    ),
+    assertFails(
+      updateDoc(doc(beto, "salas", SALA), {
+        lectura: lectura({ trozo: 1, plan: "otro", puesto: 1, lector: "e2", lectorUid: "ana" }),
+      }),
+    ),
+  ]),
+);
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  // Carla entra en la sala, pero se sale de la comunidad.
+  await setDoc(doc(libre.firestore(), `salas/${SALA}/dentro/carla`), dentroDe("carla"));
+  await deleteDoc(doc(libre.firestore(), "comunidad/voz/miembros/carla"));
+});
+await debe(
+  "ni a quien está dentro pero ya no es de la comunidad (no vería el texto)",
+  assertFails(
+    updateDoc(doc(beto, "salas", SALA), {
+      lectura: lectura({ trozo: 1, puesto: 2, lector: "e3", lectorUid: "carla" }),
+    }),
+  ),
+);
+await debe(
+  "la lectura no pasa de su total, ni la pone así el anfitrión",
+  assertFails(updateDoc(doc(moderador, "salas", SALA), { lectura: lectura({ trozo: 5, total: 4 }) })),
+);
+await debe(
+  "un día con trozos que no son trozos no entra",
+  Promise.all([
+    assertFails(setDoc(doc(moderador, "devocionales/caminemos-2026/dias/278"), diaPegado({ dia: 278, trozos: [null] }))),
+    assertFails(
+      setDoc(doc(moderador, "devocionales/caminemos-2026/dias/279"), diaPegado({ dia: 279, trozos: [{ tipo: "pasaje" }, 5] })),
+    ),
+  ]),
+);
+await debe(
+  "ni un orden con entradas que no son personas",
+  assertFails(setDoc(doc(moderador, "comunidad/voz/lectura/orden"), orden({ lista: [null] }))),
+);
+await debe(
+  "el que lee dice «terminé» y pasa al siguiente que está dentro",
+  assertSucceeds(
+    updateDoc(doc(beto, "salas", SALA), { lectura: lectura({ trozo: 1, puesto: 1, lector: "e2", lectorUid: "ana" }) }),
+  ),
+);
+await debe(
+  "pero ya no es su turno: no puede volver a pasar",
+  assertFails(updateDoc(doc(beto, "salas", SALA), { lectura: lectura({ trozo: 2 }) })),
+);
+await debe(
+  "la de turno no salta trozos ni cambia de día",
+  Promise.all([
+    assertFails(updateDoc(doc(ana, "salas", SALA), { lectura: lectura({ trozo: 5, lectorUid: "", lector: "" }) })),
+    assertFails(updateDoc(doc(ana, "salas", SALA), { lectura: lectura({ dia: 272, trozo: 2, lectorUid: "", lector: "" }) })),
+  ]),
+);
+await debe(
+  "ni aprovecha para tocar otra cosa de la sala",
+  assertFails(
+    updateDoc(doc(ana, "salas", SALA), { nombre: "Otra", lectura: lectura({ trozo: 2, lectorUid: "", lector: "" }) }),
+  ),
+);
+await debe(
+  "sin nadie más que lea, lo deja sin lector (y reasigna el anfitrión)",
+  assertSucceeds(
+    updateDoc(doc(ana, "salas", SALA), { lectura: lectura({ trozo: 2, puesto: 1, lector: "", lectorUid: "" }) }),
+  ),
+);
+await debe(
+  "quien no lee no pasa el turno",
+  assertFails(updateDoc(doc(curioso, "salas", SALA), { lectura: lectura({ trozo: 3, lector: "", lectorUid: "" }) })),
+);
+await debe(
+  "una lectura con campos de más, o con un total imposible, no pasa",
+  Promise.all([
+    assertFails(updateDoc(doc(moderador, "salas", SALA), { lectura: { ...lectura(), x: 1 } })),
+    assertFails(updateDoc(doc(moderador, "salas", SALA), { lectura: lectura({ total: 0 }) })),
+  ]),
+);
+await entorno.withSecurityRulesDisabled(async (libre) => {
+  // El anfitrión está dentro y en la lista, pero no apuntado a la comunidad.
+  await setDoc(doc(libre.firestore(), `salas/${SALA}/dentro/mod`), dentroDe("mod"));
+  await deleteDoc(doc(libre.firestore(), "comunidad/voz/miembros/mod"));
+});
+await debe(
+  "al anfitrión SÍ se le puede pasar el turno aunque no esté apuntado: modera y lee el texto",
+  (async () => {
+    await assertSucceeds(
+      updateDoc(doc(moderador, "salas", SALA), { lectura: lectura({ trozo: 0, puesto: 1, lector: "e2", lectorUid: "ana" }) }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(ana, "salas", SALA), { lectura: lectura({ trozo: 1, puesto: 3, lector: "e4", lectorUid: "mod" }) }),
+    );
+  })(),
+);
+await debe(
+  "cada uno dice «hoy sólo escucho» 👂",
+  assertSucceeds(updateDoc(doc(ana, `salas/${SALA}/dentro/ana`), { escucha: true })),
+);
+await debe(
+  "pero no por otro",
+  assertFails(updateDoc(doc(curioso, `salas/${SALA}/dentro/ana`), { escucha: false })),
+);
+await debe(
+  "y al volver a entrar lo trae puesto: entrar con «sólo escucho» vale",
+  (async () => {
+    await assertSucceeds(deleteDoc(doc(ana, `salas/${SALA}/dentro/ana`)));
+    await assertSucceeds(setDoc(doc(ana, `salas/${SALA}/dentro/ana`), dentroDe("ana", { escucha: true })));
+  })(),
+);
+
 await entorno.cleanup();
 
 console.log(

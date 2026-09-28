@@ -58,6 +58,9 @@ public class Sala extends Plugin {
     /** Como se llama la sala, solo para el aviso del servicio. */
     private String nombreActual;
 
+    /** Si ahora se publica voz: para subir el servicio a microfono al volver a la app. */
+    private boolean hablaAhora = false;
+
     /** La llamada que espera a que se conceda el microfono. */
     private PluginCall esperandoPermiso;
 
@@ -120,6 +123,9 @@ public class Sala extends Plugin {
             String cuenta = cuentaDe(uid);
             if (cuenta != null) d.put("cuenta", cuenta);
             d.put("uid", uid);
+            // 0 salio, 1 se le cayo la red, 2 paso a oyente (en directo, dejar
+            // de publicar tambien avisa de salida, pero sigue dentro).
+            d.put("motivo", motivo);
             notifyListeners("alguienSalio", d);
         }
 
@@ -285,6 +291,7 @@ public class Sala extends Plugin {
 
             canalActual = canal;
             nombreActual = nombre;
+            hablaAhora = habla;
             // Y el servicio, para que salir de la app no saque de la sala. De
             // tipo microfono solo si hay permiso: sin el, Android 14 lo mata.
             ServicioSala.arrancar(getContext(), nombre, habla && tieneMicrofono());
@@ -308,6 +315,7 @@ public class Sala extends Plugin {
         }
         canalActual = null;
         nombreActual = null;
+        hablaAhora = false;
         ServicioSala.parar(getContext());
         llamada.resolve();
     }
@@ -383,10 +391,17 @@ public class Sala extends Plugin {
                     : Constants.CLIENT_ROLE_AUDIENCE;
             op.publishMicrophoneTrack = habla;
             motor.updateChannelMediaOptions(op);
+            hablaAhora = habla;
             // Al pasar a hablar, el servicio sube a tipo microfono (ya con
-            // permiso); al callarse se queda como esta, que no estorba.
+            // permiso); al callarse se queda como esta, que no estorba. Si
+            // Android no lo deja (app en segundo plano), el papel ya cambio:
+            // no es un fallo del cambio de papel, y se reintenta al volver.
             if (habla && nombreActual != null) {
-                ServicioSala.arrancar(getContext(), nombreActual, true);
+                try {
+                    ServicioSala.arrancar(getContext(), nombreActual, tieneMicrofono());
+                } catch (Exception ignorado) {
+                    // Se sube en handleOnResume.
+                }
             }
             llamada.resolve();
         } catch (Exception e) {
@@ -422,6 +437,22 @@ public class Sala extends Plugin {
         motor.setDefaultAudioRoutetoSpeakerphone(puesto);
         motor.setEnableSpeakerphone(puesto);
         llamada.resolve();
+    }
+
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        // Con la app delante, Android ya deja el servicio de tipo microfono.
+        // Hace falta si se paso a hablar con la pantalla apagada: el servicio se
+        // quedo como reproduccion y, en Android 14, el microfono grabaria
+        // silencio hasta subirlo.
+        if (motor != null && nombreActual != null && hablaAhora && tieneMicrofono()) {
+            try {
+                ServicioSala.arrancar(getContext(), nombreActual, true);
+            } catch (Exception ignorado) {
+                // Sigue como reproduccion; se oye todo igual.
+            }
+        }
     }
 
     @Override

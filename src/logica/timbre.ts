@@ -162,6 +162,50 @@ export async function cuantosMiembros(): Promise<number | null> {
   }
 }
 
+/** Quiénes están apuntados, con su nombre. Sólo lo puede sacar quien modera (reglas). */
+export async function listarMiembros(): Promise<{ uid: string; nombre: string; usuario: string }[]> {
+  const { bd } = await nube();
+  const { collection, getDocs } = await import("firebase/firestore");
+  const r = await getDocs(collection(bd, "comunidad", "voz", "miembros"));
+  return r.docs
+    .map((d) => ({ uid: d.id, nombre: String(d.data().nombre ?? ""), usuario: String(d.data().usuario ?? "") }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+/**
+ * Quiénes están apuntados, en vivo y SÓLO con lo que confirma el servidor.
+ *
+ * Para la sala: si alguien se une con la sala abierta, entra en los turnos sin
+ * que el anfitrión salga y vuelva. Una respuesta de la caché sin conexión se
+ * ignora: vendría vacía y dejaría a todos «fuera de la comunidad».
+ */
+export function escucharMiembros(alCambiar: (uids: Set<string>) => void, alFallar: (e: unknown) => void): () => void {
+  let fin: (() => void) | null = null;
+  let vivo = true;
+  void (async () => {
+    try {
+      const { bd } = await nube();
+      const { collection, onSnapshot } = await import("firebase/firestore");
+      if (!vivo) return;
+      fin = onSnapshot(
+        collection(bd, "comunidad", "voz", "miembros"),
+        { includeMetadataChanges: true },
+        (r) => {
+          if (r.metadata.fromCache) return;
+          alCambiar(new Set(r.docs.map((d) => d.id)));
+        },
+        alFallar,
+      );
+    } catch (e) {
+      alFallar(e);
+    }
+  })();
+  return () => {
+    vivo = false;
+    fin?.();
+  };
+}
+
 /** La llamada que dejó el servicio nativo, si hay. */
 export async function llamadaPendiente(): Promise<LlamadaPendiente | null> {
   if (!hayTimbre()) return null;

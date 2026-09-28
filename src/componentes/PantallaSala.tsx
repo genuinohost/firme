@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dentro, Sala } from "@/logica/sala";
+import type { Dentro, Lectura, Sala } from "@/logica/sala";
 import {
   abrirSala,
   alCambiarLaRed,
@@ -15,21 +15,42 @@ import {
   leerSala,
   mano,
   miMicro,
+  moverLectura,
   ponerCampana,
+  ponerLectura,
   ponerMicLibre,
+  quitarLectura,
+  soloEscucho,
   porElAltavoz,
   renovarToken,
   salirDeSala,
   silenciar,
   terminarParaTodos,
+  verLlegadasYSalidas,
   verQuienEsta,
   verQuienHabla,
   verSala,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
 import { abrirAjustesDeLaApp } from "@/logica/despertador";
+import {
+  PLAN,
+  anteriorLector,
+  comentaristaDe,
+  diaDelPlan,
+  escucharDia,
+  escucharOrden,
+  leerOrden,
+  puestoVivo,
+  siguienteLector,
+  type Devocional,
+  type Lector,
+  type Orden,
+} from "@/logica/devocionales";
+import { PegarDevocional } from "./PegarDevocional";
+import { TextoDevocional } from "./TextoDevocional";
 import { parar, sonar, vibrar } from "@/logica/sonido";
-import { cuantosMiembros, llamarALaComunidad } from "@/logica/timbre";
+import { cuantosMiembros, escucharMiembros, llamarALaComunidad } from "@/logica/timbre";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -110,6 +131,40 @@ export function PantallaSala({
   const [foco, setFoco] = useState<string[]>([]);
   /** Iba a hablar y el móvil no tiene permiso del micrófono: se dice, con botón. */
   const [sinMicrofono, setSinMicrofono] = useState(false);
+  /** La lectura por turnos: el orden de la comunidad y el devocional del día. */
+  // `undefined` es «todavía cargando»; `null`, «no existe». Confundirlos le
+  // decía al anfitrión «falta el orden» mientras sólo estaba llegando.
+  const [ordenLectura, setOrdenLectura] = useState<Orden | null | undefined>(undefined);
+  const [devLectura, setDevLectura] = useState<Devocional | null | undefined>(undefined);
+  /** El día viene de la copia del móvil, sin confirmar con el servidor. */
+  const [devProvisional, setDevProvisional] = useState(false);
+  /**
+   * Sólo en el móvil del anfitrión: quién es de la comunidad (para no darle
+   * turno a quien se salió y ya no ve el texto) y quién se cayó del canal de
+   * voz aunque su ficha siga en la lista (cuenta → cuándo).
+   */
+  const [miembrosUids, setMiembrosUids] = useState<Set<string> | null>(null);
+  /** Cuenta → la `entro` de su ficha cuando se cayó (o −1 si no tenía): vuelve cuando cambia. */
+  const [caidos, setCaidos] = useState<Map<string, number>>(() => new Map());
+  /** La hora de ESTE móvil en que se vio moverse la lectura: los relojes de los demás no cuentan. */
+  const lecturaVistaEn = useRef<{ desde: number; local: number }>({ desde: 0, local: 0 });
+  /** Para volver a armar el vigilante si su intento falló. */
+  const [reintentoVigia, setReintentoVigia] = useState(0);
+  /** Cuándo se oyó por última vez a cada cuenta: para el «¿sigue ahí?». */
+  const oidoEn = useRef(new Map<string, number>());
+  /** Si no se pudo leer el orden o el día: «red» se arregla sola, «permiso» no. */
+  const [ordenFallo, setOrdenFallo] = useState<"" | "red" | "permiso">("");
+  const [devFallo, setDevFallo] = useState<"" | "red" | "permiso">("");
+  /** Para volver a escuchar el orden y el día a mano, con «Reintentar». */
+  const [reintento, setReintento] = useState(0);
+  /** «Terminé» o «Siguiente» en camino: el segundo toque no hace nada. */
+  const [pasando, setPasando] = useState(false);
+  /** Recién movida la lectura: los mandos del anfitrión esperan un instante. */
+  const [calma, setCalma] = useState(false);
+  /** Quien modera pegando el devocional del día desde la sala. */
+  const [pegando, setPegando] = useState(false);
+  /** Ver el texto del trozo que se lee (para seguirlo), plegado por defecto. */
+  const [verTexto, setVerTexto] = useState(false);
 
   /**
    * El papel que teníamos la última vez.
@@ -426,6 +481,242 @@ export function PantallaSala({
     setEstado("fuera");
   }, [gente, estado, quienSoy.uid, sala]);
 
+  // ── la lectura por turnos ────────────────────────────────────────────────
+  //
+  // El orden y el devocional se ESCUCHAN, no se leen una vez: el día lo pega
+  // quien modera a las 4:55 con la sala ya abierta, una cuenta se vincula con
+  // la sala en marcha, y un fallo de red al entrar se arregla solo cuando
+  // vuelve la red. Quien no es de la comunidad no puede leerlos: escucha y ya.
+  const falloDe = (e: unknown): "red" | "permiso" =>
+    String((e as { code?: string })?.code ?? "").includes("permission-denied") ? "permiso" : "red";
+
+  useEffect(() => {
+    if (estado !== "dentro") return;
+    return escucharOrden(
+      (o) => {
+        setOrdenLectura(o);
+        setOrdenFallo("");
+      },
+      (e) => setOrdenFallo(falloDe(e)),
+    );
+  }, [estado, reintento]);
+
+  const diaLectura = sala?.lectura?.dia ?? (esAnfitrion ? diaDelPlan() : null);
+  useEffect(() => {
+    if (estado !== "dentro" || diaLectura == null) return;
+    setDevLectura((d) => (d?.dia === diaLectura ? d : undefined));
+    return escucharDia(
+      diaLectura,
+      (d, provisional) => {
+        setDevLectura(d);
+        setDevProvisional(!!provisional);
+        setDevFallo("");
+      },
+      (e) => setDevFallo(falloDe(e)),
+    );
+  }, [estado, diaLectura, reintento]);
+
+  /**
+   * Quién puede leer ahora: tiene su cuenta vinculada en la lista, está en la
+   * sala y hoy no dijo «sólo escucho». Es lo que en el grupo son el 🟢 y el 👂.
+   */
+  //
+  // Tampoco quien tiene el micrófono cerrado por el anfitrión: vería «Te toca»
+  // y no podría hablar. Y en el móvil del anfitrión, que es el que reasigna,
+  // tampoco quien se cayó del canal (su ficha sigue ahí) ni quien ya no es de
+  // la comunidad (no ve el texto).
+  const puedeLeer = (l: Lector) =>
+    !!l.uid &&
+    gente.some((g) => g.uid === l.uid && !g.escucha && !g.silenciado) &&
+    !(esAnfitrion && caidos.has(l.uid)) &&
+    !(esAnfitrion && miembrosUids && !miembrosUids.has(l.uid) && l.uid !== sala?.anfitrion);
+
+  // Quién es de la comunidad: lo sabe quien modera, y es el anfitrión. En vivo
+  // (quien se une con la sala abierta entra en los turnos) y sólo con lo que
+  // confirma el servidor; sin dato, no se filtra.
+  useEffect(() => {
+    if (estado !== "dentro" || !esAnfitrion) return;
+    return escucharMiembros(setMiembrosUids, () => setMiembrosUids(null));
+  }, [estado, esAnfitrion]);
+
+  // La lista de ahora, para los avisos que llegan fuera del repintado.
+  const genteAhora = useRef(gente);
+  genteAhora.current = gente;
+  // Quién se cayó del canal, por Agora: Firestore no se entera.
+  useEffect(() => {
+    if (estado !== "dentro" || !esAnfitrion) return;
+    return verLlegadasYSalidas({
+      alEntrar: (c) =>
+        setCaidos((m) => {
+          if (!m.has(c)) return m;
+          const r = new Map(m);
+          r.delete(c);
+          return r;
+        }),
+      alSalir: (c) => setCaidos((m) => new Map(m).set(c, genteAhora.current.find((g) => g.uid === c)?.entro ?? -1)),
+    });
+  }, [estado, esAnfitrion]);
+  // Y si volvió a entrar (su ficha es otra: otra `entro`), deja de estar caído.
+  // Se compara la ficha con la que tenía al caerse, no relojes de dos móviles.
+  useEffect(() => {
+    setCaidos((m) => {
+      let cambio = false;
+      const r = new Map(m);
+      for (const [c, entroAlCaer] of m) {
+        const f = gente.find((g) => g.uid === c);
+        if (f && f.entro !== entroAlCaer) {
+          r.delete(c);
+          cambio = true;
+        }
+      }
+      return cambio ? r : m;
+    });
+  }, [gente]);
+  // A quién se ha oído, y cuándo (con el reloj de este móvil). La voz propia
+  // viene aparte: sin ella, al anfitrión que lee le saltaba «¿sigue ahí?».
+  useEffect(() => {
+    const ahora = Date.now();
+    for (const c of sonando.cuentas) oidoEn.current.set(c, ahora);
+    if (sonando.yo && quienSoy.uid) oidoEn.current.set(quienSoy.uid, ahora);
+  }, [sonando]);
+  useEffect(() => {
+    const d = sala?.lectura?.desde ?? 0;
+    if (d !== lecturaVistaEn.current.desde) lecturaVistaEn.current = { desde: d, local: Date.now() };
+  }, [sala?.lectura?.desde]);
+
+  // Si me toca leer, el texto se abre solo: es lo que voy a leer en voz alta.
+  const meToca = sala?.lectura?.lectorUid === quienSoy.uid && !!quienSoy.uid;
+  useEffect(() => {
+    if (meToca) setVerTexto(true);
+  }, [meToca, sala?.lectura?.trozo]);
+
+  /**
+   * Cuántos trozos tiene la lectura. Lo fija el anfitrión al empezarla, para
+   * que todos sepan a la vez cuándo se acaba aunque a alguien no le haya
+   * cargado el texto.
+   */
+  const totalDe = (l: Lectura) =>
+    l.total ?? (devLectura && devLectura.dia === l.dia ? devLectura.trozos.length : 0);
+
+  // Los mandos del anfitrión esperan un segundo y medio tras cada movimiento:
+  // si el lector acaba de decir «Terminé», su «Siguiente» ya no salta un trozo
+  // sin querer. (La transacción de `moverLectura` es la otra mitad.)
+  useEffect(() => {
+    if (!sala?.lectura) return;
+    setCalma(true);
+    const t = setTimeout(() => setCalma(false), 1500);
+    return () => clearTimeout(t);
+  }, [sala?.lectura?.desde]);
+
+  /** Pasar el turno: el trozo siguiente, al siguiente de la lista que puede leer. */
+  const pasarTurno = async () => {
+    const l = sala?.lectura;
+    if (!l || pasando) return;
+    setPasando(true);
+    try {
+      // Sin el orden no se sabe quién sigue: se intenta leerlo en el momento, y
+      // si no hay manera, se pasa el trozo sin lector y el anfitrión elige.
+      const orden = ordenLectura ?? (await leerOrden().catch(() => null));
+      const total = totalDe(l);
+      const acaba = total > 0 && l.trozo + 1 >= total;
+      const sig = acaba || !orden ? null : siguienteLector(orden.lista, puestoVivo(orden.lista, l), puedeLeer);
+      const nueva = {
+        ...l,
+        trozo: l.trozo + 1,
+        puesto: sig?.puesto ?? l.puesto,
+        lector: sig?.lector.id ?? "",
+        lectorUid: sig?.lector.uid ?? "",
+        desde: Date.now(),
+      };
+      // Las reglas sólo dejan pasárselo a quien está dentro. Si el siguiente
+      // acaba de salir y esta pantalla aún no lo sabe, se pasa sin lector y el
+      // anfitrión lo reasigna en unos segundos: mejor que un «Terminé» que falla.
+      const hecho = await moverLectura(canal, l, nueva).catch(async (e) => {
+        if (!String((e as { code?: string })?.code ?? "").includes("permission-denied") || !nueva.lectorUid) throw e;
+        return moverLectura(canal, l, { ...nueva, lector: "", lectorUid: "" });
+      });
+      if (hecho && !acaba && !orden) setError("Pasó el turno, pero sin el orden de lectura: el anfitrión elige quién sigue.");
+      // Si no se hizo es que ya se había movido (otro toque, o el anfitrión):
+      // no es un error y no se dice nada.
+    } catch {
+      setError("No se pudo pasar el turno. Mira tu conexión.");
+    } finally {
+      setPasando(false);
+    }
+  };
+
+  /** Mover la lectura desde los mandos del anfitrión, con aviso si falla. */
+  const moverDesdeAqui = (l: Lectura, cambios: Partial<Lectura>) => {
+    void moverLectura(canal, l, { ...l, ...cambios, desde: Date.now() }).catch(() =>
+      setError("No se pudo mover la lectura. Mira tu conexión."),
+    );
+  };
+
+  // ── el lector de turno ya no está ────────────────────────────────────────
+  //
+  // Se fue, se le cayó la red, dijo «sólo escucho» o no hay nadie asignado:
+  // la lectura se quedaba en «Lee X» hasta que el anfitrión se diera cuenta.
+  // En el móvil del anfitrión —el único que puede reasignar— se pasa solo al
+  // siguiente que está. Al que se fue se le dan 20 segundos, porque volver a
+  // entrar tras un corte borra y crea la ficha y una ausencia corta es normal;
+  // a quien dijo «sólo escucho» o a nadie, tres.
+  const lecturaViva = sala?.lectura;
+  const totalViva = lecturaViva ? totalDe(lecturaViva) : 0;
+  const acabadaViva = !!lecturaViva && totalViva > 0 && lecturaViva.trozo >= totalViva;
+  const fichaDelLector = lecturaViva?.lectorUid ? gente.find((g) => g.uid === lecturaViva.lectorUid) : undefined;
+  const lectorFalta: "" | "nadie" | "fuera" | "caido" | "escucha" | "silenciado" | "nomiembro" =
+    !lecturaViva || acabadaViva
+      ? ""
+      : !lecturaViva.lectorUid
+        ? "nadie"
+        : !fichaDelLector
+          ? "fuera"
+          : esAnfitrion && caidos.has(lecturaViva.lectorUid)
+            ? "caido"
+            : fichaDelLector.escucha
+              ? "escucha"
+              : fichaDelLector.silenciado
+                ? "silenciado"
+                : esAnfitrion &&
+                    miembrosUids &&
+                    !miembrosUids.has(lecturaViva.lectorUid) &&
+                    lecturaViva.lectorUid !== sala?.anfitrion
+                  ? "nomiembro"
+                  : "";
+  const hayQuienLea = !!ordenLectura?.lista.some(puedeLeer);
+  const alDia = useRef({ lectura: lecturaViva, orden: ordenLectura, puedeLeer });
+  alDia.current = { lectura: lecturaViva, orden: ordenLectura, puedeLeer };
+  useEffect(() => {
+    // Sólo dentro: con la sala «fuera» (se cayó la red) no se toca nada, y el
+    // aviso de desconexión no se tapa con uno de turnos.
+    if (estado !== "dentro" || !esAnfitrion || !lectorFalta || !hayQuienLea) return;
+    const t = setTimeout(
+      () => {
+        const { lectura: l, orden, puedeLeer: puede } = alDia.current;
+        if (!l || !orden) return;
+        const sig = siguienteLector(orden.lista, puestoVivo(orden.lista, l), (e) => puede(e) && e.uid !== l.lectorUid);
+        if (!sig) return;
+        void moverLectura(canal, l, {
+          ...l,
+          puesto: sig.puesto,
+          lector: sig.lector.id,
+          lectorUid: sig.lector.uid ?? "",
+          desde: Date.now(),
+        }).catch(() => {
+          // Si falla (la red a las 5 de la mañana), se vuelve a armar, y se
+          // dice: la tarjeta promete que pasa solo.
+          setError("No se pudo pasar el turno solo. Vuelve a probar en unos segundos, o toca «Otro lee».");
+          setReintentoVigia((n) => n + 1);
+        });
+      },
+      // Si su ficha no está, 20 s: volver a entrar tras un corte la borra y la
+      // crea, y una ausencia corta es normal. Si Agora ya dijo que se cayó
+      // (lo dice unos 20 s después de perder la red), 5. Lo demás, 3.
+      lectorFalta === "fuera" ? 20_000 : lectorFalta === "caido" ? 5_000 : 3_000,
+    );
+    return () => clearTimeout(t);
+  }, [estado, esAnfitrion, lectorFalta, hayQuienLea, lecturaViva?.desde, canal, reintentoVigia]);
+
   // ── me silenciaron ───────────────────────────────────────────────────────
   useEffect(() => {
     if (estado !== "dentro" || !yo?.silenciado) return;
@@ -630,8 +921,148 @@ export function PantallaSala({
   const manos = gente.filter((g) => g.mano && g.uid !== sala?.anfitrion);
   const conLaPalabra = gente.filter((g) => g.palabra || g.uid === sala?.anfitrion);
 
+  // ── el letrero de la lectura ───────────────────────────────────────────
+  const lectura = sala?.lectura;
+  const totalLectura = lectura ? totalDe(lectura) : 0;
+  const trozoActual = lectura && devLectura?.dia === lectura.dia ? devLectura.trozos[lectura.trozo] : undefined;
+  const lecturaAcabada = acabadaViva;
+  const lectorActual = lectura && ordenLectura ? ordenLectura.lista.find((e) => e.id === lectura.lector) : undefined;
+  /**
+   * El nombre de quien lee: el de la lista, o si no hay lista (quien no es de
+   * la comunidad no la puede leer), el de su ficha en la sala.
+   */
+  const nombreLector = lectorActual?.nombre ?? fichaDelLector?.nombre;
+  const esUltimo = !!lectura && totalLectura > 0 && lectura.trozo + 1 >= totalLectura;
+  const siguiente =
+    lectura && ordenLectura && !lecturaAcabada && !esUltimo
+      ? siguienteLector(ordenLectura.lista, puestoVivo(ordenLectura.lista, lectura), puedeLeer)
+      : null;
+  /** Al anfitrión: quien lee no se ha oído desde que le tocó, pasado un rato. */
+  const vista = lecturaVistaEn.current;
+  const sigueAhi =
+    esAnfitrion &&
+    lectura &&
+    !lecturaAcabada &&
+    lectura.lectorUid &&
+    lectorFalta === "" &&
+    vista.desde === lectura.desde &&
+    Date.now() - vista.local > 45_000
+      ? (oidoEn.current.get(lectura.lectorUid) ?? 0) < vista.local
+      : false;
+  /** Se corrigió el devocional con la lectura en marcha y ya no cuadra el número de turnos. */
+  const totalNuevo =
+    lectura && devLectura && devLectura.dia === lectura.dia && lectura.total && devLectura.trozos.length !== lectura.total
+      ? devLectura.trozos.length
+      : null;
+  /** «Isaías 16:1-5», o, si el texto no ha cargado, el número del trozo. */
+  const refActual = trozoActual?.ref ?? (lectura ? `trozo ${lectura.trozo + 1}` : "");
+  const hoyISO = (() => {
+    const f = new Date();
+    return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+  })();
+  const comentaHoy = ordenLectura ? comentaristaDe(ordenLectura, hoyISO) : null;
+
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        El letrero de la lectura por turnos, arriba y pegado mientras se baja.
+
+        Alex, 28-09-2026: «debe salir un letrero sutil arriba para que la
+        persona sepa que le toca, y también quién es el próximo en leer». Sutil:
+        una línea, que no tape nada; el texto del trozo se despliega si se toca
+        —y solo, a quien le toca, porque es lo que va a leer en voz alta.
+      */}
+      {lectura ? (
+        <div
+          className="sticky z-20 -mx-4 bg-fondo/95 px-4 pt-1 pb-2 backdrop-blur"
+          // Debajo de la barra de estado: la sala se dibuja bajo ella.
+          style={{ top: "env(safe-area-inset-top, 0px)" }}
+          aria-live="polite"
+        >
+          {lecturaAcabada ? (
+            <div className="rounded-xl border border-logro/40 bg-logro/10 px-3 py-2 text-sm">
+              ✓ Terminó la lectura.
+              {comentaHoy ? (
+                <>
+                  {" "}
+                  Comenta hoy: <strong>{comentaHoy.uid === quienSoy.uid ? "tú" : comentaHoy.nombre}</strong>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              className={`rounded-xl border px-3 py-2 ${
+                meToca ? "border-acento bg-acento/15" : "border-borde bg-superficie"
+              }`}
+            >
+              <button
+                onClick={() => setVerTexto(!verTexto)}
+                className="flex w-full items-center gap-2 text-left"
+                aria-expanded={verTexto}
+              >
+                <span className="min-w-0 flex-1">
+                  {meToca ? (
+                    <span className="block text-sm font-semibold text-acento">📖 Te toca leer · {refActual}</span>
+                  ) : lectorFalta === "nadie" ? (
+                    <span className="block truncate text-sm">Buscando quién lee · {refActual}</span>
+                  ) : lectorFalta ? (
+                    <span className="block truncate text-sm">
+                      <strong>{nombreLector ?? "Quien leía"}</strong>{" "}
+                      {lectorFalta === "escucha"
+                        ? "sólo escucha"
+                        : lectorFalta === "silenciado"
+                          ? "tiene el micrófono cerrado"
+                          : lectorFalta === "nomiembro"
+                            ? "no está en la comunidad"
+                            : "no está"}{" "}
+                      · pasa a otro
+                    </span>
+                  ) : (
+                    <span className="block truncate text-sm">
+                      Lee <strong>{nombreLector ?? "—"}</strong> · {refActual}
+                    </span>
+                  )}
+                  <span className="block truncate text-xs text-tenue">
+                    {siguiente
+                      ? `Siguiente: ${siguiente.lector.uid === quienSoy.uid ? "tú" : siguiente.lector.nombre}`
+                      : esUltimo
+                        ? "Es el último trozo"
+                        : ""}
+                    {totalLectura > 0 ? `${siguiente || esUltimo ? " · " : ""}${lectura.trozo + 1} de ${totalLectura}` : ""}
+                  </span>
+                </span>
+                {trozoActual ? <span className="shrink-0 text-xs text-tenue">{verTexto ? "▴" : "▾"}</span> : null}
+              </button>
+              {verTexto && trozoActual ? (
+                <div className="mt-2 max-h-[45vh] overflow-y-auto border-t border-borde pt-2">
+                  <TextoDevocional trozo={trozoActual} />
+                </div>
+              ) : null}
+              {meToca && yo?.silenciado ? (
+                // Con el micrófono cerrado no puede leer, y «Terminé» saltaría
+                // el trozo sin que nadie lo leyera: el anfitrión lo pasa a otro.
+                <p className="mt-2 text-sm leading-relaxed text-tenue">
+                  El anfitrión cerró tu micrófono: el turno pasa al siguiente.
+                </p>
+              ) : meToca ? (
+                <div className="mt-2">
+                  <Boton
+                    variante="logro"
+                    ancho
+                    // Con la calma: si el turno vuelve a caerle a él, un segundo
+                    // toque no se salta el trozo siguiente.
+                    deshabilitado={pasando || calma}
+                    onClick={() => void pasarTurno()}
+                  >
+                    {pasando ? "Pasando…" : "Terminé ✓"}
+                  </Boton>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ) : null}
+
       <Tarjeta>
         <Etiqueta>
           {sala?.tipo === "llamada" ? "llamada" : "devocional"} · {gente.length}{" "}
@@ -662,6 +1093,36 @@ export function PantallaSala({
               : "Estás escuchando. Levanta la mano para comentar."}
         </p>
 
+        {/*
+          «Hoy sólo escucho» 👂: la lectura por turnos se lo salta. En el grupo
+          es el 👂🏻 de la lista; aquí lo decide cada uno, con un toque.
+        */}
+        {!esAnfitrion && sala?.tipo !== "llamada" && ordenLectura ? (
+          <button
+            onClick={() =>
+              void soloEscucho(canal, !yo?.escucha).catch(() => setError("No se pudo cambiar. Mira tu conexión."))
+            }
+            // Con el turno en la mano no: primero se termina el trozo. Si no,
+            // el trozo se quedaba sin nadie que lo leyera.
+            disabled={meToca && !yo?.escucha}
+            className={`toque mt-3 rounded-full border px-3 py-1 text-xs disabled:opacity-40 ${
+              yo?.escucha ? "border-acento bg-acento/10 text-acento" : "border-borde text-tenue"
+            }`}
+            aria-pressed={!!yo?.escucha}
+          >
+            {yo?.escucha
+              ? "👂 Hoy sólo escucho · toca para leer"
+              : meToca
+                ? "👂 Termina tu trozo y luego podrás sólo escuchar"
+                : "👂 Hoy sólo escucho"}
+          </button>
+        ) : null}
+
+        {!esAnfitrion && sala?.tipo !== "llamada" && (ordenFallo === "permiso" || devFallo === "permiso") ? (
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            Para leer por turnos y ver el texto hay que estar en la comunidad: Juntos → comunidad de voz → Unirme.
+          </p>
+        ) : null}
         {error ? (
           <p className="mt-2 text-sm leading-relaxed text-fallo">{error}</p>
         ) : null}
@@ -824,6 +1285,271 @@ export function PantallaSala({
               : "Levantan la mano y tú das la palabra. Para comentar sin pisarse."}
           </p>
         </Tarjeta>
+      ) : null}
+
+      {/*
+        La lectura por turnos, para el anfitrión. Se reparte el devocional del
+        día, trozo a trozo, en el orden de la lista, entre quienes están dentro
+        con su cuenta vinculada y no dijeron «sólo escucho». El que lee dice
+        «Terminé» y pasa solo; aquí están el resto de los mandos.
+      */}
+      {esAnfitrion && sala?.tipo !== "llamada" ? (
+        <Tarjeta>
+          <Etiqueta>lectura por turnos</Etiqueta>
+          {!ordenLectura && ordenFallo ? (
+            <>
+              <p className="mt-2 text-sm leading-relaxed text-fallo">
+                {ordenFallo === "permiso"
+                  ? "Tu cuenta no puede leer el orden de lectura."
+                  : "No se pudo leer el orden de lectura. Mira tu conexión."}
+              </p>
+              <div className="mt-2">
+                <Boton onClick={() => setReintento((n) => n + 1)}>Reintentar</Boton>
+              </div>
+            </>
+          ) : ordenLectura === undefined ? (
+            <p className="mt-2 text-sm text-tenue">Cargando el orden de lectura…</p>
+          ) : ordenLectura === null ? (
+            <p className="mt-2 text-sm leading-relaxed text-tenue">
+              Falta el orden de lectura. Se pone en Juntos → orden de lectura.
+            </p>
+          ) : !lectura && devLectura === undefined ? (
+            devFallo ? (
+              <>
+                <p className="mt-2 text-sm leading-relaxed text-fallo">
+                  {devFallo === "permiso"
+                    ? "Tu cuenta no puede leer el devocional."
+                    : "No se pudo leer el devocional de hoy. Mira tu conexión."}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Boton onClick={() => setReintento((n) => n + 1)}>Reintentar</Boton>
+                  <Boton variante="fantasma" onClick={() => setPegando(true)}>
+                    Pegarlo
+                  </Boton>
+                </div>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-tenue">Cargando el devocional de hoy…</p>
+            )
+          ) : !lectura && devLectura === null ? (
+            <>
+              <p className="mt-2 text-sm leading-relaxed text-tenue">
+                El devocional del día {diaLectura} todavía no está. Pégalo aquí —el mismo Bloque 1 que mandas al
+                grupo— y la lectura se reparte al momento.
+              </p>
+              <div className="mt-3">
+                <Boton variante="fuerte" ancho onClick={() => setPegando(true)}>
+                  Pegar el devocional de hoy
+                </Boton>
+              </div>
+            </>
+          ) : !lectura && devLectura ? (
+            <>
+              <p className="mt-2 text-sm leading-relaxed">
+                Día {devLectura.dia}: {devLectura.trozos.length} trozos para{" "}
+                {ordenLectura.lista.filter(puedeLeer).length} lectores en la sala.
+              </p>
+              {!sala?.micLibre ? (
+                <p className="mt-1 text-xs leading-relaxed text-tenue">
+                  Los micrófonos están con permiso: suéltalos arriba para que cada uno abra el suyo al leer.
+                </p>
+              ) : null}
+              {devProvisional ? (
+                <p className="mt-1 text-xs leading-relaxed text-tenue">
+                  Es la copia del móvil: esperando al servidor para empezar, por si el día se corrigió.
+                </p>
+              ) : null}
+              <div className="mt-3">
+                <Boton
+                  variante="fuerte"
+                  ancho
+                  deshabilitado={!ordenLectura.lista.some(puedeLeer) || devProvisional}
+                  onClick={() => {
+                    const sig = siguienteLector(ordenLectura.lista, -1, puedeLeer);
+                    void ponerLectura(canal, {
+                      plan: PLAN,
+                      dia: devLectura.dia,
+                      trozo: 0,
+                      total: devLectura.trozos.length,
+                      puesto: sig?.puesto ?? -1,
+                      lector: sig?.lector.id ?? "",
+                      lectorUid: sig?.lector.uid ?? "",
+                      desde: Date.now(),
+                    }).catch(() => setError("No se pudo empezar la lectura."));
+                  }}
+                >
+                  Empezar la lectura
+                </Boton>
+              </div>
+              {!ordenLectura.lista.some(puedeLeer) ? (
+                <p className="mt-2 text-xs leading-relaxed text-tenue">
+                  Nadie de la lista está dentro con su cuenta vinculada. Vincúlalas en Juntos → orden de lectura.
+                </p>
+              ) : null}
+              <button
+                onClick={() => setPegando(true)}
+                className="toque mt-2 text-xs text-tenue underline underline-offset-2"
+              >
+                Corregir el devocional de hoy
+              </button>
+            </>
+          ) : lectura ? (
+            <>
+              <p className="mt-2 text-sm leading-relaxed">
+                {lecturaAcabada
+                  ? "La lectura terminó."
+                  : `Trozo ${lectura.trozo + 1}${totalLectura ? ` de ${totalLectura}` : ""} · ${
+                      lectorFalta === "nadie"
+                        ? "nadie asignado: toca «Otro lee»"
+                        : lectorFalta === "fuera"
+                          ? `${nombreLector ?? "quien leía"} no está: pasa solo al siguiente en unos segundos`
+                          : lectorFalta === "caido"
+                            ? `${nombreLector ?? "quien leía"} se desconectó: pasa al siguiente`
+                            : lectorFalta === "escucha"
+                              ? `${nombreLector ?? "quien leía"} sólo escucha: pasa al siguiente`
+                              : lectorFalta === "silenciado"
+                                ? `${nombreLector ?? "quien leía"} tiene el micrófono cerrado: pasa al siguiente`
+                                : lectorFalta === "nomiembro"
+                                  ? `${nombreLector ?? "quien leía"} ya no está en la comunidad: pasa al siguiente`
+                                  : `lee ${nombreLector ?? "nadie"}`
+                    }.`}
+              </p>
+              {sigueAhi ? (
+                <p className="mt-1 text-xs leading-relaxed text-acento">
+                  ¿Sigue ahí {nombreLector ?? "quien lee"}? No se le oye desde que le tocó. Si no responde, «Otro lee».
+                </p>
+              ) : null}
+              {!lecturaAcabada && !sala?.micLibre ? (
+                <div className="mt-2 rounded-lg border border-borde px-3 py-2 text-xs leading-relaxed">
+                  Los micrófonos están con permiso: quien lee no se oirá si no le das la palabra.
+                  <div className="mt-2">
+                    <Boton
+                      onClick={() =>
+                        void ponerMicLibre(canal, true).catch(() => setError("No se pudieron soltar los micrófonos."))
+                      }
+                    >
+                      Soltar los micrófonos
+                    </Boton>
+                  </div>
+                </div>
+              ) : null}
+              {totalNuevo != null ? (
+                <div className="mt-2 rounded-lg border border-acento/40 px-3 py-2 text-xs leading-relaxed">
+                  El devocional se corrigió: ahora tiene {totalNuevo} turnos y la lectura contaba {lectura.total}.
+                  <div className="mt-2">
+                    <Boton
+                      onClick={() =>
+                        moverDesdeAqui(lectura, { total: totalNuevo, trozo: Math.min(lectura.trozo, totalNuevo) })
+                      }
+                    >
+                      Ajustar a {totalNuevo}
+                    </Boton>
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <Boton
+                  deshabilitado={lectura.trozo === 0 || calma}
+                  onClick={() => {
+                    // Vuelve a leer quien leyó el trozo de antes, si sigue; al
+                    // volver desde el final, el que leyó el último.
+                    const base = ordenLectura ? puestoVivo(ordenLectura.lista, lectura) : lectura.puesto;
+                    const atras = ordenLectura
+                      ? anteriorLector(ordenLectura.lista, lecturaAcabada ? base + 1 : base, puedeLeer)
+                      : null;
+                    moverDesdeAqui(lectura, {
+                      trozo: Math.max(0, lectura.trozo - 1),
+                      ...(atras
+                        ? { puesto: atras.puesto, lector: atras.lector.id, lectorUid: atras.lector.uid ?? "" }
+                        : {}),
+                    });
+                  }}
+                >
+                  ‹ Atrás
+                </Boton>
+                <Boton
+                  deshabilitado={lecturaAcabada || calma}
+                  onClick={() => {
+                    // Otro lee este mismo trozo: el que tocaba no está, o no puede.
+                    const sig = siguienteLector(
+                      ordenLectura.lista,
+                      puestoVivo(ordenLectura.lista, lectura),
+                      (l) => puedeLeer(l) && l.id !== lectura.lector,
+                    );
+                    if (!sig) {
+                      setError("No hay nadie más en la sala que pueda leer.");
+                      return;
+                    }
+                    moverDesdeAqui(lectura, {
+                      puesto: sig.puesto,
+                      lector: sig.lector.id,
+                      lectorUid: sig.lector.uid ?? "",
+                    });
+                  }}
+                >
+                  Otro lee
+                </Boton>
+                <Boton
+                  variante="fuerte"
+                  deshabilitado={lecturaAcabada || calma || pasando}
+                  onClick={() => void pasarTurno()}
+                >
+                  Siguiente ›
+                </Boton>
+              </div>
+              {lecturaAcabada && comentaHoy?.uid && gente.some((g) => g.uid === comentaHoy.uid) ? (
+                <div className="mt-2">
+                  <Boton
+                    variante="logro"
+                    ancho
+                    onClick={() =>
+                      void darLaPalabra(canal, comentaHoy.uid!, true).catch(() =>
+                        setError("No se pudo darle la palabra. Mira tu conexión."),
+                      )
+                    }
+                  >
+                    Darle la palabra a {comentaHoy.nombre} para el comentario
+                  </Boton>
+                </div>
+              ) : null}
+              <div className="mt-2">
+                <Boton
+                  variante="fantasma"
+                  ancho
+                  onClick={() =>
+                    void quitarLectura(canal).catch(() => setError("No se pudo quitar la lectura. Mira tu conexión."))
+                  }
+                >
+                  Quitar la lectura
+                </Boton>
+              </div>
+            </>
+          ) : null}
+        </Tarjeta>
+      ) : null}
+
+      {/*
+        Pegar el devocional, encima de la sala pero DENTRO de ella (no en un
+        portal): así queda por debajo de la pantalla de una alarma que suene
+        mientras se pega.
+      */}
+      {pegando && diaLectura != null ? (
+        <div className="fixed inset-0 z-30 overflow-y-auto bg-fondo">
+          <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg px-4 py-3">
+            <PegarDevocional
+              dia={diaLectura}
+              existente={devLectura && devLectura.dia === diaLectura ? devLectura : null}
+              onListo={(dev) => {
+                if (dev.dia === diaLectura) {
+                  setDevLectura(dev);
+                  setDevProvisional(false);
+                }
+                setPegando(false);
+              }}
+              onCerrar={() => setPegando(false)}
+            />
+          </div>
+        </div>
       ) : null}
 
       {/* Las manos levantadas, arriba y en orden: es lo único que pide algo. */}

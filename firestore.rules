@@ -60,6 +60,13 @@ service cloud.firestore {
     //
     // Existe porque Google Play no deja publicar una app donde unos usuarios
     // leen lo que escriben otros si nadie puede quitar lo que esté mal.
+    // Quien se apuntó a la comunidad de voz. Es la comunidad del devocional:
+    // lo que en WhatsApp es el grupo, aquí es esta lista.
+    function esMiembro() {
+      return haEntrado()
+        && exists(/databases/$(database)/documents/comunidad/voz/miembros/$(request.auth.uid));
+    }
+
     function esModerador() {
       return haEntrado()
         && exists(/databases/$(database)/documents/moderadores/$(request.auth.uid));
@@ -232,7 +239,7 @@ service cloud.firestore {
       }
 
       function salaRazonable(d) {
-        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre', 'campana'])
+        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre', 'campana', 'lectura'])
           && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
           && d.abierta is bool
           && d.desde is number
@@ -246,7 +253,25 @@ service cloud.firestore {
             d.campana is map
             && d.campana.keys().hasOnly(['cuando', 'activa'])
             && d.campana.cuando is number
-            && d.campana.activa is bool));
+            && d.campana.activa is bool))
+          // La lectura por turnos: qué día del plan, qué trozo va, en qué
+          // puesto de la lista está y quién lo lee. La lleva el anfitrión (y
+          // el lector de turno, para decir «terminé»: ver abajo).
+          && (!('lectura' in d) || (
+            d.lectura is map
+            && d.lectura.keys().hasOnly(['plan', 'dia', 'trozo', 'total', 'puesto', 'lector', 'lectorUid', 'desde'])
+            && d.lectura.plan is string && d.lectura.plan.size() <= 40
+            && d.lectura.dia is int && d.lectura.dia >= 1 && d.lectura.dia <= 366
+            && d.lectura.trozo is int && d.lectura.trozo >= 0 && d.lectura.trozo <= 200
+            // Cuántos trozos tiene: lo fija el anfitrión al empezar, para que
+            // todos sepan a la vez cuándo se acaba.
+            && (!('total' in d.lectura) || (d.lectura.total is int && d.lectura.total >= 1 && d.lectura.total <= 200
+              // Y el trozo no pasa del final: «igual al total» es «se acabó».
+              && d.lectura.trozo <= d.lectura.total))
+            && d.lectura.puesto is int && d.lectura.puesto >= -1 && d.lectura.puesto <= 200
+            && d.lectura.lector is string && d.lectura.lector.size() <= 40
+            && d.lectura.lectorUid is string && d.lectura.lectorUid.size() <= 128
+            && d.lectura.desde is number));
       }
 
       // La lee cualquiera que haya entrado: hace falta para saber si la sala
@@ -276,12 +301,42 @@ service cloud.firestore {
       allow update: if esModerador()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['abierta'])
         && request.resource.data.abierta == false;
+      // Y el que está leyendo dice «terminé»: pasa al trozo SIGUIENTE y a
+      // nada más. Sin esto, en cada párrafo el anfitrión tenía que tocar el
+      // botón mientras lee otro — y es justo el que tiene las manos ocupadas.
+      //
+      // Y se lo pasa a quien de verdad sigue: el de ese puesto en el orden de
+      // lectura, con su cuenta, y dentro de la sala. O a nadie (se acabó, o no
+      // queda quien lea: entonces reasigna el anfitrión). Sin esto, el lector
+      // podía pasárselo a una cuenta ausente y la lectura se quedaba atascada.
+      function pasaAQuienSigue(l) {
+        let lista = get(/databases/$(database)/documents/comunidad/voz/lectura/orden).data.lista;
+        return (l.lectorUid == '' && l.lector == '')
+          || (l.puesto >= 0 && l.puesto < lista.size()
+            && lista[l.puesto].id == l.lector
+            && lista[l.puesto].get('uid', '') == l.lectorUid
+            && exists(/databases/$(database)/documents/salas/$(canal)/dentro/$(l.lectorUid))
+            // Y que sea de la comunidad (quien se salió ya no ve el texto), o
+            // el anfitrión, que modera y lo lee aunque no esté apuntado.
+            && (exists(/databases/$(database)/documents/comunidad/voz/miembros/$(l.lectorUid))
+              || l.lectorUid == resource.data.anfitrion));
+      }
+      allow update: if haEntrado()
+        && resource.data.get('lectura', null) != null
+        && resource.data.lectura.get('lectorUid', '') == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lectura'])
+        && request.resource.data.lectura.plan == resource.data.lectura.plan
+        && request.resource.data.lectura.dia == resource.data.lectura.dia
+        && request.resource.data.lectura.get('total', 0) == resource.data.lectura.get('total', 0)
+        && request.resource.data.lectura.trozo == resource.data.lectura.trozo + 1
+        && salaRazonable(request.resource.data)
+        && pasaAQuienSigue(request.resource.data.lectura);
       allow delete: if esElMismo(resource.data.anfitrion);
 
       // ------------------------------------------------------ quién está dentro
       match /dentro/{quien} {
         function dentroRazonable(d) {
-          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra', 'racha', 'faltas', 'silenciado'])
+          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra', 'racha', 'faltas', 'silenciado', 'escucha'])
             && d.nombre is string && d.nombre.size() <= 40
             && d.usuario is string && d.usuario.size() <= 20
             && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000))
@@ -293,7 +348,10 @@ service cloud.firestore {
             && (!('racha' in d) || (d.racha is int && d.racha >= 0 && d.racha <= 10000))
             && (!('faltas' in d) || (d.faltas is int && d.faltas >= 0 && d.faltas <= 10000))
             // El micrófono cerrado por el anfitrión. Como `palabra`: sólo él.
-            && (!('silenciado' in d) || d.silenciado is bool);
+            && (!('silenciado' in d) || d.silenciado is bool)
+            // «Hoy sólo escucho» 👂: es de cada uno, y la lectura por turnos se
+            // lo salta. En el grupo de WhatsApp es el 👂🏻 de la lista.
+            && (!('escucha' in d) || d.escucha is bool);
         }
 
         // Todos ven la lista: es una reunión, no una sala a oscuras.
@@ -324,7 +382,7 @@ service cloud.firestore {
         allow update: if (
             esElMismo(quien)
             && dentroRazonable(request.resource.data)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mano'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mano', 'escucha'])
           ) || (
             esAnfitrion()
             && dentroRazonable(request.resource.data)
@@ -383,6 +441,59 @@ service cloud.firestore {
     // inasistencias». Cada móvil apunta lo suyo al entrar a la sala; la lista
     // entera la ve quien modera. Los dos números se copian a `dentro/{uid}`
     // al entrar, que es donde los ven los demás.
+    // ------------------------------------------------------ el orden de lectura
+    //
+    // La lista de quién lee, en orden, como el «ORDEN DE LECTURA BÍBLICA DE
+    // HOY» del grupo: cada entrada con su nombre y, si ya está en la app, su
+    // cuenta. Y el «ancla» del comentario: qué puesto comentó qué día; desde
+    // ahí avanza uno por día y da la vuelta, que es como se hace en el grupo.
+    // La escribe quien modera; la leen la comunidad y quien modera.
+    match /comunidad/voz/lectura/{doc} {
+      function ordenRazonable(d) {
+        return d.keys().hasOnly(['lista', 'ancla', 'actualizado'])
+          && d.lista is list && d.lista.size() <= 80
+          && (d.lista.size() == 0 || (d.lista[0] is map && d.lista[d.lista.size() - 1] is map))
+          && d.ancla is map && d.ancla.keys().hasOnly(['fecha', 'puesto'])
+          && d.ancla.fecha is string && d.ancla.fecha.size() == 10
+          && d.ancla.puesto is int && d.ancla.puesto >= 0
+          && d.actualizado is int;
+      }
+      allow read: if esModerador() || esMiembro();
+      allow write: if esModerador() && doc == 'orden' && ordenRazonable(request.resource.data);
+    }
+
+    // ------------------------------------------------- el archivo de devocionales
+    //
+    // «Caminemos con la Palabra», día a día: lo que Alex manda al grupo cada
+    // mañana. Lleva el texto bíblico completo (RVR1960, que tiene derechos),
+    // así que se comparte como hoy en WhatsApp: SÓLO con la comunidad. Lo sube
+    // la cuenta de servicio (scripts/devocionales/subir.mjs); desde la app no
+    // se escribe.
+    match /devocionales/{plan}/dias/{dia} {
+      // El día pegado desde la app: el Bloque 1 ya partido en trozos. Se
+      // comprueba la forma, no el contenido: lo escribe quien modera.
+      function diaRazonable(d) {
+        return d.keys().hasOnly(['dia', 'fecha', 'tema', 'capitulos', 'trozos', 'aprendi', 'subido'])
+          && d.dia is int && d.dia >= 1 && d.dia <= 366 && string(d.dia) == dia
+          && d.fecha is string && d.fecha.size() == 10
+          && d.tema is string && d.tema.size() <= 300
+          && d.capitulos is list && d.capitulos.size() <= 40
+          && d.trozos is list && d.trozos.size() >= 1 && d.trozos.size() <= 200
+          // Las reglas no recorren listas; el primero y el último, al menos,
+          // tienen que ser trozos. (La app además se salta lo que no lo sea.)
+          && d.trozos[0] is map && d.trozos[d.trozos.size() - 1] is map
+          && (!('aprendi' in d) || (d.aprendi is string && d.aprendi.size() <= 20000))
+          && d.subido is int;
+      }
+      allow read: if esModerador() || esMiembro();
+      // Pegar o corregir el devocional del día: quien modera, sólo en el plan
+      // de la comunidad. Borrar, nadie desde la app.
+      allow create, update: if esModerador()
+        && plan == 'caminemos-2026'
+        && diaRazonable(request.resource.data);
+      allow delete: if false;
+    }
+
     match /comunidad/voz/asistencia/{uid} {
       function asistenciaRazonable(d) {
         return d.keys().hasOnly(['nombre', 'usuario', 'dias', 'racha', 'faltas', 'ultimo'])

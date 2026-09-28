@@ -16,6 +16,8 @@ import { Muro } from "./Muro";
 import { ComunidadDeVoz } from "./ComunidadDeVoz";
 import { QuienPuedeLlamar } from "./QuienPuedeLlamar";
 import { Asistencia } from "./Asistencia";
+import { DevocionalDeHoy } from "./DevocionalDeHoy";
+import { OrdenDeLectura } from "./OrdenDeLectura";
 import { SalasAbiertas } from "./SalasAbiertas";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
@@ -155,6 +157,9 @@ export function PantallaComunidad({
         </p>
       </header>
 
+      {/* Lo primero: el devocional de hoy, como en YouVersion. Es lo más importante. */}
+      <DevocionalDeHoy />
+
       {/*
         El muro va arriba del todo, y no al final con los enlaces.
 
@@ -179,6 +184,8 @@ export function PantallaComunidad({
       <ComunidadDeVoz />
       {/* Sólo la ve el dueño: la lista de quién puede llamar y abrir el devocional. */}
       <QuienPuedeLlamar />
+      {/* Sólo quien modera: el orden de lectura y a quién le toca comentar. */}
+      <OrdenDeLectura />
       {/* Sólo quien modera: quién viene al devocional, su racha y sus faltas. */}
       <Asistencia />
 

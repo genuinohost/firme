@@ -106,6 +106,33 @@ export type Sala = {
    * la vez en Caracas y en Madrid; cada móvil la hace sonar por su cuenta.
    */
   campana?: { cuando: number; activa: boolean };
+  /**
+   * La lectura por turnos del devocional: qué día, qué trozo va, en qué puesto
+   * de la lista y quién lo lee. Alex, 28-09-2026: «el sistema debe
+   * identificar, según la lista de participantes y si está o no conectado, a
+   * quién le toca leer, y debe salir un letrero sutil arriba para que la
+   * persona sepa que le toca; también quién es el próximo».
+   */
+  lectura?: Lectura;
+};
+
+export type Lectura = {
+  plan: string;
+  dia: number;
+  /** El índice del trozo que se está leyendo; igual al total, se acabó. */
+  trozo: number;
+  /**
+   * Cuántos trozos tiene la lectura, fijado al empezarla. Con él, todos saben
+   * a la vez cuándo se acaba aunque el texto no les haya cargado o tengan una
+   * copia distinta del día.
+   */
+  total: number;
+  /** El puesto en la lista de quien lee (−1 si nadie). */
+  puesto: number;
+  /** El id de la entrada de la lista, y su cuenta. */
+  lector: string;
+  lectorUid: string;
+  desde: number;
 };
 
 /** Uno de los que están dentro. Sale de Firestore, con su nombre y su foto. */
@@ -129,6 +156,8 @@ export type Dentro = {
    * participantes», sobre todo al acabar, cuando alguien olvida colgar.
    */
   silenciado?: boolean;
+  /** «Hoy sólo escucho» 👂: la lectura por turnos se lo salta. */
+  escucha?: boolean;
 };
 
 /** Lo que devuelve el portero. */
@@ -312,6 +341,7 @@ export async function verQuienEsta(
           ...(typeof x.racha === "number" ? { racha: x.racha } : {}),
           ...(typeof x.faltas === "number" ? { faltas: x.faltas } : {}),
           ...(x.silenciado === true ? { silenciado: true } : {}),
+          ...(x.escucha === true ? { escucha: true } : {}),
         };
       }),
     );
@@ -340,6 +370,84 @@ export async function darLaPalabra(
   const { updateDoc } = await import("firebase/firestore");
   // Al dar la palabra se le baja la mano: ya se le atendió.
   await updateDoc(await refDentro(canal, aQuien), { palabra: se, mano: false });
+}
+
+/** «Hoy sólo escucho» 👂, o volver a leer. Es de cada uno. */
+export async function soloEscucho(canal: string, si: boolean): Promise<void> {
+  const uid = await miUid();
+  if (!uid) throw new Error("sin-cuenta");
+  const { updateDoc } = await import("firebase/firestore");
+  await updateDoc(await refDentro(canal, uid), { escucha: si });
+  apuntarEscucha(si);
+}
+
+// «Hoy sólo escucho» se recuerda en el móvil el día entero. Al volver a entrar
+// —se cayó la red, MIUI cerró la app— la ficha se borra y se crea de nuevo, y
+// sin esto la persona volvía a la lista de turnos sin haberlo pedido.
+const CLAVE_ESCUCHA = "genuino.sala.escucha";
+
+function hoyLocal(): string {
+  const f = new Date();
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+}
+
+function apuntarEscucha(si: boolean): void {
+  try {
+    if (si) localStorage.setItem(CLAVE_ESCUCHA, hoyLocal());
+    else localStorage.removeItem(CLAVE_ESCUCHA);
+  } catch {
+    // Sin almacenamiento, se pierde al volver a entrar; no es grave.
+  }
+}
+
+function escuchaHoy(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_ESCUCHA) === hoyLocal();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Empezar la lectura. Sólo el anfitrión (lo garantizan las reglas).
+ */
+export async function ponerLectura(canal: string, lectura: Lectura): Promise<void> {
+  const { updateDoc } = await import("firebase/firestore");
+  await updateDoc(await refSala(canal), { lectura });
+}
+
+/**
+ * Mover la lectura —pasar el turno, volver atrás, que lea otro— SÓLO si sigue
+ * donde quien toca el botón la vio. Devuelve `false` si ya se había movido.
+ *
+ * El lector dice «Terminé» y, en el mismo segundo, el anfitrión toca
+ * «Siguiente» con la pantalla todavía sin actualizar: sin esta comprobación,
+ * la lectura saltaba dos trozos y uno se quedaba sin leer. Y un doble toque en
+ * «Terminé» ya no da un error falso: el segundo ve que ya avanzó y no hace nada.
+ */
+export async function moverLectura(
+  canal: string,
+  vista: Pick<Lectura, "trozo" | "lectorUid" | "desde">,
+  nueva: Lectura,
+): Promise<boolean> {
+  const { runTransaction } = await import("firebase/firestore");
+  const { bd } = await nube();
+  const ref = await refSala(canal);
+  return runTransaction(bd, async (t) => {
+    const d = await t.get(ref);
+    const ahora = d.data()?.lectura as Lectura | undefined;
+    if (!ahora || ahora.trozo !== vista.trozo || (ahora.lectorUid ?? "") !== vista.lectorUid || ahora.desde !== vista.desde) {
+      return false;
+    }
+    t.update(ref, { lectura: nueva });
+    return true;
+  });
+}
+
+/** Terminar la lectura por turnos: se quita de la sala. Sólo el anfitrión. */
+export async function quitarLectura(canal: string): Promise<void> {
+  const { updateDoc, deleteField } = await import("firebase/firestore");
+  await updateDoc(await refSala(canal), { lectura: deleteField() });
 }
 
 /** Quitar a alguien de la lista SIN vetarlo: para limpiar a quien se cayó. Sólo el anfitrión. */
@@ -454,6 +562,7 @@ export async function entrarEnSala(
       // Se entra en silencio siempre. Las reglas no admitirían otra cosa.
       palabra: false,
       ...(asistencia ? { racha: asistencia.racha, faltas: asistencia.faltas } : {}),
+      ...(escuchaHoy() ? { escucha: true } : {}),
     });
   } catch (e) {
     // Aparecer en la lista significa estar. Si no se pudo, no se está: se
@@ -547,6 +656,45 @@ export function alCaducarElToken(
   hacer: () => void,
 ): Promise<{ remove: () => Promise<void> }> {
   return nativa.addListener("tokenPorCaducar", () => hacer());
+}
+
+/**
+ * Quién llega y quién se va del canal de voz, por su cuenta.
+ *
+ * Firestore no se entera de que alguien se cayó: su ficha sigue en la lista
+ * hasta que su móvil la borra, y si MIUI le cerró la app no la borra nunca.
+ * Agora sí: avisa unos segundos después. Lo usa el anfitrión para no darle el
+ * turno de lectura a un fantasma.
+ *
+ * Sólo avisa de quien publica voz (en directo, los oyentes no cuentan), y el
+ * «pasó a oyente» (motivo 2) no es irse: sigue dentro.
+ */
+export function verLlegadasYSalidas(avisos: {
+  alEntrar: (cuenta: string) => void;
+  alSalir: (cuenta: string) => void;
+}): () => void {
+  const cuentas = new Map<number, string>();
+  const apuntar = (d: Record<string, unknown>) => {
+    if (typeof d.cuenta === "string" && d.cuenta) cuentas.set(Number(d.uid), d.cuenta);
+  };
+  const escuchas = [
+    nativa.addListener("alguienEntro", (d) => {
+      apuntar(d);
+      const c = cuentas.get(Number(d.uid));
+      if (c) avisos.alEntrar(c);
+    }),
+    nativa.addListener("seSupoQuienEs", (d) => {
+      apuntar(d);
+      const c = cuentas.get(Number(d.uid));
+      if (c) avisos.alEntrar(c);
+    }),
+    nativa.addListener("alguienSalio", (d) => {
+      if (Number(d.motivo ?? 0) === 2) return;
+      const c = typeof d.cuenta === "string" && d.cuenta ? d.cuenta : cuentas.get(Number(d.uid));
+      if (c) avisos.alSalir(c);
+    }),
+  ];
+  return () => escuchas.forEach((e) => void e.then((x) => x.remove()).catch(() => {}));
 }
 
 /**

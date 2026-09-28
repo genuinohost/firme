@@ -25,3 +25,9 @@ __pycache__/
 # Lo que deja wrangler al empaquetar el portero.
 worker/.wrangler/
 public/Genuino.apk
+
+# Lo privado: el archivo de devocionales sacado del chat de WhatsApp. Lleva el
+# texto bíblico completo (RVR1960, con derechos) y los nombres de los hermanos
+# del grupo. El repositorio es PÚBLICO: esto no sale de este PC más que a
+# Firestore, con acceso sólo para la comunidad.
+privado/

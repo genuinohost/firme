@@ -1,13 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 65,
-  "nombre": "6.23",
+  "codigo": 66,
+  "nombre": "6.24",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Salas de voz mas firmes: si el anfitrion te saca o termina, sales de verdad; si se cae la red, lo dice; quien entra con microfonos libres entra callado.",
-    "Para escuchar ya no se pide el microfono: solo cuando te dan la palabra. Si lo negaste, un boton te lleva a los ajustes.",
-    "El timbre: si reinstalas o cambias de movil, vuelves a quedar apuntado al abrir la app; si la llamada llega con la app abierta, sale Entrar o Ahora no; y un movil con la hora mal puesta ya no se queda mudo.",
-    "El anfitrion ve todas las manos, tambien la de quien ya tiene la palabra, y puede sacar a alguien sin vetarlo."
+    "El devocional de cada dia dentro de la app, como en YouVersion: los dias arriba, las secciones con su circulo y el lector. Todo el ano desde el 1 de enero.",
+    "Lectura por turnos en la sala: arriba sale a quien le toca y quien sigue; el que lee toca Termine y pasa solo. Con Hoy solo escucho te saltas.",
+    "El anfitrion pega el devocional del dia desde la sala y se reparte al momento.",
+    "La app ya no se cierra si sueltan los microfonos mientras escuchas con la pantalla apagada."
   ],
   "importante": false
 }

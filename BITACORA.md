@@ -8,6 +8,123 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — 6.24: los devocionales en la app, y la lectura por turnos
+
+## Qué hay
+
+- **El archivo del año**: 270 devocionales de Alex, del 1 de enero al 28 de septiembre (falta el
+  80, que no se mandó), sacados del chat exportado con `scripts/devocionales/extraer-chat.mjs` y
+  subidos con `subir.mjs` a `devocionales/caminemos-2026/dias/{N}`. Sólo los lee la comunidad:
+  llevan la RVR1960, que tiene derechos. El chat y el archivo local viven en `privado/` (ignorado).
+- **Pantalla como YouVersion** (`PantallaDevocional`): tira de días centrada en hoy con ✓, las
+  secciones con su círculo, el lector con ‹ › y «Terminar ✓». Tarjeta arriba de Juntos.
+- **Orden de lectura** (`OrdenDeLectura`): la lista del grupo; el comentario avanza un puesto al
+  día desde un ancla. Editarla no mueve el comentario de hoy (se re-ancla por id).
+- **Turnos en la sala**: letrero arriba («Te toca leer» / «Lee X · Siguiente: Y»), «Terminé ✓»,
+  «Hoy sólo escucho» 👂 (se recuerda el día entero), y los mandos del anfitrión.
+- **Pegar el devocional del día** (`PegarDevocional`): quien modera pega el Bloque 1 —el mismo que
+  manda al grupo— desde la sala, desde Juntos o desde la pantalla del devocional, y la sala lo
+  recibe al momento. Avisa si el número de día del texto no coincide.
+
+## Lo que encontraron las dos revisiones
+
+La primera (un revisor, y un escéptico por grupo de hallazgos): 17, todos reales.
+
+- **Desde el 29 no había devocional**: el archivo acababa en el 271 y la app no podía escribir
+  días. De ahí «pegar el devocional»; el troceador pasó a `src/logica/partirDevocional.ts`, que
+  usan la app y el extractor. Al volver a extraer, **los 270 días salieron idénticos**.
+- **Carreras en el turno**: «Siguiente» del anfitrión justo tras un «Terminé» saltaba un trozo.
+  Ahora todo movimiento va por `moverLectura` (transacción: sólo si sigue donde se vio) y los
+  mandos esperan 1,5 s tras cada cambio.
+- **Lector que se va**: el móvil del anfitrión lo pasa solo al siguiente (20 s si salió, 3 si dijo
+  «sólo escucho» o no hay nadie). La regla del lector exige pasar a quien de verdad sigue: el de
+  ese puesto del orden, con su cuenta y dentro de la sala (o a nadie).
+- **Sin red**: el orden y el día se escuchan en vivo; un fallo es un fallo con «Reintentar», no
+  «falta el orden». El editor del orden ya no puede borrar la lista por un fallo de red.
+- **El total de trozos va en la lectura**, para que todos sepan a la vez cuándo se acaba.
+- **Caché de días**: con el plan en la clave y 12 horas de vida; la sala lee siempre del servidor.
+- **Bisiestos**: `fechaDelDia` ya es la inversa de `diaDelPlan`.
+- **Nombres del grupo** en unas pruebas a punto de ir al repositorio público: fuera (P1…P26), y
+  `npm run revisar-nombres` lo comprueba antes de cada commit.
+
+La segunda, sobre el conjunto (cuatro revisores y un escéptico por hallazgo, 29 agentes): 25,
+ninguno refutado. Lo que más importaba:
+
+- **La caché de días llenaba el almacenamiento** donde la app guarda tareas y rachas (unos 20 KB
+  por día, sin tope). Ahora se quedan hoy ±2 y los 8 últimos abiertos.
+- **Lo que se pega de verdad**: con las negritas de WhatsApp se perdían todos los pasajes; sin los
+  emojis de los encabezados (o con tono de piel) se fundían las secciones; los cuatro bloques de
+  DeepSeek pegados juntos acababan dentro del último turno. Ahora se limpia igual que el extractor,
+  se corta en el Bloque 2/3/4 y el 3 se toma como «lo que aprendí hoy». `npm run revisar-partido`
+  comprueba que los 270 días se siguen partiendo igual.
+- **Turnos**: no se le da el turno a quien tiene el micrófono cerrado, a quien se cayó del canal
+  (Agora lo avisa; Firestore no) ni a quien ya no es de la comunidad; el puesto del lector se busca
+  por su id (editar el orden con la sala en marcha lo descolocaba); «¿Sigue ahí X?» si no se le oye;
+  aviso si los micrófonos están con permiso durante la lectura; «Ajustar» si se corrige el día con
+  la lectura en marcha; «Terminé» con la misma calma que los mandos del anfitrión.
+- **Cargando no es «no existe»**: el orden y el día tienen tres estados, y sin conexión la sala usa
+  la copia del móvil y espera al servidor antes de empezar.
+- Reglas: la lectura no pasa de su total; el lector sólo pasa el turno a un miembro (o al
+  anfitrión); días y orden con elementos que sean mapas.
+
+La tercera, sobre esos arreglos (tres revisores y escépticos, 15 agentes): 12 más, menores (la
+lista de miembros ahora se escucha en vivo; el vigilante no actúa con la sala caída; horas locales
+en vez de comparar relojes de dos móviles…). Todos aplicados.
+
+## Un fallo que ya existía: la app podía cerrarse en pleno devocional
+
+Lo encontró la investigación de video (abajo). Al soltar los micrófonos, el móvil de quien escucha
+con la pantalla apagada sube el servicio a «micrófono»; **Android 14 no lo deja en segundo plano y
+la excepción cerraba la app**. Ahora `ServicioSala` sigue como reproducción si falla (se oye todo)
+y `Sala.handleOnResume` sube a micrófono al volver a la app.
+
+## Cómo se comprobó
+
+- `npm run revisar-reglas`: 162 comprobaciones (pegar un día, la regla nueva del lector, el total,
+  el anfitrión que recibe el turno sin estar apuntado).
+- `npm run revisar-turnos`: 51 (fechas en bisiesto, re-anclar, volver atrás, puesto vivo, y partir
+  un devocional inventado —negritas, sin emojis, cuatro bloques juntos—: el de verdad lleva texto
+  con derechos). `revisar-partido`: los 270 días. `revisar-subgrupos`: 21 (para la 6.25).
+- En el navegador, con días reales cargados sólo en local: la pantalla, el lector, y pegar el 271
+  (32 turnos, igual que el archivo) y el aviso de pegarlo en el 272.
+
+## Para mañana, 29 de septiembre
+
+El día 272 **no está**: se pega desde la app a las 4:55 (sala → «Pegar el devocional de hoy»). Y
+para que haya turnos, cada nombre del orden tiene que estar **vinculado a su cuenta** (Juntos →
+orden de lectura → vincular).
+
+## ⚠️ Agora: el plan gratuito se CORTA
+
+La investigación lo encontró en la documentación de Agora: el paquete **Free** da 10.000 minutos
+al mes y, al acabarlos, **suspende el servicio** hasta que se paga. El devocional diario de 28
+personas × 60 min son **1.680 minutos al día**: unos 6 días. Opciones (las decide y paga Alex):
+una recarga de 25.000 minutos ($23,50, dura un año) hoy y decidir el 1 de octubre, o el paquete
+Starter ($45,99/mes, 50.000 minutos, no se corta). Mirar antes el consumo en la consola.
+
+## Video, pantalla compartida y «ver juntos» (pedido de Alex)
+
+Investigado con cinco frentes, síntesis y crítica: `docs/investigacion/video-pantalla-reproductor.md`.
+Lo esencial: cámara sí, con el paquete **Lite** de Agora de la misma versión (+1,3 MB por móvil),
+primero en subgrupos; YouTube con un reproductor **sincronizado** en cada móvil ($0 en Agora),
+no compartiendo pantalla; audio propio emitido por Agora (también con la pantalla apagada);
+compartir pantalla, última fase y opcional. Nada construido todavía.
+
+## Subgrupos (pedido de Alex, para la 6.25)
+
+`src/logica/subgrupos.ts` (de 2 a 5 grupos, de 2 a 5 personas, parejos, al azar o a mano) con sus
+pruebas. El componente de pantalla está escrito y apartado hasta la 6.25.
+
+## Pendiente de Alex
+
+- La **versión de la Biblia** para llevarlo a otras comunidades: RVR1960 necesita licencia de las
+  Sociedades Bíblicas Unidas; la RV1909 es de dominio público.
+- Con eso, generar los días 272-365: el calendario ya está sacado de YouVersion
+  (`privado/devocionales/calendario-272-365.json`, 94 días, sin huecos).
+- Lo de Agora (autenticación de coanfitrión y regenerar el certificado), como en la 6.23.
+
+---
+
 # 🧭 28 de septiembre de 2026 — 6.23: lo que encontró la revisión del timbre y las salas
 
 ## Cómo se revisó

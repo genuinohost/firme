@@ -90,11 +90,28 @@ public class ServicioSala extends Service {
                 .build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(
-                    this, ID_AVISO, aviso,
-                    conMicrofono
-                            ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                            : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            try {
+                ServiceCompat.startForeground(
+                        this, ID_AVISO, aviso,
+                        conMicrofono
+                                ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                                : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } catch (Exception e) {
+                // Android 14 no deja subir a tipo microfono con la app en
+                // segundo plano: pasa cuando el anfitrion suelta los
+                // microfonos y alguien escucha con la pantalla apagada. Sin
+                // esto, la excepcion cerraba la app en pleno devocional. Se
+                // sigue como reproduccion (se oye todo); el microfono se sube
+                // al volver a la app (Sala.handleOnResume). Y hay que llamar a
+                // startForeground igualmente, o el sistema la cierra a los 5 s.
+                try {
+                    ServiceCompat.startForeground(
+                            this, ID_AVISO, aviso, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                } catch (Exception otra) {
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
+            }
         } else {
             startForeground(ID_AVISO, aviso);
         }

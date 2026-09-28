@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { pedirPermisosNativos } from "@/logica/alarmasNativas";
 import type { EstadoDespertador } from "@/logica/despertador";
 import {
   abrirAjustesDeLaApp,
@@ -18,6 +19,9 @@ import {
   unirmeALaComunidad,
 } from "@/logica/timbre";
 import { Boton, Etiqueta, Tarjeta } from "./piezas";
+
+/** Se avisa al unirse o salirse, para que quien dependa de ello se entere sin recargar. */
+export const CAMBIO_DE_COMUNIDAD = "genuino:comunidad";
 
 /**
  * La comunidad de voz: entrar, salir, y saber que al entrar te va a sonar.
@@ -94,7 +98,22 @@ export function ComunidadDeVoz() {
     ]);
     setDespertador(e);
     setInicioAuto(ia);
+    return e;
   };
+
+  // Al volver de los ajustes del sistema, se mira otra vez: si ya concedió lo
+  // que faltaba, desaparece de la lista sin tener que salir y entrar.
+  useEffect(() => {
+    if (estado !== "dentro" || !hayTimbre()) return;
+    const alVolver = () => {
+      if (document.visibilityState === "visible") void mirarElMovil();
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, [estado]);
+
+  /** Con los avisos de Genuino apagados, la llamada no suena ni se ve. */
+  const mudo = !!despertador && !(despertador.avisosActivos && despertador.canalActivo);
 
   if (estado === "mirando" || estado === "sin-cuenta") return null;
 
@@ -105,6 +124,8 @@ export function ComunidadDeVoz() {
       if (estado === "dentro") {
         await salirmeDeLaComunidad();
         setEstado("fuera");
+        // La tarjeta del devocional de hoy, arriba en Juntos, depende de esto.
+        window.dispatchEvent(new Event(CAMBIO_DE_COMUNIDAD));
         setAviso("Ya no te sonará. Puedes volver cuando quieras.");
       } else {
         if (!quien) {
@@ -113,8 +134,13 @@ export function ComunidadDeVoz() {
         }
         await unirmeALaComunidad(quien);
         setEstado("dentro");
-        setAviso("Dentro. Cuando el anfitrión llame, te sonará.");
-        if (hayTimbre()) void mirarElMovil();
+        window.dispatchEvent(new Event(CAMBIO_DE_COMUNIDAD));
+        const e = hayTimbre() ? await mirarElMovil() : null;
+        setAviso(
+          e && !(e.avisosActivos && e.canalActivo)
+            ? "Dentro, pero tu móvil tiene los avisos de Genuino apagados: actívalos abajo para que te suene."
+            : "Dentro. Cuando el anfitrión llame, te sonará.",
+        );
       }
     } catch (e) {
       const m = String((e as { message?: string })?.message ?? e);
@@ -141,11 +167,19 @@ export function ComunidadDeVoz() {
         </p>
       ) : estado === "dentro" ? (
         <>
-          <p className="mt-2 text-sm leading-relaxed">
-            Estás dentro. Cuando el anfitrión abra el devocional y llame,{" "}
-            <strong>tu móvil sonará</strong> aunque la app esté cerrada, y podrás
-            entrar con un toque.
-          </p>
+          {mudo ? (
+            <p className="mt-2 text-sm leading-relaxed">
+              Estás dentro, pero <strong>tu móvil todavía no puede sonar</strong>: tiene
+              los avisos de Genuino apagados. Actívalos abajo y la llamada te sonará
+              aunque la app esté cerrada.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed">
+              Estás dentro. Cuando el anfitrión abra el devocional y llame,{" "}
+              <strong>tu móvil sonará</strong> aunque la app esté cerrada, y podrás
+              entrar con un toque.
+            </p>
+          )}
           <div className="mt-3">
             <Boton ancho deshabilitado={ocupado} onClick={() => void cambiar()}>
               {ocupado ? "Un momento…" : "Salirme de la comunidad"}
@@ -174,7 +208,7 @@ export function ComunidadDeVoz() {
       {aviso ? <p className="mt-2 text-xs leading-relaxed text-acento">{aviso}</p> : null}
 
       {estado === "dentro" && despertador ? (
-        <ParaQueSeVea despertador={despertador} inicioAuto={inicioAuto} />
+        <ParaQueSeVea despertador={despertador} inicioAuto={inicioAuto} alVolver={() => void mirarElMovil()} />
       ) : null}
     </Tarjeta>
   );
@@ -188,14 +222,34 @@ export function ComunidadDeVoz() {
 function ParaQueSeVea({
   despertador,
   inicioAuto,
+  alVolver,
 }: {
   despertador: EstadoDespertador;
   inicioAuto: { hay: boolean; fabricante: string } | null;
+  alVolver: () => void;
 }) {
   const fabricante = (inicioAuto?.fabricante ?? despertador.fabricante ?? "").toLowerCase();
   const esXiaomi = /xiaomi|redmi|poco/.test(fabricante);
 
   const faltan: { que: string; porque: string; boton: string; hacer: () => void }[] = [];
+  const sinAvisos = !(despertador.avisosActivos && despertador.canalActivo);
+
+  // Lo primero: sin avisos permitidos la llamada ni suena ni se ve. Android
+  // sólo deja pedirlo con un diálogo una vez; si ya se negó, o si lo apagado es
+  // el canal, no queda más que ir a los ajustes de la app.
+  if (sinAvisos) {
+    faltan.push({
+      que: "Permitir los avisos de Genuino",
+      porque: "Están apagados, y así el móvil descarta la llamada en silencio: ni suena ni sale en la pantalla.",
+      boton: "Permitir los avisos",
+      hacer: () =>
+        void (async () => {
+          const r = await pedirPermisosNativos();
+          if (!r.avisos || !despertador.canalActivo) await abrirAjustesDeLaApp();
+          alVolver();
+        })(),
+    });
+  }
 
   if (!despertador.puedePantallaCompleta) {
     faltan.push({
@@ -238,7 +292,7 @@ function ParaQueSeVea({
 
   return (
     <div className="mt-4 border-t border-borde pt-3">
-      <Etiqueta>para que la llamada se vea, no sólo suene</Etiqueta>
+      <Etiqueta>{sinAvisos ? "para que la llamada suene y se vea" : "para que la llamada se vea, no sólo suene"}</Etiqueta>
       {faltan.map((f) => (
         <div key={f.que} className="mt-3">
           <p className="text-sm font-medium">{f.que}</p>
