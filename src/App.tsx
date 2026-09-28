@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cargar, guardar, idNuevo } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
 import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
@@ -47,7 +47,8 @@ import { horaLocalDe, salaDeLaUrl, type Reunion } from "@/logica/comunidad";
 import { respaldarSiToca } from "@/logica/respaldoNube";
 import { atenderLlamada, llamadaPendiente, type LlamadaPendiente } from "@/logica/timbre";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
-import { Cita } from "@/componentes/piezas";
+import { Cita, vars } from "@/componentes/piezas";
+import { reducido, resorte } from "@/logica/resorte";
 
 type Pestaña =
   | "hoy"
@@ -73,6 +74,17 @@ type Pestaña =
  */
 const EN_LA_BARRA: Pestaña[] = ["hoy", "planes", "diario", "mensaje", "comunidad", "mas"];
 
+/**
+ * Dónde está cada pantalla, de izquierda a derecha como en la barra; las de
+ * dentro de «Más», un paso más allá. Sirve para saber DESDE qué lado tiene
+ * que entrar la pantalla nueva: ir a la derecha entra desde la derecha,
+ * volver entra desde la izquierda.
+ */
+function profundidad(p: Pestaña): number {
+  const i = EN_LA_BARRA.indexOf(p);
+  return i >= 0 ? i : EN_LA_BARRA.length;
+}
+
 const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
   { id: "hoy", nombre: "Hoy", icono: "◎" },
   { id: "planes", nombre: "Planes", icono: "≡" },
@@ -84,7 +96,21 @@ const PESTAÑAS: { id: Pestaña; nombre: string; icono: string }[] = [
 
 export default function App() {
   const [datos, setDatos] = useState<Datos>(cargar);
-  const [pestaña, setPestaña] = useState<Pestaña>("hoy");
+  const [pestaña, setPestañaCruda] = useState<Pestaña>("hoy");
+  /**
+   * Hacia dónde entra la pantalla nueva: 1 si se fue a la derecha (o hacia
+   * dentro, a una pantalla de «Más»), -1 si se volvió, 0 al arrancar. Lo lee
+   * `.pantalla-entra` como `--dir`. Se guarda como estado y no se calcula al
+   * pintar: el reloj repinta cada segundo y cambiar `--dir` a media animación
+   * la haría saltar.
+   */
+  const [dir, setDir] = useState(0);
+  const setPestaña = (p: Pestaña) => {
+    setDir(Math.sign(profundidad(p) - profundidad(pestaña)));
+    setPestañaCruda(p);
+  };
+  /** Sube cuando la intro empieza a irse: Hoy vuelve a entrar debajo de ella. */
+  const [escena, setEscena] = useState(0);
   const [avisoMuro, setAvisoMuro] = useState("");
   /** Hermanos esperando que les contestes. Se pinta en «Más». */
   const [solicitudes, setSolicitudes] = useState(0);
@@ -137,6 +163,9 @@ export default function App() {
    */
   const [bloqueada, setBloqueada] = useState(() => tocaPedirlo());
   const [brindis, setBrindis] = useState<{ texto: string; fuente?: string } | null>(null);
+  /** Los dos avisos flotantes se despiden antes de irse, en vez de desaparecer. */
+  const [brindisSale, setBrindisSale] = useState(false);
+  const [avisoSale, setAvisoSale] = useState(false);
   /** Alarmas que tenían que haber sonado y no sonaron. Se dicen en voz alta. */
   const [perdidas, setPerdidas] = useState<AlarmaPerdida[]>([]);
   /**
@@ -159,6 +188,26 @@ export default function App() {
   const ahora = useReloj();
 
   useEffect(() => guardar(datos), [datos]);
+
+  /**
+   * «Menos movimiento», puesto en <html> para que el CSS lo vea.
+   *
+   * Dos fuentes y basta una: el ajuste del móvil («reducir movimiento») o el
+   * interruptor de Ajustes. Va en un efecto de disposición para que esté
+   * puesto ANTES del primer pintado: si no, a quien lo pidió le saldría la
+   * intro entera un instante.
+   */
+  useLayoutEffect(() => {
+    const consulta = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const aplicar = () => {
+      const menos = datos.ajustes.menosMovimiento || (consulta?.matches ?? false);
+      if (menos) document.documentElement.dataset.movimiento = "menos";
+      else delete document.documentElement.dataset.movimiento;
+    };
+    aplicar();
+    consulta?.addEventListener?.("change", aplicar);
+    return () => consulta?.removeEventListener?.("change", aplicar);
+  }, [datos.ajustes.menosMovimiento]);
 
   useEffect(() => {
     if (!esNativo()) return;
@@ -361,8 +410,13 @@ export default function App() {
   // Lo que pasó al intentar publicar una nota. Se retira solo, como el brindis.
   useEffect(() => {
     if (!avisoMuro) return;
+    setAvisoSale(false);
+    const irse = window.setTimeout(() => setAvisoSale(true), 5200 - 220);
     const id = window.setTimeout(() => setAvisoMuro(""), 5200);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(irse);
+      clearTimeout(id);
+    };
   }, [avisoMuro]);
 
   // Quién está esperando respuesta. Se mira al arrancar y cada vez que se
@@ -379,11 +433,51 @@ export default function App() {
   // El aviso de ánimo se retira solo.
   useEffect(() => {
     if (!brindis) return;
+    setBrindisSale(false);
+    const irse = window.setTimeout(() => setBrindisSale(true), 5200 - 220);
     const id = window.setTimeout(() => setBrindis(null), 5200);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(irse);
+      clearTimeout(id);
+    };
   }, [brindis]);
 
   const seleccionada: Pestaña = EN_LA_BARRA.includes(pestaña) ? pestaña : "mas";
+
+  /**
+   * La marca de la barra: se desliza y, a mitad de camino, se ESTIRA —más
+   * cuanto más lejos salta— y se recoge al llegar, con resorte.
+   *
+   * Con la Web Animations API y sin `fill`: al acabar manda el `transform` en
+   * línea, que ya apunta a la pestaña nueva. En un efecto de disposición para
+   * que el primer cuadro salga ya en marcha y no se vea la marca saltar al
+   * destino y volver.
+   */
+  const marca = useRef<HTMLDivElement>(null);
+  const indiceMarca = Math.max(0, PESTAÑAS.findIndex((p) => p.id === seleccionada));
+  const indiceAnterior = useRef(indiceMarca);
+  useLayoutEffect(() => {
+    const de = indiceAnterior.current;
+    indiceAnterior.current = indiceMarca;
+    const el = marca.current;
+    if (!el || typeof el.animate !== "function" || de === indiceMarca || reducido()) return;
+    const salto = Math.abs(indiceMarca - de);
+    const medio = (de + indiceMarca) / 2;
+    const estiron = Math.min(2.4, 1 + salto * 0.55);
+    const anim = el.animate(
+      [
+        { transform: `translateX(${de * 100}%) scaleX(1)` },
+        {
+          transform: `translateX(${medio * 100}%) scaleX(${estiron})`,
+          offset: 0.375,
+          easing: resorte("snap"),
+        },
+        { transform: `translateX(${indiceMarca * 100}%) scaleX(1)` },
+      ],
+      { duration: 480, easing: resorte("firme"), fill: "none" },
+    );
+    return () => anim.cancel();
+  }, [indiceMarca]);
 
   /**
    * Mandar al muro una nota recién escrita, desde el repaso o desde el plan.
@@ -515,11 +609,17 @@ export default function App() {
   return (
     <div className="mx-auto flex min-h-full max-w-lg flex-col">
       {/*
-        Cada pantalla entra: al cambiar de pestaña, el contenido nuevo aparece
-        y se posa. La clave es la pestaña, así que React desmonta la vieja y
-        monta la nueva, y la animación de entrada corre una vez por cambio.
+        Cada pantalla entra: al cambiar de pestaña, la nueva llega desde el
+        lado hacia el que se fue (`--dir`), baja un poco y se posa. La clave
+        lleva la pestaña —React desmonta la vieja y monta la nueva, y la
+        entrada corre una vez por cambio— y la escena, que sube cuando la
+        intro se va, para que Hoy entre debajo de ella y no esté ya quieto.
       */}
-      <main key={pestaña} className="zona-segura-arriba aparece flex-1 pb-24">
+      <main
+        key={`${pestaña}:${escena}`}
+        className="zona-segura-arriba pantalla-entra flex-1 pb-24"
+        style={vars({ "--dir": dir })}
+      >
         <AvisoActualizacion />
 
         {pestaña === "hoy" ? (
@@ -768,7 +868,7 @@ export default function App() {
       */}
       {brindis ? (
         <div
-          className="entrar pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4"
+          className={`${brindisSale ? "brindis-sale" : "brindis-entra"} pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4`}
           style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
         >
           {/* Fondo opaco a propósito: translúcido sobre la lista no se leía. */}
@@ -781,7 +881,7 @@ export default function App() {
       {/* Lo que pasó con el muro. Mismo sitio y misma altura que el brindis. */}
       {avisoMuro ? (
         <div
-          className="entrar pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4"
+          className={`${avisoSale ? "brindis-sale" : "brindis-entra"} pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4`}
           style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <p className="pointer-events-auto max-w-md rounded-2xl border border-borde bg-superficie-alta px-4 py-3 text-xs leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
@@ -793,12 +893,14 @@ export default function App() {
       {/* En las pantallas de dentro, «Más» queda marcada. */}
       <nav className="zona-segura-abajo fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-borde bg-fondo/95 backdrop-blur">
         {/*
-          La marca dorada se DESLIZA de una pestaña a otra en vez de saltar.
-          Mide una pestaña de ancho y se mueve con transform, que es lo único
-          que el móvil anima sin recalcular nada.
+          La marca dorada se DESLIZA de una pestaña a otra en vez de saltar,
+          estirándose a mitad de camino (el efecto de arriba). Mide una pestaña
+          de ancho y se mueve con transform, que es lo único que el móvil anima
+          sin recalcular nada.
         */}
         <div
-          className="marca-barra pointer-events-none absolute top-0 h-0.5 rounded-full bg-acento"
+          ref={marca}
+          className="marca-barra pointer-events-none absolute top-0 h-[3px] rounded-full bg-acento"
           style={{
             width: `${100 / PESTAÑAS.length}%`,
             transform: `translateX(${Math.max(0, PESTAÑAS.findIndex((p) => p.id === seleccionada)) * 100}%)`,
@@ -818,9 +920,7 @@ export default function App() {
               }`}
             >
               <span
-                className={`text-lg leading-none transition-transform duration-[var(--t-medio)] ease-[var(--curva)] ${
-                  seleccionada === p.id ? "scale-110" : ""
-                }`}
+                className={`icono-barra text-lg leading-none ${seleccionada === p.id ? "activo" : ""}`}
                 aria-hidden
               >
                 {p.icono}
@@ -831,7 +931,12 @@ export default function App() {
         </div>
       </nav>
 
-      {saludando && !disparo && !llamada ? <Intro onFin={() => setSaludando(false)} /> : null}
+      {saludando && !disparo && !llamada ? (
+        <Intro
+          onFin={() => setSaludando(false)}
+          onSaliendo={() => setEscena((n) => n + 1)}
+        />
+      ) : null}
 
       {tareaAbierta ? (
         <DialogoTarea
@@ -1001,7 +1106,7 @@ export default function App() {
                   void atenderLlamada();
                   void entrarEnSala(canal, nombre);
                 }}
-                className="rounded-2xl bg-logro px-6 py-5 text-lg font-semibold text-fondo transition active:scale-[0.98]"
+                className="toque boton-vivo rounded-2xl bg-logro px-6 py-5 text-lg font-semibold text-fondo"
               >
                 Entrar
               </button>
@@ -1010,7 +1115,7 @@ export default function App() {
                   setLlamada(null);
                   void atenderLlamada();
                 }}
-                className="rounded-2xl border border-borde px-6 py-3 text-sm text-tenue transition active:scale-[0.98]"
+                className="toque rounded-2xl border border-borde px-6 py-3 text-sm text-tenue"
               >
                 Ahora no
               </button>

@@ -237,6 +237,18 @@ export function PantallaAjustes({
         </div>
       </Tarjeta>
 
+      <Tarjeta>
+        <Etiqueta>movimiento</Etiqueta>
+        <div className="mt-3">
+          <Interruptor
+            titulo="Menos movimiento"
+            detalle="Sin animaciones: todo aparece de golpe. Si el móvil ya tiene «reducir movimiento», se apagan solas."
+            valor={a.menosMovimiento}
+            onCambiar={(v) => cambiar("menosMovimiento", v)}
+          />
+        </div>
+      </Tarjeta>
+
       <ClaveOpenRouter />
 
       <RespaldoEnElReloj rutina={datos.rutina} />

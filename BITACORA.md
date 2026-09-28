@@ -8,6 +8,82 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 (madrugada) — «quiero más power»: el movimiento con peso
+
+## Lo que pidió, en dos tiempos
+
+Por la mañana del 27: «una muy breve intro… cualquier mínima actividad que hagas debe tener alguna
+reacción, alguna animación, todo sutil, todo suave». Salió la **6.17**: una curva, tres tiempos,
+la intro de un segundo, las pantallas que se posan, el ✓ que rebota.
+
+Por la noche, viéndola en el móvil: **«casi no se notan los efectos y el dinamismo: quiero más
+power. Tienes que superar al Joseito»**. Tenía razón: era correcta y no se sentía.
+
+## Cómo se decidió la 6.18
+
+No a ojo. Se pidieron **tres propuestas independientes** de sistema de movimiento y se hicieron
+juzgar por dos jueces con la misma rúbrica (carácter, coherencia, rendimiento en WebView, respeto
+a «reducir movimiento»):
+
+| Propuesta | Idea | Nota |
+|---|---|---|
+| **Peso propio** | Todo se mueve con resortes: se pasa un pelo y vuelve, como algo con masa | **7,9 / 8,2 — ganó** |
+| Enfoque | Cinematográfico: el logo enfoca como una cámara, destello donde cae el dedo | injertos |
+| Linotipia | Editorial: el ✓ se dibuja, la G se traza, la cabecera a tiempos, la fecha pasa página | injertos |
+
+Lo que faltaba no era velocidad: era **peso**. Una curva Bézier frena y se para; un resorte se pasa
+y vuelve. Las cuatro curvas de la 6.18 son resortes muestreados en 29 puntos (`linear()`), con
+Bézier de repuesto para WebViews viejos. Viven en `estilos.css` **y** en `logica/resorte.ts`
+—la misma mano para CSS y para la Web Animations API.
+
+## Lo que hay en la 6.18
+
+- **Intro** de 1,4 s: el logo *enfoca* (copia borrosa que se disuelve mientras la nítida llega con
+  resorte, destello a los 480 ms), «Genuino» letra a letra, y al irse **Hoy vuelve a entrar
+  debajo** (`escena` en la clave de `<main>`). Se salta con un toque.
+- **Cambiar de pantalla**: la nueva llega **desde el lado hacia el que se fue** (`--dir`), baja y se
+  posa con rebote. La marca de la barra **se estira a mitad de camino** —más cuanto más lejos
+  salta— y se recoge (WAAPI en `useLayoutEffect`, sin `fill`). El icono activo sube y crece.
+- **El dedo**: hunde en 80 ms sin rebote, vuelve con resorte en 600 ms, y **se ilumina justo donde
+  cayó el dedo** (`seguirElDedo()` pone `--x/--y`; el CSS pinta el destello). La fila entera
+  responde al tocar cualquier cosa dentro.
+- **Cumplido**: el ✓ entra girando con resorte y suelta un anillo, **el trazo del ✓ se dibuja**, la
+  fila se lava de verde y el nombre **se tacha de izquierda a derecha**. Sólo en la fila que se
+  acaba de marcar (`useAcabaDe`), nunca al abrir la pantalla.
+- **La racha rueda** como un cuentakilómetros (`Rodillo`, sólo transform) y, al subir, **la G del
+  icono se traza en oro detrás** y el número crece. Los segundos de la cuenta atrás también ruedan.
+- **Día completo**: catorce motas de oro salen del botón que se tocó (`celebrarDia`, WAAPI en una
+  capa que se quita a los 1100 ms), un barrido de oro cruza la tarjeta, el titular sube palabra a
+  palabra, se dibuja un filete, y la tarjeta queda con **brasa**.
+- La cabecera de Hoy entra a tres tiempos; la fecha **pasa página** al cambiar de día; las
+  etiquetas de sección llevan filete; el botón Cumplido tiene halo y un reflejo cada 7 s.
+- **«Menos movimiento»** en Ajustes. Con eso o con «reducir movimiento» del móvil, `App.tsx` pone
+  `<html data-movimiento="menos">` y todo queda quieto en su estado final.
+
+## Comprobado
+
+Con fotogramas **congelados** en el navegador (pausando `document.getAnimations()` a 330 y
+640 ms): la G dibujándose, el barrido, el anillo del ✓, la tachadura a medias, el dígito rodando.
+Y en vivo: 14 motas creadas, `data-movimiento` puesto y quitado desde Ajustes, `--dir` 1 y -1
+según el sentido, `linear()` reconocido por el navegador. Cero errores en consola.
+
+**Sin probar en el móvil todavía.** El WebView de un Xiaomi de gama media es la prueba real.
+
+## Regla que se aprendió
+
+**Un `requestAnimationFrame` no dispara con el panel del navegador oculto**: un script que lo
+esperaba se colgó 45 s. Para congelar animaciones basta forzar el reflow (`el.offsetWidth`).
+
+## Pendiente
+
+- Que Alex vea la 6.18 en su móvil y diga si es «más power» o pasado de vueltas. Luego, las
+  referencias de José que prometió mandar.
+- El timbre: Joseito con permisos y pantalla apagada; Nazdrely y Play Services.
+- Regenerar el certificado de Agora (se pegó en el chat) y volver a poner el secreto.
+- 5 probadores de 12 para Play.
+
+---
+
 # 🧭 27 de septiembre de 2026 (noche) — el timbre sonó de verdad, y lo que Joseito vio
 
 ## 🟢 Sonó

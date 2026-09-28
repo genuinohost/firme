@@ -1,13 +1,15 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 59,
-  "nombre": "6.17",
+  "codigo": 60,
+  "nombre": "6.18",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Una intro de un segundo al abrir la app: el logo llega y se posa, y se disuelve en Hoy. Se salta con un toque.",
-    "Cada pantalla entra suave al cambiar de pestana, y la marca dorada de abajo se desliza en vez de saltar.",
-    "Todo lo que se toca responde: los botones se hunden un pelo, el ✓ de cumplido celebra, y la racha sube contando.",
-    "Si tienes «reducir movimiento» en el movil, todo esto se apaga solo."
+    "Mas power: todo se mueve con resortes, como algo que tiene peso. Los botones se hunden y vuelven, y se iluminan justo donde tocas.",
+    "La intro: el logo enfoca como una camara, Genuino llega letra a letra, y Hoy entra debajo.",
+    "Cada pantalla llega desde el lado hacia el que fuiste, y la marca de abajo se estira al saltar.",
+    "Cumplido: el check se dibuja, la fila se lava de verde y el nombre se tacha de izquierda a derecha.",
+    "La racha rueda como un cuentakilometros y, al subir, la G se traza en oro detras. El dia completo tira motas de oro.",
+    "Nuevo en Ajustes: Menos movimiento, por si todo esto marea."
   ],
   "importante": false
 }

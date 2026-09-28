@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { compartirFrase, type ResultadoCompartir } from "@/logica/compartir";
 import { alternar, estaGuardada } from "@/logica/favoritas";
 import { CATEGORIAS, type Categoria } from "@/datos/tipos";
@@ -18,13 +18,20 @@ export function Boton({
   ancho,
   deshabilitado,
   tipo = "button",
+  vivo,
 }: {
   children: ReactNode;
-  onClick?: () => void;
+  /** Recibe el evento por si hace falta saber DESDE DÓNDE se tocó (celebrar). */
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   variante?: "normal" | "fuerte" | "logro" | "fallo" | "fantasma";
   ancho?: boolean;
   deshabilitado?: boolean;
   tipo?: "button" | "submit";
+  /**
+   * El botón principal de la pantalla: con halo debajo y un reflejo que lo
+   * recorre cada siete segundos. **Uno por pantalla**, o deja de destacar.
+   */
+  vivo?: boolean;
 }) {
   const estilos: Record<string, string> = {
     normal: "bg-superficie-alta border-borde hover:border-tenue",
@@ -38,7 +45,7 @@ export function Boton({
       type={tipo}
       onClick={onClick}
       disabled={deshabilitado}
-      className={`toque rounded-xl border px-4 py-3 text-sm disabled:opacity-40 disabled:active:scale-100 ${estilos[variante]} ${ancho ? "w-full" : ""}`}
+      className={`toque rounded-xl border px-4 py-3 text-sm disabled:opacity-40 ${estilos[variante]} ${ancho ? "w-full" : ""} ${vivo ? "boton-vivo" : ""}`}
     >
       {children}
     </button>
@@ -59,12 +66,110 @@ export function Tarjeta({
   );
 }
 
-export function Etiqueta({ children }: { children: ReactNode }) {
+export function Etiqueta({
+  children,
+  filete,
+}: {
+  children: ReactNode;
+  /** Con una línea de oro debajo que se dibuja al entrar. Para la primera
+      etiqueta de sección de cada pantalla, no para todas. */
+  filete?: boolean;
+}) {
   return (
-    <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-tenue">
+    <span
+      className={`text-[11px] font-medium uppercase tracking-[0.14em] text-tenue ${
+        filete ? "etiqueta-filete" : ""
+      }`}
+    >
       {children}
     </span>
   );
+}
+
+const DIGITOS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+/**
+ * Un número que RUEDA, como un cuentakilómetros.
+ *
+ * Cada dígito es una columna de 1em con la tira 0-9 detrás; al cambiar, la
+ * tira se desplaza con `transform` y se pasa un poco antes de asentarse
+ * (`.rodillo-tira` en estilos.css). Sólo transform: un móvil viejo lo mueve
+ * sin recalcular nada, aunque ruede cada segundo en la cuenta atrás.
+ *
+ * La clave de cada columna cuenta DESDE LA DERECHA: al pasar de 9 a 10 la
+ * columna de las unidades conserva su identidad y rueda, y la nueva —las
+ * decenas— entra apareciendo. Lo que no es dígito (los dos puntos de «12:34»)
+ * se pinta quieto.
+ *
+ * De 9 a 0 la tira vuelve hacia atrás en vez de dar la vuelta completa (eso
+ * pediría una tira doble). En la racha pasa una vez cada diez días y en la
+ * cuenta atrás se ve como el giro rápido de un contador: está bien así.
+ */
+export function Rodillo({
+  valor,
+  minimo = 1,
+  className = "",
+}: {
+  valor: number | string;
+  /** Cifras mínimas: con 2, el 5 se pinta «05». */
+  minimo?: number;
+  className?: string;
+}) {
+  const texto =
+    typeof valor === "number"
+      ? String(Math.max(0, Math.round(valor))).padStart(minimo, "0")
+      : valor;
+  const letras = texto.split("");
+  return (
+    <span className={`rodillo ${className}`} aria-label={texto} role="text">
+      {letras.map((c, i) =>
+        /\d/.test(c) ? (
+          <span key={letras.length - i} className="rodillo-col aparece" aria-hidden>
+            <span
+              className="rodillo-tira"
+              style={{ transform: `translateY(-${Number(c) * 10}%)` }}
+            >
+              {DIGITOS.map((d) => (
+                <span key={d} className="rodillo-digito">
+                  {d}
+                </span>
+              ))}
+            </span>
+          </span>
+        ) : (
+          <span key={`s${letras.length - i}`} className="rodillo-digito" aria-hidden>
+            {c}
+          </span>
+        ),
+      )}
+    </span>
+  );
+}
+
+/**
+ * El ✓ como trazo, para que pueda DIBUJARSE: dentro de `.snap-ok`, el CSS lo
+ * traza de izquierda a derecha en 380 ms. Fuera, es un ✓ normal.
+ */
+export function CheckDibujado({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path className="trazo-check" pathLength={1} d="M4 12.5 9.5 18 20 6.5" />
+    </svg>
+  );
+}
+
+/** Para poner `--i` y demás variables en `style` sin pelearse con TypeScript. */
+export function vars(v: Record<string, number | string>): CSSProperties {
+  return v as CSSProperties;
 }
 
 export function Campo({
@@ -164,17 +269,19 @@ export function Cita({
           <div className="-mr-1 flex shrink-0 items-center gap-1">
             <button
               onClick={() => setGuardada(alternar(texto, fuente))}
-              className={`rounded-lg px-2 py-1 text-sm transition ${
+              className={`toque rounded-lg px-2 py-1 text-sm ${
                 guardada ? "text-acento" : "text-tenue hover:text-acento"
               }`}
               aria-label={guardada ? "Quitar de guardadas" : "Guardar esta frase"}
               aria-pressed={guardada}
             >
-              {guardada ? "♥" : "♡"}
+              <span key={String(guardada)} className={guardada ? "snap-ok inline-block" : "inline-block"}>
+                {guardada ? "♥" : "♡"}
+              </span>
             </button>
             <button
               onClick={async () => setEstado(await compartirFrase({ texto, fuente }))}
-              className="rounded-lg px-2 py-1 text-xs text-tenue transition hover:text-acento"
+              className="toque rounded-lg px-2 py-1 text-xs text-tenue hover:text-acento"
               aria-label="Compartir esta frase"
             >
               {estado === "copiado"

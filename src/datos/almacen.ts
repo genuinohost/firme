@@ -52,6 +52,7 @@ export function datosIniciales(): Datos {
       // Diez, que es lo que pidio Alex: cinco no da tiempo a nada y quince ya
       // es volverse a dormir. Se puede cambiar en Ajustes.
       posponerMin: 10,
+      menosMovimiento: false,
     },
   };
 }

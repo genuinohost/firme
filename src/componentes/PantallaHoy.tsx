@@ -1,10 +1,23 @@
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { Ajustes, Motivo, Suceso } from "@/datos/tipos";
 import { estaVencido, faseDe, fechaLarga, finDe, minutoActual, sucesoEnCurso } from "@/logica/dia";
-import { useContador } from "@/logica/contador";
+import { useAcabaDe, useSubio } from "@/logica/recien";
+import { celebrarDia } from "@/logica/celebrar";
 import { elegirFrase } from "@/logica/elegirFrase";
 import { diaDe, faltaPara, type Aviso } from "@/logica/avisos";
-import { AreaTexto, Boton, Cita, Etiqueta, Punto, Tarjeta, Vacio, colorDe } from "./piezas";
+import {
+  AreaTexto,
+  Boton,
+  CheckDibujado,
+  Cita,
+  Etiqueta,
+  Punto,
+  Rodillo,
+  Tarjeta,
+  Vacio,
+  colorDe,
+  vars,
+} from "./piezas";
 
 type Props = {
   fecha: string;
@@ -69,16 +82,23 @@ function quedanDe(suceso: Suceso, ahora: Date): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/** El trazo de la G del icono (`public/icono.svg`), para dibujarla detrás de la racha. */
+const TRAZO_G = "M 357.6 184.9 A 124 124 0 1 0 357.6 327.1 L 357.6 256 L 284 256";
+
 export function PantallaHoy(props: Props) {
   const {
     fecha, fechaObjeto, esHoy, ahora, sucesos, ajustes, motivos, racha, alarma,
     onCumplir, onSaltar, onDeshacer, onCambiarDia, onNuevaTarea, onEditarTarea, onVerPorque,
   } = props;
-  // La racha sube contando, no de golpe: es lo que la app celebra.
-  const rachaContada = useContador(racha);
 
   const [saltando, setSaltando] = useState<Suceso | null>(null);
   const [excusa, setExcusa] = useState("");
+  /** Hacia dónde se pasó de día la última vez: la fecha rueda en ese sentido. */
+  const [sentido, setSentido] = useState<0 | 1 | -1>(0);
+  const cambiarDia = (d: 1 | -1) => {
+    setSentido(d);
+    onCambiarDia(d);
+  };
 
   const minuto = minutoActual(ahora);
   const conHora = useMemo(() => sucesos.filter((s) => s.minuto !== null), [sucesos]);
@@ -93,13 +113,44 @@ export function PantallaHoy(props: Props) {
     ? elegirFrase("empuje", ajustes, `${fecha}|${actual.id}`, actual.categoria)
     : elegirFrase("repaso", ajustes, fecha);
 
+  /**
+   * Celebrar, y sólo cuando toca.
+   *
+   * La racha se celebra al SUBIR (la G se dibuja detrás, el número crece); el
+   * día se celebra al COMPLETARSE con un toque de aquí —no al pasar a un día
+   * de ayer que ya estaba completo—, y las motas de oro salen del botón que
+   * se tocó. Nada de esto pasa al abrir la pantalla: eso sería decorar.
+   */
+  const subio = useSubio(racha);
+  const completo = esHoy && sucesos.length > 0 && cumplidos === sucesos.length;
+  const ultimoToque = useRef<DOMRect | undefined>(undefined);
+  const antes = useRef({ fecha, completo });
+  const [celebrando, setCelebrando] = useState(false);
+  useEffect(() => {
+    const previo = antes.current;
+    antes.current = { fecha, completo };
+    if (previo.fecha !== fecha || !completo || previo.completo) return;
+    setCelebrando(true);
+    celebrarDia(ultimoToque.current);
+    const id = window.setTimeout(() => setCelebrando(false), 1400);
+    return () => clearTimeout(id);
+  }, [fecha, completo]);
+
+  const cumplir = (s: Suceso, desde?: DOMRect) => {
+    ultimoToque.current = desde;
+    onCumplir(s);
+  };
+
+  const titulo = completo ? "Día completo. Sin fisuras." : "No queda nada por delante.";
+
   return (
     <div className="flex flex-col gap-5 px-4 pb-6">
+      {/* La cabecera entra a tres tiempos: etiqueta, fecha, racha. */}
       <header className="pt-1">
-        <div className="flex items-center justify-between">
+        <div className="primer-tiempo flex items-center justify-between">
           <button
-            onClick={() => onCambiarDia(-1)}
-            className="-ml-2 px-2 py-1 text-lg text-tenue transition hover:text-texto"
+            onClick={() => cambiarDia(-1)}
+            className="toque -ml-2 rounded-lg px-2 py-1 text-lg text-tenue hover:text-texto"
             aria-label="Día anterior"
           >
             ‹
@@ -108,26 +159,54 @@ export function PantallaHoy(props: Props) {
             {etiquetaRelativa(fechaObjeto, ahora)}
           </h1>
           <button
-            onClick={() => onCambiarDia(1)}
-            className="-mr-2 px-2 py-1 text-lg text-tenue transition hover:text-texto"
+            onClick={() => cambiarDia(1)}
+            className="toque -mr-2 rounded-lg px-2 py-1 text-lg text-tenue hover:text-texto"
             aria-label="Día siguiente"
           >
             ›
           </button>
         </div>
         <div className="mt-1 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-lg font-semibold first-letter:uppercase">
-              {fechaLarga(fechaObjeto)}
-            </p>
+          <div className="segundo-tiempo min-w-0">
+            {/* La fecha pasa página: sube al ir hacia delante, baja al volver. */}
+            <div className="pasa-pagina" data-sentido={sentido}>
+              <p key={fecha} className="text-lg font-semibold first-letter:uppercase">
+                {fechaLarga(fechaObjeto)}
+              </p>
+            </div>
             <p className="text-sm text-tenue">
               {sucesos.length === 0
                 ? "nada programado"
                 : `${cumplidos} de ${sucesos.length} cumplidos`}
             </p>
           </div>
-          <div className="shrink-0 text-right leading-none">
-            <span className="cifras text-3xl font-bold text-acento">{rachaContada}</span>
+          <div className="tercer-tiempo relative shrink-0 text-right leading-none">
+            {subio ? (
+              <>
+                <span className="halo-destello" aria-hidden />
+                <svg
+                  className="pointer-events-none absolute -inset-3 size-auto text-acento"
+                  viewBox="0 0 512 512"
+                  fill="none"
+                  aria-hidden
+                >
+                  <path
+                    className="trazo"
+                    pathLength={1}
+                    d={TRAZO_G}
+                    stroke="currentColor"
+                    strokeWidth="34"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </>
+            ) : null}
+            {/* La racha rueda como un cuentakilómetros: es lo que la app celebra. */}
+            <Rodillo
+              valor={racha}
+              className={`cifras relative text-3xl font-bold text-acento ${subio ? "grande" : ""}`}
+            />
             <div className="mt-1">
               <Etiqueta>{racha === 1 ? "día seguido" : "días seguidos"}</Etiqueta>
             </div>
@@ -140,7 +219,7 @@ export function PantallaHoy(props: Props) {
 
       {/* El bloque que toca ahora: grande, con la razón y la frase. */}
       {actual && actual.minuto !== null ? (
-        <Tarjeta className="entrar relative overflow-hidden !p-5">
+        <Tarjeta className="relative overflow-hidden !p-5">
           <div
             className="absolute inset-x-0 top-0 h-1"
             style={{ background: colorDe(actual.categoria) }}
@@ -150,7 +229,9 @@ export function PantallaHoy(props: Props) {
           <p className="cifras mt-1 text-sm text-tenue">
             {actual.hora} · {actual.duracionMin} min ·{" "}
             {enCurso ? (
-              <span className="text-acento">quedan {quedanDe(actual, ahora)}</span>
+              <span className="text-acento">
+                quedan <Rodillo valor={quedanDe(actual, ahora)} />
+              </span>
             ) : (
               faltanPara(actual.minuto, ahora)
             )}
@@ -168,7 +249,12 @@ export function PantallaHoy(props: Props) {
 
           <div className="mt-4 flex gap-2">
             <div className="flex-1">
-              <Boton variante="logro" ancho onClick={() => onCumplir(actual)}>
+              <Boton
+                variante="logro"
+                ancho
+                vivo
+                onClick={(e) => cumplir(actual, e.currentTarget.getBoundingClientRect())}
+              >
                 Cumplido
               </Boton>
             </div>
@@ -184,11 +270,26 @@ export function PantallaHoy(props: Props) {
           </div>
         </Tarjeta>
       ) : esHoy && conHora.length > 0 ? (
-        <Tarjeta className="!p-5 text-center">
+        <Tarjeta className="relative !p-5 text-center">
+          {/* Con el día completo, la tarjeta queda con brasa; al completarse, la cruza el oro. */}
+          {completo ? <span className="brasa" aria-hidden /> : null}
+          {celebrando ? <span className="barrido" aria-hidden /> : null}
           <Etiqueta>día terminado</Etiqueta>
-          <p className="mt-2 text-lg font-semibold">
-            {cumplidos === sucesos.length ? "Día completo. Sin fisuras." : "No queda nada por delante."}
+          <p className="mt-2 text-lg font-semibold" aria-label={titulo}>
+            {titulo.split(" ").map((palabra, i) => (
+              <Fragment key={`${titulo}|${i}`}>
+                {i > 0 ? " " : null}
+                <span className="palabra" style={vars({ "--i": i })} aria-hidden>
+                  <span>{palabra}</span>
+                </span>
+              </Fragment>
+            ))}
           </p>
+          {completo ? (
+            <svg className="filete mt-3" viewBox="0 0 100 2" preserveAspectRatio="none" aria-hidden>
+              <line x1="0" y1="1" x2="100" y2="1" pathLength={1} />
+            </svg>
+          ) : null}
           <div className="mt-3">
             <Cita texto={frase.texto} fuente={frase.fuente} />
           </div>
@@ -199,18 +300,21 @@ export function PantallaHoy(props: Props) {
       {ancla && ancla.texto ? (
         <button
           onClick={onVerPorque}
-          className="rounded-2xl border border-acento/25 bg-acento/[0.06] p-4 text-left transition hover:border-acento/50"
+          className="toque rounded-2xl border border-acento/25 bg-acento/[0.06] p-4 text-left hover:border-acento/50"
         >
           <Etiqueta>por esto te esfuerzas</Etiqueta>
           <p className="mt-1.5 text-[15px] leading-relaxed">{ancla.texto}</p>
         </button>
       ) : null}
 
-      {/* La línea del día. Entra escalonada: cada bloque 45 ms después del anterior. */}
+      {/* La línea del día. Entra escalonada: cada bloque 55 ms después del anterior, y su hora 70 ms después. */}
       <section className="escalonado flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Etiqueta>el día</Etiqueta>
-          <button onClick={onNuevaTarea} className="text-sm text-acento transition hover:brightness-125">
+          <Etiqueta filete>el día</Etiqueta>
+          <button
+            onClick={onNuevaTarea}
+            className="toque -mr-2 rounded-lg px-2 py-1 text-sm text-acento hover:brightness-125"
+          >
             + tarea
           </button>
         </div>
@@ -226,7 +330,7 @@ export function PantallaHoy(props: Props) {
             fase={faseDe(s, minuto, esHoy)}
             destacado={actual?.id === s.id}
             vencido={estaVencido(s, minuto, ajustes.graciaMin, esHoy)}
-            onCumplir={() => onCumplir(s)}
+            onCumplir={(desde) => cumplir(s, desde)}
             onSaltar={() => {
               setSaltando(s);
               setExcusa("");
@@ -248,7 +352,7 @@ export function PantallaHoy(props: Props) {
                 fase="sinHora"
                 destacado={false}
                 vencido={false}
-                onCumplir={() => onCumplir(s)}
+                onCumplir={(desde) => cumplir(s, desde)}
                 onSaltar={() => {
                   setSaltando(s);
                   setExcusa("");
@@ -264,7 +368,7 @@ export function PantallaHoy(props: Props) {
       {/* Antes de saltar, el porqué. Esa fricción es intencionada. */}
       {saltando ? (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-fondo/85 p-4 backdrop-blur-sm sm:items-center">
-          <Tarjeta className="entrar w-full max-w-md !bg-superficie-alta">
+          <Tarjeta className="w-full max-w-md !bg-superficie-alta">
             <Etiqueta>antes de saltarlo</Etiqueta>
             <h3 className="mt-1 text-lg font-semibold">{saltando.nombre}</h3>
             {saltando.porque ? (
@@ -292,8 +396,8 @@ export function PantallaHoy(props: Props) {
                 <Boton
                   variante="fuerte"
                   ancho
-                  onClick={() => {
-                    onCumplir(saltando);
+                  onClick={(e) => {
+                    cumplir(saltando, e.currentTarget.getBoundingClientRect());
                     setSaltando(null);
                   }}
                 >
@@ -326,7 +430,8 @@ export function PantallaHoy(props: Props) {
  * La cuenta atrás hasta el próximo aviso.
  *
  * Sale de la misma lista que se le entrega a Android, así que lo que marca es
- * lo que el sistema tiene programado de verdad, no una cuenta aparte.
+ * lo que el sistema tiene programado de verdad, no una cuenta aparte. Los
+ * segundos RUEDAN: el tiempo se ve moverse, como en el reloj del móvil.
  */
 function ContadorAlarma({ alarma, ahora }: { alarma: Aviso | null; ahora: Date }) {
   if (!alarma) {
@@ -362,13 +467,12 @@ function ContadorAlarma({ alarma, ahora }: { alarma: Aviso | null; ahora: Date }
           {`${String(cuando.getHours()).padStart(2, "0")}:${String(cuando.getMinutes()).padStart(2, "0")}`}
         </p>
       </div>
-      <span
+      <Rodillo
+        valor={faltaPara(cuando, ahora)}
         className={`cifras shrink-0 text-xl font-semibold tracking-tight ${
           inminente ? "text-acento" : ""
         }`}
-      >
-        {faltaPara(cuando, ahora)}
-      </span>
+      />
     </div>
   );
 }
@@ -387,7 +491,8 @@ function FilaSuceso({
   fase: ReturnType<typeof faseDe>;
   destacado: boolean;
   vencido: boolean;
-  onCumplir: () => void;
+  /** Con el rectángulo del botón tocado: de ahí salen las motas si completa el día. */
+  onCumplir: (desde?: DOMRect) => void;
   onSaltar: () => void;
   onDeshacer: () => void;
   /** Abre el editor. Solo las tareas sueltas se editan desde aquí; los
@@ -398,14 +503,22 @@ function FilaSuceso({
   const cumplido = registro?.estado === "cumplido";
   const saltado = registro?.estado === "saltado";
   const apagado = (fase === "pasado" && !registro) || saltado;
+  /**
+   * Sólo la fila que se ACABA de marcar celebra: lavado verde, el nombre se
+   * tacha de izquierda a derecha y el ✓ se dibuja. Una fila que ya estaba
+   * cumplida al abrir la pantalla se pinta quieta.
+   */
+  const reciente = useAcabaDe(cumplido);
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
-        destacado ? "border-acento/40 bg-superficie" : "border-borde bg-superficie/60"
-      } ${apagado ? "opacity-55" : ""}`}
+      className={`fila flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+        reciente ? "fila-reciente" : ""
+      } ${destacado ? "border-acento/40 bg-superficie" : "border-borde bg-superficie/60"} ${
+        apagado ? "opacity-55" : ""
+      }`}
     >
-      <div className="cifras w-11 shrink-0 text-sm text-tenue">
+      <div className="fila-hora cifras w-11 shrink-0 text-sm text-tenue">
         {suceso.hora ?? "—"}
       </div>
       <Punto categoria={suceso.categoria} />
@@ -423,8 +536,9 @@ function FilaSuceso({
           className="flex w-full items-center gap-1.5 text-left"
           aria-label={`Editar ${suceso.nombre}`}
         >
-          <span className={`truncate text-[15px] ${cumplido ? "text-tenue line-through" : ""}`}>
+          <span className={`relative truncate text-[15px] ${cumplido ? "text-tenue" : ""}`}>
             {suceso.nombre}
+            {cumplido ? <i className="tachadura" aria-hidden /> : null}
           </span>
           <span className="shrink-0 text-xs text-tenue" aria-hidden>
             ✎
@@ -440,16 +554,25 @@ function FilaSuceso({
       {registro ? (
         <button
           onClick={onDeshacer}
-          className={`shrink-0 rounded-lg px-2 py-1 text-xs transition ${
+          className={`toque shrink-0 rounded-lg px-2 py-1 text-xs ${
             cumplido ? "text-logro" : "text-fallo"
           } hover:bg-superficie-alta`}
         >
-          <span className="pop inline-block">{cumplido ? "✓ hecho" : "saltado"}</span>
+          <span className={`inline-flex items-center gap-1 ${reciente ? "snap-ok" : ""}`}>
+            {cumplido ? (
+              <>
+                <CheckDibujado className="size-3.5" />
+                <span className="desde-izquierda-corto">hecho</span>
+              </>
+            ) : (
+              "saltado"
+            )}
+          </span>
         </button>
       ) : (
         <div className="flex shrink-0 gap-1">
           <button
-            onClick={onCumplir}
+            onClick={(e) => onCumplir(e.currentTarget.getBoundingClientRect())}
             className="toque rounded-lg border border-borde px-2.5 py-1.5 text-xs hover:border-logro hover:text-logro"
             aria-label={`Marcar ${suceso.nombre} como cumplido`}
           >
@@ -467,4 +590,3 @@ function FilaSuceso({
     </div>
   );
 }
-

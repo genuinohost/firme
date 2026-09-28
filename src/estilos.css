@@ -103,22 +103,6 @@ body {
   animation: latido 1.6s ease-in-out infinite;
 }
 
-@keyframes entrar {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-/* Sin `fill-mode`: si el navegador no llega a pintar la animación (pestaña en
-   segundo plano), el elemento se queda visible en vez de invisible. */
-.entrar {
-  animation: entrar 0.28s ease-out;
-}
-
 /* El código equivocado: un no que se ve antes de leerlo. */
 @keyframes temblor {
   0%, 100% { transform: translateX(0); }
@@ -132,143 +116,706 @@ body {
 }
 
 /* ==========================================================================
-   El movimiento: una sola mano.
+   El movimiento: una sola mano, y con peso.
 
-   Alex, 27-09-2026: «cualquier mínima actividad que hagas debe tener alguna
-   reacción, alguna animación, todo sutil, todo suave, sin que se vea fuerte».
+   Alex, 27-09-2026, por la mañana: «cualquier mínima actividad que hagas debe
+   tener alguna reacción, alguna animación, todo sutil, todo suave». Y por la
+   noche, viendo la primera versión: «casi no se notan los efectos y el
+   dinamismo: quiero más power».
 
-   Tres reglas para que se sienta una sola mano y no diez:
+   Lo que faltaba no era velocidad: era PESO. Una curva Bézier frena y se
+   para; un resorte se pasa un pelo y vuelve, como algo que tiene masa. Por
+   eso las cuatro curvas de aquí son resortes muestreados (`linear()`), con un
+   Bézier de repuesto para navegadores viejos. Las mismas viven en
+   `logica/resorte.ts` para lo que se anima desde JavaScript: es la misma mano.
 
-   1. UNA curva para todo lo que aparece o se mueve (--curva): arranca rápido y
-      frena suave, como algo que llega y se posa. Y UNA curva con rebote
-      (--rebote) reservada para lo que celebra: el ✓ de cumplido y poco más.
-   2. TRES tiempos, no veinte: 150 ms para responder al dedo, 260 ms para lo que
-      entra en pantalla, 420 ms para lo que celebra. Más lento se siente lento;
-      más rápido no se ve.
-   3. Solo `transform` y `opacity`. Son lo único que el móvil anima sin
-      recalcular la página, y la app corre dentro de un WebView en teléfonos
-      que no son nuevos. Un movimiento que tironea es peor que ninguno.
+     --r-dedo    sin rebote, corto          la respuesta al toque
+     --r-firme   sin rebote, se posa        lo que entra en pantalla
+     --r-vivo    se pasa un 5 % y vuelve    pantallas, iconos, lo que respira
+     --r-snap    se pasa un 24 % y vuelve   celebrar: el ✓, la marca al saltar
 
-   Y todo se apaga con «reducir movimiento»: hay gente a la que las
-   animaciones marean, y la app tiene que ser igual de buena para ellos.
+   Reglas que no se rompen:
+   1. Sólo `transform` y `opacity`. Son lo único que el móvil anima sin
+      recalcular la página, y la app corre en un WebView en teléfonos que no
+      son nuevos. Un movimiento que tironea es peor que ninguno. (El trazo
+      del ✓ y de la G anima `stroke-dashoffset`: son iconos de 14 píxeles.)
+   2. Todo acaba en `transform: none`: nada se queda a medias ni deja un
+      contenedor transformado debajo de un `position: fixed`.
+   3. Lo que celebra, celebra UNA vez: la clase se pone cuando algo acaba de
+      pasar (`useRecien`, `useSubio`, `useAcabaDe` en `logica/recien.ts`), no
+      cuando ya está. Un ✓ que rebota al abrir la pantalla es ruido.
+   4. Todo se apaga con «menos movimiento». `App.tsx` pone
+      `<html data-movimiento="menos">` si lo pide el móvil («reducir
+      movimiento») o el interruptor de Ajustes; el bloque del final lo mira.
+      Hay gente a la que las animaciones marean, y la app tiene que ser igual
+      de buena para ellos.
    ========================================================================== */
 :root {
-  --curva: cubic-bezier(0.22, 0.9, 0.25, 1);
-  --rebote: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --t-rapido: 150ms;
-  --t-medio: 260ms;
-  --t-lento: 420ms;
+  /* De repuesto, Bézier. Si el navegador sabe `linear()`, abajo se pisan. */
+  --r-dedo: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --r-firme: cubic-bezier(0.22, 0.9, 0.25, 1);
+  --r-vivo: cubic-bezier(0.34, 1.3, 0.5, 1);
+  --r-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --t-dedo: 150ms;
+  --t-firme: 380ms;
+  --t-vivo: 450ms;
+  --t-snap: 600ms;
+  --t-rodillo: 700ms;
+  --t-celebra: 900ms;
+
+  /* Los nombres de la primera versión siguen valiendo. */
+  --curva: var(--r-firme);
+  --rebote: var(--r-snap);
+  --t-rapido: var(--t-dedo);
+  --t-medio: var(--t-firme);
+  --t-lento: var(--t-snap);
+}
+@supports (animation-timing-function: linear(0, 1)) {
+  :root {
+    --r-dedo: linear(0, .019, .075, .138, .211, .304, .381, .472, .542, .608, .678, .731, .777, .825, .859, .888, .917, .937, .953, .969, .979, .988, .994, .999, 1.003, 1.005, 1.006, 1.007, 1);
+    --r-firme: linear(0, .027, .085, .165, .254, .338, .425, .505, .573, .639, .696, .743, .786, .822, .853, .878, .9, .918, .932, .945, .955, .963, .97, .976, .98, .984, .987, .99, 1);
+    --r-vivo: linear(0, .032, .108, .212, .329, .449, .564, .669, .761, .84, .903, .953, .991, 1.018, 1.036, 1.046, 1.051, 1.052, 1.049, 1.045, 1.039, 1.033, 1.027, 1.021, 1.016, 1.011, 1.007, 1.004, 1);
+    --r-snap: linear(0, .085, .286, .549, .794, .997, 1.139, 1.216, 1.237, 1.213, 1.164, 1.104, 1.046, .999, .965, .948, .944, .95, .962, .976, .99, 1.001, 1.009, 1.013, 1.013, 1.012, 1.009, 1.005, 1);
+  }
 }
 
-/* Lo que entra en pantalla: aparece y se posa. Sin fill-mode, como `entrar`,
-   para que si no llega a pintarse no se quede invisible. */
-@keyframes aparece {
+/* --------------------------------------------------------------------------
+   Cambiar de pantalla.
+
+   La pantalla nueva llega DESDE el lado hacia el que se fue: a la derecha
+   en la barra, entra desde la derecha; volver a «Más», desde la izquierda.
+   `--dir` lo pone App.tsx (1, -1 o 0). Además baja un poco y crece: llega y
+   se posa, con el rebote de --r-vivo.
+   -------------------------------------------------------------------------- */
+@keyframes pantalla-entra {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translate3d(calc(var(--dir, 0) * 28px), 12px, 0) scale(0.975);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-.aparece {
-  animation: aparece var(--t-medio) var(--curva);
-}
-
-/* Una lista que entra escalonada: cada hijo, 45 ms después del anterior. A
-   partir del octavo entran todos a la vez — más allá no se ve y suma espera. */
-.escalonado > * {
-  animation: aparece var(--t-medio) var(--curva) backwards;
-}
-.escalonado > :nth-child(1) { animation-delay: 0ms; }
-.escalonado > :nth-child(2) { animation-delay: 45ms; }
-.escalonado > :nth-child(3) { animation-delay: 90ms; }
-.escalonado > :nth-child(4) { animation-delay: 135ms; }
-.escalonado > :nth-child(5) { animation-delay: 180ms; }
-.escalonado > :nth-child(6) { animation-delay: 225ms; }
-.escalonado > :nth-child(7) { animation-delay: 270ms; }
-.escalonado > :nth-child(n + 8) { animation-delay: 315ms; }
-
-/* El dedo: todo lo que se toca se hunde un pelo y vuelve. */
-.toque {
-  transition:
-    transform var(--t-rapido) var(--curva),
-    filter var(--t-rapido) var(--curva),
-    background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva),
-    color var(--t-rapido) var(--curva);
-}
-.toque:active {
-  transform: scale(0.96);
-}
-
-/* Celebrar: el ✓ crece un poco de más y se asienta. La única vez que se usa
-   el rebote, para que siga significando algo. */
-@keyframes pop {
-  0% { transform: scale(0.6); opacity: 0; }
-  60% { transform: scale(1.18); opacity: 1; }
-  100% { transform: scale(1); }
-}
-.pop {
-  animation: pop var(--t-lento) var(--rebote);
-}
-
-/* La marca de la barra de abajo: se desliza de una pestaña a otra en vez de
-   saltar. Ancho de una pestaña, movido por --pestaña. */
-.marca-barra {
-  transition: transform var(--t-medio) var(--curva);
+.pantalla-entra {
+  animation: pantalla-entra var(--t-vivo) var(--r-vivo);
+  transform-origin: 50% 40%;
 }
 
 /* --------------------------------------------------------------------------
-   La intro: un segundo, y a la app.
+   Lo que entra: tarjetas y listas.
 
-   El logo llega y se posa; la palabra se recoge (las letras vienen separadas
-   y se juntan); y todo se disuelve en Hoy. Sobre el mismo fondo que la app,
-   para que del splash nativo a esto no haya salto. Ni loading ni barra:
-   la app ya está lista debajo, esto es un saludo.
+   Sin fill-mode en `.aparece` y `.entrar`: si el navegador no llega a pintar
+   la animación (pestaña en segundo plano), el elemento se queda visible en
+   vez de invisible. Las escalonadas sí llevan `backwards`, porque si no las
+   últimas se verían antes de «entrar».
    -------------------------------------------------------------------------- */
-@keyframes intro-logo {
-  from { opacity: 0; transform: scale(0.88) translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes intro-marca {
-  from { opacity: 0; letter-spacing: 0.42em; }
-  to { opacity: 1; letter-spacing: 0.12em; }
-}
-@keyframes intro-lema {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 0.7; transform: none; }
-}
-@keyframes intro-fuera {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-.intro-logo { animation: intro-logo 680ms var(--curva) both; }
-.intro-marca { animation: intro-marca 620ms var(--curva) 180ms both; }
-.intro-lema { animation: intro-lema 500ms var(--curva) 420ms both; }
-.intro-fuera { animation: intro-fuera 320ms var(--curva) both; }
-
-@media (prefers-reduced-motion: reduce) {
-  .latido,
-  .entrar,
-  .temblor,
-  .aparece,
-  .escalonado > *,
-  .pop,
-  .intro-logo,
-  .intro-marca,
-  .intro-lema,
-  .intro-fuera {
-    animation: none;
+@keyframes aparece {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
   }
-  .toque,
-  .marca-barra {
-    transition: none;
-  }
-  .toque:active {
+  to {
+    opacity: 1;
     transform: none;
   }
+}
+.aparece,
+.entrar {
+  animation: aparece var(--t-vivo) var(--r-vivo);
+}
+
+/* Cada hijo sabe su sitio (--i), y lo heredan sus nietos: así la hora de
+   cada fila puede llegar 70 ms después que la fila, sin más reglas. A partir
+   del séptimo entran todos a la vez — más allá no se ve y suma espera. */
+.escalonado > :nth-child(1) { --i: 0; }
+.escalonado > :nth-child(2) { --i: 1; }
+.escalonado > :nth-child(3) { --i: 2; }
+.escalonado > :nth-child(4) { --i: 3; }
+.escalonado > :nth-child(5) { --i: 4; }
+.escalonado > :nth-child(6) { --i: 5; }
+.escalonado > :nth-child(n + 7) { --i: 6; }
+.escalonado > * {
+  animation: aparece var(--t-vivo) var(--r-vivo) calc(var(--i, 0) * 55ms) backwards;
+}
+@keyframes fila-hora {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.escalonado > * .fila-hora {
+  animation: fila-hora var(--t-firme) var(--r-firme) calc(var(--i, 0) * 55ms + 70ms) backwards;
+}
+
+/* La cabecera de Hoy, a tres tiempos: la etiqueta baja, el titular llega
+   desde la izquierda, la racha desde la derecha. 60 ms entre cada uno. */
+@keyframes desde-arriba {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes desde-izquierda {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes desde-derecha {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+.primer-tiempo { animation: desde-arriba var(--t-firme) var(--r-firme) 90ms backwards; }
+.segundo-tiempo { animation: desde-izquierda var(--t-vivo) var(--r-vivo) 150ms backwards; }
+.tercer-tiempo { animation: desde-derecha var(--t-vivo) var(--r-vivo) 210ms backwards; }
+
+/* La fecha pasa página: al ir hacia delante sube, al volver baja. Dentro de
+   una caja que la recorta, como un cuentakilómetros. */
+@keyframes pasa-adelante {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pasa-atras {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: none; }
+}
+.pasa-pagina {
+  display: block;
+  overflow: hidden;
+}
+.pasa-pagina[data-sentido="1"] > * { animation: pasa-adelante 320ms var(--r-vivo) both; }
+.pasa-pagina[data-sentido="-1"] > * { animation: pasa-atras 320ms var(--r-vivo) both; }
+
+/* --------------------------------------------------------------------------
+   El dedo.
+
+   Al pulsar, se hunde en 80 ms sin rebote (--r-dedo): es la respuesta, tiene
+   que ser inmediata. Al soltar, VUELVE con resorte (--r-snap, 600 ms): se
+   pasa un poco y se asienta, como una tecla de verdad. Y se ilumina justo
+   donde cayó el dedo: `--x`/`--y` los pone `seguirElDedo()` en resorte.ts.
+   -------------------------------------------------------------------------- */
+.toque {
+  position: relative;
+  transition:
+    transform var(--t-snap) var(--r-snap),
+    box-shadow var(--t-snap) var(--r-snap),
+    background-color var(--t-dedo) var(--r-dedo),
+    border-color var(--t-dedo) var(--r-dedo),
+    color var(--t-dedo) var(--r-dedo),
+    filter var(--t-dedo) var(--r-dedo);
+}
+.toque:active {
+  transform: scale(0.95) translateY(1px);
+  transition-duration: 80ms;
+  transition-timing-function: var(--r-dedo);
+}
+.toque::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--x, 50%) var(--y, 50%),
+    rgba(255, 255, 255, 0.28),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 420ms var(--r-firme);
+}
+.toque:active::after {
+  opacity: 1;
+  transition-duration: 0ms;
+}
+.toque:disabled,
+.toque:disabled:active {
+  transform: none;
+}
+.toque:disabled::after {
+  display: none;
+}
+
+/* Una fila de la lista: se encoge un pelo entera al tocar cualquier cosa
+   dentro de ella (el nombre, el ✓): la fila responde, no sólo el botón. */
+.fila {
+  position: relative;
+  transition:
+    transform var(--t-snap) var(--r-snap),
+    border-color var(--t-dedo) var(--r-dedo),
+    background-color var(--t-dedo) var(--r-dedo),
+    opacity var(--t-firme) var(--r-firme);
+}
+.fila:active {
+  transform: scale(0.985);
+  transition-duration: 80ms;
+  transition-timing-function: var(--r-dedo);
+}
+
+/* El botón principal de la pantalla («Cumplido»): un halo verde debajo que
+   se aplasta al pulsar, y un reflejo que lo recorre cada siete segundos,
+   como la luz en una tarjeta metálica. Sólo uno por pantalla. */
+.boton-vivo {
+  overflow: hidden;
+  box-shadow: 0 10px 28px -10px rgba(63, 158, 122, 0.65);
+}
+.boton-vivo:active {
+  box-shadow: 0 3px 10px -6px rgba(63, 158, 122, 0.5);
+}
+@keyframes brillo {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  /* 1,1 s de barrido (el 15 % de 7,3 s) y el resto quieto. */
+  15%, 100% { transform: translateX(320%) skewX(-18deg); }
+}
+.boton-vivo::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  pointer-events: none;
+  animation: brillo 7.3s var(--r-firme) 1.8s infinite;
+}
+
+/* --------------------------------------------------------------------------
+   Celebrar: cumplido.
+
+   Tres cosas a la vez, en la fila que se ACABA de marcar y sólo en ella:
+   el ✓ entra con resorte girando y suelta un anillo; el trazo del ✓ se
+   dibuja; la fila se lava de verde y el nombre se tacha de izquierda a
+   derecha en vez de aparecer tachado.
+   -------------------------------------------------------------------------- */
+@keyframes snap-ok {
+  from { opacity: 0; transform: scale(0.4) rotate(-14deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes halo {
+  from { opacity: 0.8; transform: scale(0.6); }
+  to { opacity: 0; transform: scale(2); }
+}
+.snap-ok {
+  position: relative;
+  animation: snap-ok var(--t-snap) var(--r-snap) both;
+}
+.snap-ok::before {
+  content: "";
+  position: absolute;
+  inset: -5px -7px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-logro);
+  pointer-events: none;
+  animation: halo 650ms var(--r-firme) 60ms both;
+}
+
+/* El trazo que se dibuja: vale para el ✓, la G de la racha y el filete.
+   `pathLength="1"` en el SVG normaliza la longitud: dasharray 1, offset 1→0. */
+@keyframes trazo {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes trazo-fuera {
+  to { opacity: 0; }
+}
+.trazo-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.snap-ok .trazo-check {
+  animation: trazo 380ms var(--r-firme) 80ms backwards;
+}
+@keyframes desde-izquierda-corto {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}
+.snap-ok .desde-izquierda-corto {
+  animation: desde-izquierda-corto var(--t-firme) var(--r-firme) 140ms backwards;
+}
+
+@keyframes lavado {
+  from { opacity: 0.22; }
+  to { opacity: 0; }
+}
+.fila-reciente::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-logro);
+  pointer-events: none;
+  animation: lavado 700ms var(--r-firme) both;
+}
+@keyframes tachar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.tachadura {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 1px;
+  background: currentColor;
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+.fila-reciente .tachadura {
+  animation: tachar 320ms var(--r-firme) 120ms backwards;
+}
+
+/* --------------------------------------------------------------------------
+   Celebrar: la racha.
+
+   El número no cuenta: RUEDA. Cada dígito es una columna de 1em con la tira
+   0-9 detrás, que se desplaza con transform y se pasa un poco (--r-vivo),
+   como un cuentakilómetros con inercia. Las unidades arrancan primero; las
+   decenas, 40 ms después. Y al subir, detrás del número se dibuja la G del
+   icono en oro y se apaga, con un destello.
+   -------------------------------------------------------------------------- */
+.rodillo {
+  display: inline-flex;
+  height: 1em;
+  line-height: 1;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+.rodillo-col {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+}
+.rodillo-tira {
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--t-rodillo) var(--r-vivo);
+  will-change: transform;
+}
+.rodillo-col:nth-last-child(2) .rodillo-tira { transition-delay: 40ms; }
+.rodillo-col:nth-last-child(3) .rodillo-tira { transition-delay: 80ms; }
+.rodillo-digito {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+@keyframes grande {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.28); }
+  100% { transform: none; }
+}
+.grande {
+  animation: grande var(--t-celebra) var(--r-snap) both;
+  transform-origin: 100% 60%;
+}
+@keyframes halo-destello {
+  0% { opacity: 0; transform: scale(0.6); }
+  35% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+.halo-destello {
+  position: absolute;
+  inset: -40% -30%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(201, 162, 39, 0.55), transparent 70%);
+  pointer-events: none;
+  animation: halo-destello 800ms var(--r-firme) both;
+}
+.trazo {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation:
+    trazo 640ms var(--r-firme) both,
+    trazo-fuera 500ms var(--r-firme) 900ms both;
+}
+
+/* --------------------------------------------------------------------------
+   Celebrar: el día completo.
+
+   La tarjeta la cruza un barrido de oro; el titular sube palabra a palabra;
+   debajo se dibuja un filete; y la tarjeta queda con brasa: un borde de oro
+   que respira. Las catorce motas que vuelan las tira `celebrarDia()`.
+   -------------------------------------------------------------------------- */
+@keyframes barrido {
+  from { transform: translateX(-130%) skewX(-18deg); }
+  to { transform: translateX(260%) skewX(-18deg); }
+}
+/* Una capa encima de la tarjeta que recorta el barrido a sus esquinas. Va
+   aparte —y no `overflow: hidden` en la tarjeta— para no recortar la brasa,
+   que brilla 28 px hacia fuera. */
+.barrido {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.barrido::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.22), transparent);
+  pointer-events: none;
+  animation: barrido 700ms var(--r-firme) 250ms both;
+}
+@keyframes sube-palabra {
+  from { opacity: 0; transform: translateY(110%); }
+  to { opacity: 1; transform: none; }
+}
+.palabra {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.08em;
+}
+.palabra > span {
+  display: inline-block;
+  animation: sube-palabra 480ms var(--r-vivo) calc(var(--i, 0) * 60ms) backwards;
+}
+.filete {
+  display: block;
+  width: 100%;
+  height: 2px;
+  overflow: visible;
+}
+.filete line {
+  stroke: var(--color-acento);
+  stroke-width: 1.5;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: trazo 640ms var(--r-firme) 200ms both;
+}
+@keyframes brasa-entra {
+  to { opacity: 1; }
+}
+@keyframes brasa-late {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.brasa {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 39, 0.45),
+    0 0 28px 4px rgba(201, 162, 39, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  animation:
+    brasa-entra 900ms var(--r-firme) 400ms both,
+    brasa-late 4s ease-in-out 1300ms infinite;
+}
+
+/* El filete bajo las etiquetas de sección: la misma línea de oro de la
+   intro, en pequeño, dibujándose 200 ms después de entrar la pantalla. */
+@keyframes filete-etiqueta {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.etiqueta-filete {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 4px;
+}
+.etiqueta-filete::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-acento);
+  opacity: 0.35;
+  transform-origin: 0 50%;
+  animation: filete-etiqueta 380ms var(--r-firme) 200ms backwards;
+}
+
+/* --------------------------------------------------------------------------
+   La barra de abajo.
+
+   La marca dorada se DESLIZA de una pestaña a otra y, a mitad de camino, se
+   ESTIRA —más cuanto más lejos salta— y se recoge al llegar, con resorte.
+   Eso lo hace App.tsx con la Web Animations API. Aquí, su brillo y el icono
+   activo, que sube y crece.
+   -------------------------------------------------------------------------- */
+.marca-barra {
+  box-shadow: 0 0 12px 1px rgba(201, 162, 39, 0.45);
+}
+.icono-barra {
+  display: inline-block;
+  transition: transform var(--t-vivo) var(--r-vivo);
+}
+.icono-barra.activo {
+  transform: translateY(-2px) scale(1.18);
+}
+
+/* El aviso de ánimo: sube y se posa; al irse, baja y se disuelve. */
+@keyframes brindis-entra {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes brindis-sale {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+.brindis-entra { animation: brindis-entra var(--t-vivo) var(--r-vivo) both; }
+.brindis-sale { animation: brindis-sale 220ms var(--r-firme) both; }
+
+/* --------------------------------------------------------------------------
+   La intro: 1,4 segundos, y a la app.
+
+   El logo ENFOCA: una copia borrosa y grande se disuelve mientras la nítida
+   llega con resorte, y un destello la remata. La palabra llega letra a
+   letra; el lema, después. Todo sobre un halo de oro que respira una vez.
+   Y se va creciendo y disolviéndose sobre Hoy, que entra debajo.
+   -------------------------------------------------------------------------- */
+.intro-pila {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.intro-pila > * {
+  grid-area: 1 / 1;
+}
+@keyframes intro-halo {
+  0% { opacity: 0; transform: scale(0.6); }
+  55% { opacity: 1; }
+  100% { opacity: 0.55; transform: scale(1); }
+}
+.intro-halo {
+  position: absolute;
+  inset: -70%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(201, 162, 39, 0.26), transparent 72%);
+  pointer-events: none;
+  animation: intro-halo 1150ms var(--r-firme) both;
+}
+@keyframes intro-borroso {
+  0% { opacity: 0.9; transform: scale(1.25); }
+  45% { opacity: 0; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+.intro-borroso {
+  filter: blur(10px);
+  animation: intro-borroso 620ms var(--r-vivo) both;
+}
+@keyframes intro-logo {
+  0% { opacity: 0; transform: scale(0.72) rotate(-5deg); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+.intro-logo {
+  animation: intro-logo 620ms var(--r-vivo) both;
+}
+@keyframes intro-destello {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+.intro-destello {
+  filter: brightness(1.8);
+  opacity: 0;
+  pointer-events: none;
+  animation: intro-destello 360ms var(--r-firme) 480ms both;
+}
+@keyframes intro-letra {
+  from { opacity: 0; transform: translateY(14px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+.intro-letra {
+  display: inline-block;
+  animation: intro-letra 480ms var(--r-vivo) calc(360ms + var(--i, 0) * 38ms) backwards;
+}
+@keyframes intro-lema {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 0.75; transform: none; }
+}
+.intro-lema {
+  animation: intro-lema 720ms var(--r-firme) 640ms both;
+}
+@keyframes intro-fuera {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(1.08); }
+}
+.intro-fuera {
+  animation: intro-fuera 350ms var(--r-firme) both;
+}
+
+/* --------------------------------------------------------------------------
+   Menos movimiento.
+
+   Lo pone App.tsx en <html> si el móvil pide «reducir movimiento» o si se
+   activó el interruptor en Ajustes. Todo lo de arriba se queda en su estado
+   final, de golpe: la app entera sigue funcionando igual, sólo que quieta.
+   -------------------------------------------------------------------------- */
+:root[data-movimiento="menos"] .latido,
+:root[data-movimiento="menos"] .entrar,
+:root[data-movimiento="menos"] .temblor,
+:root[data-movimiento="menos"] .aparece,
+:root[data-movimiento="menos"] .escalonado > *,
+:root[data-movimiento="menos"] .escalonado > * .fila-hora,
+:root[data-movimiento="menos"] .pantalla-entra,
+:root[data-movimiento="menos"] .primer-tiempo,
+:root[data-movimiento="menos"] .segundo-tiempo,
+:root[data-movimiento="menos"] .tercer-tiempo,
+:root[data-movimiento="menos"] .pasa-pagina > *,
+:root[data-movimiento="menos"] .snap-ok,
+:root[data-movimiento="menos"] .snap-ok::before,
+:root[data-movimiento="menos"] .snap-ok .trazo-check,
+:root[data-movimiento="menos"] .snap-ok .desde-izquierda-corto,
+:root[data-movimiento="menos"] .fila-reciente::before,
+:root[data-movimiento="menos"] .fila-reciente .tachadura,
+:root[data-movimiento="menos"] .grande,
+:root[data-movimiento="menos"] .halo-destello,
+:root[data-movimiento="menos"] .trazo,
+:root[data-movimiento="menos"] .barrido::before,
+:root[data-movimiento="menos"] .palabra > span,
+:root[data-movimiento="menos"] .filete line,
+:root[data-movimiento="menos"] .brasa,
+:root[data-movimiento="menos"] .etiqueta-filete::after,
+:root[data-movimiento="menos"] .boton-vivo::before,
+:root[data-movimiento="menos"] .brindis-entra,
+:root[data-movimiento="menos"] .brindis-sale,
+:root[data-movimiento="menos"] .intro-halo,
+:root[data-movimiento="menos"] .intro-borroso,
+:root[data-movimiento="menos"] .intro-logo,
+:root[data-movimiento="menos"] .intro-destello,
+:root[data-movimiento="menos"] .intro-letra,
+:root[data-movimiento="menos"] .intro-lema,
+:root[data-movimiento="menos"] .intro-fuera {
+  animation: none;
+}
+:root[data-movimiento="menos"] .toque,
+:root[data-movimiento="menos"] .toque::after,
+:root[data-movimiento="menos"] .fila,
+:root[data-movimiento="menos"] .rodillo-tira,
+:root[data-movimiento="menos"] .icono-barra {
+  transition: none;
+}
+:root[data-movimiento="menos"] .toque:active,
+:root[data-movimiento="menos"] .fila:active {
+  transform: none;
+}
+:root[data-movimiento="menos"] .toque::after,
+:root[data-movimiento="menos"] .halo-destello,
+:root[data-movimiento="menos"] .snap-ok::before,
+:root[data-movimiento="menos"] .intro-borroso,
+:root[data-movimiento="menos"] .intro-destello,
+:root[data-movimiento="menos"] .intro-halo {
+  display: none;
+}
+:root[data-movimiento="menos"] .trazo,
+:root[data-movimiento="menos"] .trazo-check,
+:root[data-movimiento="menos"] .filete line {
+  stroke-dashoffset: 0;
+}
+:root[data-movimiento="menos"] .trazo {
+  opacity: 0;
+}
+:root[data-movimiento="menos"] .brasa {
+  opacity: 1;
+}
+:root[data-movimiento="menos"] .intro-fuera {
+  opacity: 0;
 }
 
 /* Barra de desplazamiento discreta en escritorio. */

@@ -115,6 +115,11 @@ export type Ajustes = {
   horaRepaso: string;
   /** Minutos que añade el botón «5 min más». */
   posponerMin: number;
+  /**
+   * Sin animaciones. Lo que el móvil llama «reducir movimiento», pero desde
+   * la app: hay gente a la que el movimiento marea y no sabe dónde apagarlo.
+   */
+  menosMovimiento: boolean;
 };
 
 /** Todo el estado que se guarda. Una sola pieza, fácil de exportar. */
