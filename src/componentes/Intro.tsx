@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { vars } from "@/componentes/piezas";
+import { reducido } from "@/logica/resorte";
 
 /**
  * Un segundo y pico de saludo al abrir la app, y a Hoy.
@@ -38,6 +39,10 @@ import { vars } from "@/componentes/piezas";
  *
  * **Mismo fondo que la app.** El splash nativo de Android es del mismo color;
  * del uno al otro no hay salto, y de esto a Hoy tampoco.
+ *
+ * **Con «menos movimiento», no hay intro.** Un saludo que no se mueve es sólo
+ * una espera de un segundo y una capa invisible que se traga el primer toque.
+ * Y mientras se disuelve, deja pasar los toques: Hoy ya está debajo.
  */
 
 /** Si ya se saludó en esta ejecución. Vive con el proceso, no con React. */
@@ -70,6 +75,12 @@ export function Intro({
 
   useEffect(() => {
     yaSaludo = true;
+    // Aquí `reducido()` ya ve `data-movimiento`: el efecto de disposición de
+    // App.tsx que lo pone corre antes que este efecto.
+    if (reducido()) {
+      onFin();
+      return;
+    }
     const id = window.setTimeout(salir, DURA_MS - SALIDA_MS);
     return () => clearTimeout(id);
     // Sólo al montar: `salir` no cambia de identidad mientras esto vive.
@@ -80,7 +91,7 @@ export function Intro({
     <div
       onClick={salir}
       className={`fixed inset-0 z-[70] flex flex-col items-center justify-center bg-fondo ${
-        saliendo ? "intro-fuera" : ""
+        saliendo ? "intro-fuera pointer-events-none" : ""
       }`}
       aria-label="Genuino"
       role="img"

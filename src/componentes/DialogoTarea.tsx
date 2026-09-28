@@ -2,7 +2,7 @@ import { useState } from "react";
 import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type Categoria, type Tarea, type Timbre } from "@/datos/tipos";
 import { BotonDictar } from "./BotonDictar";
-import { Boton, Campo, Entrada, Etiqueta, Selector, Tarjeta, colorDe } from "./piezas";
+import { Boton, Campo, Capa, Entrada, Etiqueta, Selector, Tarjeta, colorDe } from "./piezas";
 
 /**
  * "HH:MM" de dentro de `minutos`, en hora local.
@@ -74,7 +74,8 @@ export function DialogoTarea({
    * volvía imposible.
    */
   return (
-    <div className="fixed inset-0 z-40 flex justify-center overflow-y-auto bg-fondo/90 p-4 backdrop-blur-sm">
+    <Capa>
+    <div className="velo fixed inset-0 z-40 flex justify-center overflow-y-auto bg-fondo/90 p-4 backdrop-blur-sm">
       <Tarjeta className="entrar mt-auto mb-0 h-fit w-full max-w-md !bg-superficie-alta sm:my-auto">
         <div className="flex items-center justify-between">
           <Etiqueta>{editando ? "editar tarea" : "tarea de hoy"}</Etiqueta>
@@ -264,5 +265,6 @@ export function DialogoTarea({
         </div>
       </Tarjeta>
     </div>
+    </Capa>
   );
 }

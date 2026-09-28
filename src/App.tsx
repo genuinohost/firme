@@ -106,6 +106,9 @@ export default function App() {
    */
   const [dir, setDir] = useState(0);
   const setPestaña = (p: Pestaña) => {
+    // Tocar la pestaña ya puesta no es un cambio: si aquí se pusiera `--dir`
+    // a 0, la pantalla que aún está entrando saltaría de lado (ver arriba).
+    if (p === pestaña) return;
     setDir(Math.sign(profundidad(p) - profundidad(pestaña)));
     setPestañaCruda(p);
   };
@@ -366,6 +369,17 @@ export default function App() {
     tareaAbierta === null,
   );
 
+  /**
+   * Si una alarma o una llamada llegan mientras saluda, el saludo se da por
+   * hecho. `disparo` y `llamada` se fijan en un efecto, después del primer
+   * pintado: la Intro se montaba, se desmontaba al instante sin llegar a
+   * `onFin`, y al cerrar la alarma volvía a salir entera —y su `onSaliendo`
+   * remontaba Hoy, cortando la celebración del bloque recién cumplido.
+   */
+  useEffect(() => {
+    if (saludando && (disparo || llamada)) setSaludando(false);
+  }, [saludando, disparo, llamada]);
+
   // El siguiente aviso, ya redactado para la pantalla de comprobación.
   const proximo = useMemo(() => {
     const siguiente = proximoAviso(sucesosHoy, minutoActual(ahora));
@@ -412,12 +426,30 @@ export default function App() {
     if (!avisoMuro) return;
     setAvisoSale(false);
     const irse = window.setTimeout(() => setAvisoSale(true), 5200 - 220);
-    const id = window.setTimeout(() => setAvisoMuro(""), 5200);
+    const id = window.setTimeout(() => {
+      // La bandera se apaga aquí, no al llegar el siguiente aviso: ése llega
+      // desde una promesa y el efecto corre después de pintar, así que el
+      // cuadro nacía un fotograma con la clase de salida.
+      setAvisoMuro("");
+      setAvisoSale(false);
+    }, 5200);
     return () => {
       clearTimeout(irse);
       clearTimeout(id);
     };
   }, [avisoMuro]);
+
+  // Tocar un aviso lo retira: no tiene sentido que tape la lista cinco
+  // segundos sin hacer nada. Al vaciarse, el efecto de arriba limpia sus dos
+  // temporizadores.
+  const retirarAvisoMuro = () => {
+    setAvisoSale(true);
+    window.setTimeout(() => setAvisoMuro(""), 220);
+  };
+  const retirarBrindis = () => {
+    setBrindisSale(true);
+    window.setTimeout(() => setBrindis(null), 220);
+  };
 
   // Quién está esperando respuesta. Se mira al arrancar y cada vez que se
   // vuelve al menú, que es justo antes de que pueda verse el aviso.
@@ -435,7 +467,10 @@ export default function App() {
     if (!brindis) return;
     setBrindisSale(false);
     const irse = window.setTimeout(() => setBrindisSale(true), 5200 - 220);
-    const id = window.setTimeout(() => setBrindis(null), 5200);
+    const id = window.setTimeout(() => {
+      setBrindis(null);
+      setBrindisSale(false);
+    }, 5200);
     return () => {
       clearTimeout(irse);
       clearTimeout(id);
@@ -596,13 +631,27 @@ export default function App() {
    */
   if (bloqueada && !disparo) {
     return (
-      <PantallaBloqueo
-        onAbrir={() => {
-          darPorAbierta();
-          setBloqueada(false);
-        }}
-        pie="Si lo olvidas, se borra desinstalando la app — y con ella todo lo que has escrito. Elige uno que no se te vaya."
-      />
+      <>
+        <PantallaBloqueo
+          onAbrir={() => {
+            darPorAbierta();
+            setBloqueada(false);
+          }}
+          pie="Si lo olvidas, se borra desinstalando la app — y con ella todo lo que has escrito. Elige uno que no se te vaya."
+        />
+        {/*
+          El saludo va ENCIMA del código, no después: si sólo saliera al abrir
+          la app entera, quien tiene código lo vería tras teclear el PIN, como
+          un peaje, y Hoy entraría dos veces. Aquí saluda pegado al splash,
+          que es donde tiene sentido, y el teclado queda debajo.
+        */}
+        {saludando && !llamada ? (
+          <Intro
+            onFin={() => setSaludando(false)}
+            onSaliendo={() => setEscena((n) => n + 1)}
+          />
+        ) : null}
+      </>
     );
   }
 
@@ -872,7 +921,11 @@ export default function App() {
           style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
         >
           {/* Fondo opaco a propósito: translúcido sobre la lista no se leía. */}
-          <div className="pointer-events-auto max-w-md rounded-2xl border border-acento/40 bg-superficie-alta px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+          <div
+            role="status"
+            onClick={retirarBrindis}
+            className="pointer-events-auto max-w-md rounded-2xl border border-acento/40 bg-superficie-alta px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+          >
             <Cita texto={brindis.texto} fuente={brindis.fuente} compartible={false} />
           </div>
         </div>
@@ -884,7 +937,11 @@ export default function App() {
           className={`${avisoSale ? "brindis-sale" : "brindis-entra"} pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4`}
           style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
         >
-          <p className="pointer-events-auto max-w-md rounded-2xl border border-borde bg-superficie-alta px-4 py-3 text-xs leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+          <p
+            role="status"
+            onClick={retirarAvisoMuro}
+            className="pointer-events-auto max-w-md rounded-2xl border border-borde bg-superficie-alta px-4 py-3 text-xs leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
+          >
             {avisoMuro}
           </p>
         </div>

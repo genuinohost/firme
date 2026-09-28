@@ -8,6 +8,7 @@ import { diaDe, faltaPara, type Aviso } from "@/logica/avisos";
 import {
   AreaTexto,
   Boton,
+  Capa,
   CheckDibujado,
   Cita,
   Etiqueta,
@@ -121,7 +122,10 @@ export function PantallaHoy(props: Props) {
    * de ayer que ya estaba completo—, y las motas de oro salen del botón que
    * se tocó. Nada de esto pasa al abrir la pantalla: eso sería decorar.
    */
-  const subio = useSubio(racha);
+  // 1400 ms: lo que tarda la G en dibujarse y apagarse (`.trazo` en
+  // estilos.css: trazo-fuera empieza a los 900 y dura 500). Si se cambia
+  // allí, se cambia aquí; si no, la G se corta a medio fundido.
+  const subio = useSubio(racha, 1400);
   const completo = esHoy && sucesos.length > 0 && cumplidos === sucesos.length;
   const ultimoToque = useRef<DOMRect | undefined>(undefined);
   const antes = useRef({ fecha, completo });
@@ -133,7 +137,12 @@ export function PantallaHoy(props: Props) {
     setCelebrando(true);
     celebrarDia(ultimoToque.current);
     const id = window.setTimeout(() => setCelebrando(false), 1400);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      // Si se deshace antes de tiempo, el barrido no se queda montado: así
+      // vuelve a salir cuando se complete otra vez.
+      setCelebrando(false);
+    };
   }, [fecha, completo]);
 
   const cumplir = (s: Suceso, desde?: DOMRect) => {
@@ -185,7 +194,10 @@ export function PantallaHoy(props: Props) {
               <>
                 <span className="halo-destello" aria-hidden />
                 <svg
-                  className="pointer-events-none absolute -inset-3 size-auto text-acento"
+                  // Tamaño fijo y pegada al número: sin él, un svg con viewBox
+                  // y sin medidas se estiraba al bloque entero (124 px) y la G
+                  // tachaba «DÍAS SEGUIDOS» y bajaba hasta la tarjeta de abajo.
+                  className="pointer-events-none absolute -top-3 -right-2 size-14 text-acento"
                   viewBox="0 0 512 512"
                   fill="none"
                   aria-hidden
@@ -230,7 +242,7 @@ export function PantallaHoy(props: Props) {
             {actual.hora} · {actual.duracionMin} min ·{" "}
             {enCurso ? (
               <span className="text-acento">
-                quedan <Rodillo valor={quedanDe(actual, ahora)} />
+                quedan <Rodillo porSegundos valor={quedanDe(actual, ahora)} />
               </span>
             ) : (
               faltanPara(actual.minuto, ahora)
@@ -275,15 +287,19 @@ export function PantallaHoy(props: Props) {
           {completo ? <span className="brasa" aria-hidden /> : null}
           {celebrando ? <span className="barrido" aria-hidden /> : null}
           <Etiqueta>día terminado</Etiqueta>
-          <p className="mt-2 text-lg font-semibold" aria-label={titulo}>
-            {titulo.split(" ").map((palabra, i) => (
-              <Fragment key={`${titulo}|${i}`}>
-                {i > 0 ? " " : null}
-                <span className="palabra" style={vars({ "--i": i })} aria-hidden>
-                  <span>{palabra}</span>
-                </span>
-              </Fragment>
-            ))}
+          {/* El lector oye el titular entero; las palabras animadas son decoración. */}
+          <p className="mt-2 text-lg font-semibold">
+            <span className="sr-only">{titulo}</span>
+            <span aria-hidden>
+              {titulo.split(" ").map((palabra, i) => (
+                <Fragment key={`${titulo}|${i}`}>
+                  {i > 0 ? " " : null}
+                  <span className="palabra" style={vars({ "--i": i })}>
+                    <span>{palabra}</span>
+                  </span>
+                </Fragment>
+              ))}
+            </span>
           </p>
           {completo ? (
             <svg className="filete mt-3" viewBox="0 0 100 2" preserveAspectRatio="none" aria-hidden>
@@ -326,6 +342,7 @@ export function PantallaHoy(props: Props) {
         {conHora.map((s) => (
           <FilaSuceso
             key={s.id}
+            fecha={fecha}
             suceso={s}
             fase={faseDe(s, minuto, esHoy)}
             destacado={actual?.id === s.id}
@@ -348,6 +365,7 @@ export function PantallaHoy(props: Props) {
             {sinHora.map((s) => (
               <FilaSuceso
                 key={s.id}
+                fecha={fecha}
                 suceso={s}
                 fase="sinHora"
                 destacado={false}
@@ -367,7 +385,8 @@ export function PantallaHoy(props: Props) {
 
       {/* Antes de saltar, el porqué. Esa fricción es intencionada. */}
       {saltando ? (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-fondo/85 p-4 backdrop-blur-sm sm:items-center">
+        <Capa>
+        <div className="velo fixed inset-0 z-40 flex items-end justify-center bg-fondo/85 p-4 backdrop-blur-sm sm:items-center">
           <Tarjeta className="w-full max-w-md !bg-superficie-alta">
             <Etiqueta>antes de saltarlo</Etiqueta>
             <h3 className="mt-1 text-lg font-semibold">{saltando.nombre}</h3>
@@ -421,6 +440,7 @@ export function PantallaHoy(props: Props) {
             </div>
           </Tarjeta>
         </div>
+        </Capa>
       ) : null}
     </div>
   );
@@ -468,6 +488,7 @@ function ContadorAlarma({ alarma, ahora }: { alarma: Aviso | null; ahora: Date }
         </p>
       </div>
       <Rodillo
+        porSegundos
         valor={faltaPara(cuando, ahora)}
         className={`cifras shrink-0 text-xl font-semibold tracking-tight ${
           inminente ? "text-acento" : ""
@@ -478,6 +499,7 @@ function ContadorAlarma({ alarma, ahora }: { alarma: Aviso | null; ahora: Date }
 }
 
 function FilaSuceso({
+  fecha,
   suceso,
   fase,
   destacado,
@@ -487,6 +509,8 @@ function FilaSuceso({
   onDeshacer,
   onAbrir,
 }: {
+  /** El día que se mira: cambiar de día no es cumplir. */
+  fecha: string;
   suceso: Suceso;
   fase: ReturnType<typeof faseDe>;
   destacado: boolean;
@@ -508,14 +532,14 @@ function FilaSuceso({
    * tacha de izquierda a derecha y el ✓ se dibuja. Una fila que ya estaba
    * cumplida al abrir la pantalla se pinta quieta.
    */
-  const reciente = useAcabaDe(cumplido);
+  const reciente = useAcabaDe(cumplido, fecha);
 
   return (
     <div
       className={`fila flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
         reciente ? "fila-reciente" : ""
       } ${destacado ? "border-acento/40 bg-superficie" : "border-borde bg-superficie/60"} ${
-        apagado ? "opacity-55" : ""
+        apagado ? "fila-apagada" : ""
       }`}
     >
       <div className="fila-hora cifras w-11 shrink-0 text-sm text-tenue">

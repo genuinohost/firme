@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useAcabaDe } from "@/logica/recien";
 import { compartirFrase, type ResultadoCompartir } from "@/logica/compartir";
 import { alternar, estaGuardada } from "@/logica/favoritas";
 import { CATEGORIAS, type Categoria } from "@/datos/tipos";
@@ -29,7 +31,7 @@ export function Boton({
   tipo?: "button" | "submit";
   /**
    * El botón principal de la pantalla: con halo debajo y un reflejo que lo
-   * recorre cada siete segundos. **Uno por pantalla**, o deja de destacar.
+   * recorre tres veces al aparecer. **Uno por pantalla**, o deja de destacar.
    */
   vivo?: boolean;
 }) {
@@ -113,11 +115,15 @@ export function Rodillo({
   valor,
   minimo = 1,
   className = "",
+  porSegundos = false,
 }: {
   valor: number | string;
   /** Cifras mínimas: con 2, el 5 se pinta «05». */
   minimo?: number;
   className?: string;
+  /** Cuenta atrás con segundos: la última cifra rueda corto (200 ms) para
+      que el compositor descanse la mayor parte de cada segundo. */
+  porSegundos?: boolean;
 }) {
   const texto =
     typeof valor === "number"
@@ -125,7 +131,7 @@ export function Rodillo({
       : valor;
   const letras = texto.split("");
   return (
-    <span className={`rodillo ${className}`}>
+    <span className={`rodillo ${porSegundos ? "rodillo-segundos" : ""} ${className}`}>
       <span className="sr-only">{texto}</span>
       {letras.map((c, i) =>
         /\d/.test(c) ? (
@@ -157,10 +163,10 @@ function Columna({ digito }: { digito: number }) {
   // sin transición y forzando el reflow entre medias: así el navegador lo
   // pinta de golpe aunque la pestaña esté detrás (un requestAnimationFrame
   // no correría ahí), y React después sólo confirma el mismo valor.
-  const recolocar = () => {
+  const saltarAlMedio = (): number => {
     const p = posActual.current;
-    if (p >= 10 && p < 20) return;
     const m = alMedio(p);
+    if (m === p) return p;
     const el = tira.current;
     if (el) {
       el.style.transition = "none";
@@ -169,7 +175,12 @@ function Columna({ digito }: { digito: number }) {
       el.style.transition = "";
     }
     posActual.current = m;
-    setPos(m);
+    return m;
+  };
+  const recolocar = () => {
+    const antes = posActual.current;
+    const m = saltarAlMedio();
+    if (m !== antes) setPos(m);
   };
 
   useEffect(() => {
@@ -177,10 +188,12 @@ function Columna({ digito }: { digito: number }) {
     // El paso más corto entre los dos dígitos, entre -5 y +4.
     const paso = ((digito - anterior.current + 15) % 10) - 5;
     anterior.current = digito;
-    // Si se quedó fuera del medio —la pantalla estuvo apagada y no llegó el
-    // transitionend—, se parte del medio: así nunca se sale de la tira.
-    setPos((p) => alMedio(p) + paso);
-    // Y por si el transitionend tampoco llega esta vez, se recoloca igual.
+    // Si se quedó fuera del medio —la pantalla estuvo apagada, o el tick
+    // anterior aún rueda—, PRIMERO se salta al medio sin transición y después
+    // se da el paso: así nunca se sale de la tira ni da una vuelta casi
+    // entera por partir de la posición vieja. (Revisión de la 6.18.)
+    setPos(saltarAlMedio() + paso);
+    // Y por si el transitionend no llega (pestaña detrás), se recoloca igual.
     const id = window.setTimeout(recolocar, 900);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,6 +241,19 @@ export function CheckDibujado({ className = "" }: { className?: string }) {
 /** Para poner `--i` y demás variables en `style` sin pelearse con TypeScript. */
 export function vars(v: Record<string, number | string>): CSSProperties {
   return v as CSSProperties;
+}
+
+/**
+ * Lo que va en `position: fixed` no puede vivir dentro de `<main>`: mientras
+ * `.pantalla-entra` lo transforma (450 ms), `main` pasa a ser el bloque
+ * contenedor de todo `fixed` de dentro, y un diálogo que se abre en ese
+ * instante —el editor de la rutina al tocar un bloque desde Hoy— se desliza
+ * con la pantalla y pega un salto al asentarse. Esto lo saca al `body`,
+ * fuera de cualquier transform. Los eventos de React siguen subiendo por el
+ * árbol de componentes, así que nada más cambia. (Revisión de la 6.18.)
+ */
+export function Capa({ children }: { children: ReactNode }) {
+  return createPortal(children, document.body);
 }
 
 export function Campo({
@@ -303,6 +329,10 @@ export function Cita({
 }) {
   const [estado, setEstado] = useState<ResultadoCompartir | null>(null);
   const [guardada, setGuardada] = useState(() => estaGuardada(texto));
+  // El ♥ celebra sólo cuando se ACABA de guardar, no cuando ya lo estaba al
+  // abrir la pantalla (regla 3 del movimiento). Mismo plazo que el ✓ de la
+  // fila: cubre el rebote (600 ms) y el anillo (710 ms).
+  const recienGuardada = useAcabaDe(guardada);
 
   // El aviso de «copiado» se retira solo.
   useEffect(() => {
@@ -333,7 +363,7 @@ export function Cita({
               aria-label={guardada ? "Quitar de guardadas" : "Guardar esta frase"}
               aria-pressed={guardada}
             >
-              <span key={String(guardada)} className={guardada ? "snap-ok inline-block" : "inline-block"}>
+              <span className={recienGuardada ? "snap-ok inline-block" : "inline-block"}>
                 {guardada ? "♥" : "♡"}
               </span>
             </button>

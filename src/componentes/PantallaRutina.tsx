@@ -3,9 +3,7 @@ import { idNuevo } from "@/datos/almacen";
 import { CATEGORIAS, TIMBRES, type BloqueRutina, type Categoria, type Timbre } from "@/datos/tipos";
 import { DIAS_CORTOS, aMinutos, cruzaMedianoche } from "@/logica/dia";
 import { sonar, parar } from "@/logica/sonido";
-import {
-  AreaTexto, Boton, Campo, Entrada, Etiqueta, Punto, Selector, Tarjeta, Vacio, colorDe,
-} from "./piezas";
+import { AreaTexto, Boton, Campo, Capa, Entrada, Etiqueta, Punto, Selector, Tarjeta, Vacio, colorDe } from "./piezas";
 
 const TODOS = [0, 1, 2, 3, 4, 5, 6];
 const LABORABLES = [1, 2, 3, 4, 5];
@@ -150,6 +148,7 @@ function EditorBloque({
     cambiar("dias", b.dias.includes(d) ? b.dias.filter((x) => x !== d) : [...b.dias, d].sort());
 
   return (
+    <Capa>
     <div className="fixed inset-0 z-40 overflow-y-auto bg-fondo/90 backdrop-blur-sm">
       <div className="zona-segura-arriba zona-segura-abajo mx-auto flex min-h-full max-w-lg flex-col justify-center p-4">
         <Tarjeta className="entrar !bg-superficie-alta">
@@ -320,5 +319,6 @@ function EditorBloque({
         </Tarjeta>
       </div>
     </div>
+    </Capa>
   );
 }

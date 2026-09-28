@@ -11,7 +11,7 @@ import {
   rachaDelPlan,
   sucesosDelPlan,
 } from "@/logica/planes";
-import { Boton, Etiqueta, Tarjeta, Vacio, colorDe } from "./piezas";
+import { Boton, Capa, Etiqueta, Tarjeta, Vacio, colorDe } from "./piezas";
 
 /**
  * Los planes: los compromisos que alguien decide sostener, cada uno con su
@@ -167,6 +167,7 @@ function ElegirPlan({
   const [abierta, setAbierta] = useState<string | null>(null);
 
   return (
+    <Capa>
     <div className="fixed inset-0 z-40 overflow-y-auto bg-fondo/95 backdrop-blur-sm">
       <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg p-4">
         <div className="flex items-center justify-between pb-2">
@@ -256,6 +257,7 @@ function ElegirPlan({
         </div>
       </div>
     </div>
+    </Capa>
   );
 }
 

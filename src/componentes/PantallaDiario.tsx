@@ -12,7 +12,7 @@ import {
 import { despublicarNota, publicarNota } from "@/logica/muro";
 import { comoFallo } from "@/logica/nube";
 import { BotonDictar } from "./BotonDictar";
-import { AreaTexto, Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
+import { AreaTexto, Boton, Capa, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
  * El diario.
@@ -338,11 +338,13 @@ export function PantallaDiario({
         navegador se ve bien y en el teléfono no.
       */}
       {aviso ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-40 mx-auto flex max-w-lg justify-center px-4">
-          <p className="rounded-full border border-borde bg-superficie px-4 py-2 text-xs shadow-lg">
-            {aviso}
-          </p>
-        </div>
+        <Capa>
+          <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-40 mx-auto flex max-w-lg justify-center px-4">
+            <p className="rounded-full border border-borde bg-superficie px-4 py-2 text-xs shadow-lg">
+              {aviso}
+            </p>
+          </div>
+        </Capa>
       ) : null}
     </div>
   );

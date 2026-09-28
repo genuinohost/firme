@@ -217,7 +217,10 @@ body {
     transform: translateY(18px) scale(0.96);
   }
   to {
-    opacity: 1;
+    /* Acaba en la opacidad propia de cada elemento (1 salvo que diga otra
+       cosa): una fila atenuada entra hasta su 0.55 y no brilla y se apaga
+       de golpe al terminar, que el fin de una animación no transiciona. */
+    opacity: var(--opacidad-final, 1);
     transform: none;
   }
 }
@@ -296,15 +299,16 @@ body {
    pasa un poco y se asienta, como una tecla de verdad. Y se ilumina justo
    donde cayó el dedo: `--x`/`--y` los pone `seguirElDedo()` en resorte.ts.
    -------------------------------------------------------------------------- */
+/* Sólo transform y colores: ni box-shadow ni filter, que se repintan en el
+   hilo principal cuadro a cuadro (y el hover con filter ni existe en un
+   móvil táctil: Tailwind lo mete tras `@media (hover: hover)`). */
 .toque {
   position: relative;
   transition:
     transform var(--t-snap) var(--r-snap),
-    box-shadow var(--t-snap) var(--r-snap),
     background-color var(--t-dedo) var(--r-dedo),
     border-color var(--t-dedo) var(--r-dedo),
-    color var(--t-dedo) var(--r-dedo),
-    filter var(--t-dedo) var(--r-dedo);
+    color var(--t-dedo) var(--r-dedo);
 }
 .toque:active {
   transform: scale(0.95) translateY(1px);
@@ -352,16 +356,22 @@ body {
   transition-duration: 80ms;
   transition-timing-function: var(--r-dedo);
 }
+/* Fila pasada sin registro, o saltada: atenuada. Su entrada (`aparece`)
+   acaba en esta misma opacidad, no en 1. */
+.fila-apagada {
+  --opacidad-final: 0.55;
+  opacity: var(--opacidad-final);
+}
 
-/* El botón principal de la pantalla («Cumplido»): un halo verde debajo que
-   se aplasta al pulsar, y un reflejo que lo recorre cada siete segundos,
-   como la luz en una tarjeta metálica. Sólo uno por pantalla. */
+/* El botón principal de la pantalla («Cumplido»): un halo verde debajo, fijo
+   —lo que se hunde es el botón, y la sombra ya se lee como aplastada sin
+   repintarla—, y un reflejo que lo recorre TRES veces al llegar a la
+   pantalla, como la luz en una tarjeta metálica, y después descansa: una
+   animación infinita mantiene al compositor despierto aunque no cambie
+   nada. Sólo uno por pantalla. */
 .boton-vivo {
   overflow: hidden;
   box-shadow: 0 10px 28px -10px rgba(63, 158, 122, 0.65);
-}
-.boton-vivo:active {
-  box-shadow: 0 3px 10px -6px rgba(63, 158, 122, 0.5);
 }
 @keyframes brillo {
   0% { transform: translateX(-120%) skewX(-18deg); }
@@ -375,7 +385,9 @@ body {
   width: 40%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
   pointer-events: none;
-  animation: brillo 7.3s var(--r-firme) 1.8s infinite;
+  /* backwards: durante los 1,8 s de espera se queda fuera del botón, no
+     quieto encima como una mancha. */
+  animation: brillo 7.3s var(--r-firme) 1.8s 3 backwards;
 }
 
 /* --------------------------------------------------------------------------
@@ -442,6 +454,9 @@ body {
   inset: 0;
   border-radius: inherit;
   background: var(--color-logro);
+  /* Base invisible: sin esto, con «menos movimiento» la fila se ponía de
+     verde macizo 1,2 s. La animación arranca en 0.22 mientras corre. */
+  opacity: 0;
   pointer-events: none;
   animation: lavado 700ms var(--r-firme) both;
 }
@@ -477,7 +492,10 @@ body {
   height: 1em;
   line-height: 1;
   overflow: hidden;
-  vertical-align: bottom;
+  /* Por línea base: en línea («quedan 03:12») los dígitos se apoyan donde
+     el texto (con `bottom` quedaban 3 px por debajo), y solo (racha,
+     contador) no cambia nada. */
+  vertical-align: baseline;
 }
 .rodillo-col {
   display: inline-block;
@@ -496,6 +514,18 @@ body {
   display: block;
   height: 1em;
   line-height: 1;
+}
+/* Lo que cambia cada segundo rueda corto: el compositor duerme ~800 ms de
+   cada 1000 en vez de estar 700 en marcha. La racha sigue con sus 700 ms. */
+.rodillo-segundos .rodillo-col:last-child .rodillo-tira {
+  transition-duration: 200ms;
+}
+/* Debajo de un velo (`.velo`, los diálogos que se abren sobre Hoy) nadie ve
+   rodar la cifra: que salte, y así el desenfoque del velo no se rehace
+   cuarenta veces por segundo en la GPU. Si el WebView no sabe `:has()`,
+   simplemente no aplica. */
+:root:has(.velo) .rodillo-tira {
+  transition: none;
 }
 
 @keyframes grande {
@@ -603,7 +633,8 @@ body {
   pointer-events: none;
   animation:
     brasa-entra 900ms var(--r-firme) 400ms both,
-    brasa-late 4s ease-in-out 1300ms infinite;
+    /* Tres respiraciones (~13 s) al llegar, y quieta: como el brillo. */
+    brasa-late 4s ease-in-out 1300ms 3;
 }
 
 /* El filete bajo las etiquetas de sección: la misma línea de oro de la
@@ -767,12 +798,10 @@ body {
 :root[data-movimiento="menos"] .grande,
 :root[data-movimiento="menos"] .halo-destello,
 :root[data-movimiento="menos"] .trazo,
-:root[data-movimiento="menos"] .barrido::before,
 :root[data-movimiento="menos"] .palabra > span,
 :root[data-movimiento="menos"] .filete line,
 :root[data-movimiento="menos"] .brasa,
 :root[data-movimiento="menos"] .etiqueta-filete::after,
-:root[data-movimiento="menos"] .boton-vivo::before,
 :root[data-movimiento="menos"] .brindis-entra,
 :root[data-movimiento="menos"] .brindis-sale,
 :root[data-movimiento="menos"] .intro-halo,
@@ -795,9 +824,15 @@ body {
 :root[data-movimiento="menos"] .fila:active {
   transform: none;
 }
+/* Los pseudoelementos que sólo existen para animarse se quitan enteros: sin
+   animación se quedarían pintados quietos (la franja del brillo, el barrido
+   de oro, el lavado verde). */
 :root[data-movimiento="menos"] .toque::after,
 :root[data-movimiento="menos"] .halo-destello,
 :root[data-movimiento="menos"] .snap-ok::before,
+:root[data-movimiento="menos"] .fila-reciente::before,
+:root[data-movimiento="menos"] .barrido::before,
+:root[data-movimiento="menos"] .boton-vivo::before,
 :root[data-movimiento="menos"] .intro-borroso,
 :root[data-movimiento="menos"] .intro-destello,
 :root[data-movimiento="menos"] .intro-halo {

@@ -8,6 +8,55 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — la 6.19: lo que encontró la revisión de la 6.18
+
+## Cómo se revisó
+
+Cuatro revisores independientes leyeron el diff de la 6.18, cada uno con una lente (rendimiento
+en el WebView, corrección en React, regresiones de CSS, experiencia y accesibilidad): 29
+hallazgos distintos. A cada uno le tocó **un escéptico** con la orden de refutarlo con el código
+delante; sobrevivieron **24**, ninguno grave (12 medios, 12 leves), y un quinto revisor buscó lo
+que nadie había mirado y trajo 5 más. Los 5 refutados eran o coreografía buscada (Hoy entra dos
+veces con la intro, a propósito) o código que ya no existía.
+
+**Lo que más valió fue el escéptico**: cuatro arreglos propuestos eran peores que el defecto
+(quitar `will-change` al rodillo, dígitos en `lh` con la tira en `em` —salía «79:80»—, quitar
+`pointer-events-auto` al brindis, temporizadores para el brillo). Sin él se habrían aplicado.
+
+## Lo que se arregló (todo en la 6.19)
+
+| Dónde | Qué pasaba | Qué se hizo |
+|---|---|---|
+| `recien.ts` | Marcar y deshacer en un segundo dejaba `subio`/`reciente` pegados: la siguiente celebración no salía | El estado se fija siempre al resultado; `useAcabaDe` acepta una **clave** (la fecha) |
+| Filas | Tocar ‹ para ver ayer «cumplía» cada bloque delante de ti (lavado, tachadura, ✓) | La fila celebra sólo si la fecha no cambió |
+| Intro | Con alarma o llamada al arrancar volvía a salir entera al cerrarlas, y remontaba Hoy | Si llegan, el saludo se da por hecho |
+| Intro | Con código de bloqueo salía DESPUÉS del PIN, como un peaje | Ahora saluda encima del teclado, pegada al splash |
+| Intro | Mientras se disolvía tragaba toques; con «menos movimiento» era una capa invisible 1,4 s | `pointer-events-none` al irse; con «menos», no hay intro |
+| ♥ de la cita | Rebotaba al montar si la frase ya estaba guardada (cada vuelta a Hoy) | `useAcabaDe(guardada)`: sólo al guardar |
+| La G de la racha | Un svg sin medidas se estiraba a 124 px: tachaba «DÍAS SEGUIDOS» y bajaba a la tarjeta de abajo | `size-14`, pegada al número; y vive 1400 ms, lo que dura su fundido |
+| Velos fijos dentro de `main` | Mientras `main` entra transformado, un diálogo `fixed` se desliza con él y salta al asentarse (el editor de rutina al tocar un bloque desde Hoy) | `Capa`: portal al `body`. Rutina, Planes, Hoy (saltar), tarea, aviso del diario |
+| Brillo del botón | Mancha quieta 1,8 s al montar; infinito (compositor despierto); permanente con «menos» | `backwards`, 3 pasadas, y `display:none` con «menos» |
+| Brasa | Infinita | 3 respiraciones |
+| `.toque` | Transicionaba `box-shadow` y `filter` (repintado en hilo principal 600 ms) | Sólo transform y colores; la sombra del botón es fija |
+| Rodillo | 700 ms de transición cada segundo en las cuentas atrás; 3 px por debajo de la línea base; al volver del fondo podía dar casi una vuelta entera; debajo de un velo hacía rehacer el desenfoque 40 veces por segundo | `porSegundos` (200 ms en la última cifra); `baseline`; salta al medio ANTES del paso; `:root:has(.velo) .rodillo-tira { transition: none }` |
+| Filas apagadas | Entraban a brillo pleno y caían a 0,55 de golpe | `aparece` acaba en `--opacidad-final`; `.fila-apagada` |
+| «Menos movimiento» | La fila marcada se ponía de verde macizo; franja de oro quieta | Base `opacity: 0` y `display: none` para los pseudoelementos que sólo existen para animarse |
+| Brindis / aviso | Tapaban la última fila 5,2 s sin hacer nada; el segundo aviso nacía un cuadro con la clase de salida | Tocarlos los retira; la bandera se apaga en el mismo temporizador |
+| Titular del día completo | `aria-label` en un `<p>` no se anuncia (nombre prohibido): TalkBack no lo leía | `sr-only` + un solo `aria-hidden` |
+| Pestaña activa | Tocarla otra vez ponía `--dir` a 0 a media animación: salto lateral | Salir antes si es la misma |
+| **Service worker en el APK** | Al instalar una versión nueva, el SW viejo servía la anterior desde caché y a los segundos recargaba solo: dos intros y lo que hubiera a medias, perdido | En nativo no se registra, y los ya instalados se dan de baja |
+
+Comprobado en el navegador: portal en `body`, `0s` de transición bajo el velo y `0.7s` fuera,
+lavado a 0.22 y ✓ una sola vez, ♥ quieto al montar y animado al tocar, `baseline`, última cifra
+a 200 ms, `.toque` sin `box-shadow`. Sin errores en consola.
+
+## Pendiente
+
+- Que Alex vea la 6.19 en el Xiaomi.
+- Lo del timbre (Joseito, Nazdrely) y el certificado de Agora siguen igual.
+
+---
+
 # 🧭 28 de septiembre de 2026 — «los que yo señale»: el dueño nombra desde el móvil
 
 ## Lo que faltaba
@@ -48,7 +97,7 @@ al dueño. La lista entera sólo la ve él. `dueno` va sin ñ porque el lenguaje
 
 ## Pendiente
 
-- Publicar la 6.19 con esto y con lo que confirme la revisión de la 6.18 (en marcha).
+- ~~Publicar la 6.19~~ — publicada con la revisión, ver la entrada de arriba.
 
 ---
 
