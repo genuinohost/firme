@@ -1177,9 +1177,9 @@ const reparto = (extra = {}) => ({
   hasta: 0,
   grupos: [
     { letra: "A", canal: GRUPO, miembros: ["ana", "carla"] },
-    { letra: "B", canal: `${SALA}~b1`, miembros: ["beto", "dora"] },
+    { letra: "B", canal: `${SALA}~b1`, miembros: ["beto", "pepa"] },
   ],
-  nombres: { ana: "Ana", carla: "Carla", beto: "Beto", dora: "Dora" },
+  nombres: { ana: "Ana", carla: "Carla", beto: "Beto", pepa: "Pepa" },
   ...extra,
 });
 await debe(
