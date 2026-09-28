@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { miUid, puedoModerar } from "@/logica/muro";
 import type { Sala } from "@/logica/sala";
-import { abrirSala, canalDesdeNombre, cerrarSala, salasAbiertas } from "@/logica/sala";
+import { abrirSala, canalDesdeNombre, cerrarSala, hayVoz, salasAbiertas } from "@/logica/sala";
 import { Boton, Entrada, Etiqueta } from "./piezas";
 
 /**
@@ -87,14 +87,17 @@ export function SalasAbiertas({
   };
 
   const hay = salas != null && salas.length > 0;
+  // Abrir, sólo donde se puede entrar: desde el navegador quedaba una sala
+  // «sonando ahora» para los treinta y nadie dentro que pudiera hablar.
+  const puedoAbrirAqui = modero && hayVoz();
 
   // Se avisa de lo que se va a pintar, no de lo que hay en la base: para el
   // aviso de «aquí no hay nada» cuenta igual el botón de abrir que una sala.
   useEffect(() => {
-    onHayAlgo?.(hay || modero);
-  }, [hay, modero, onHayAlgo]);
+    onHayAlgo?.(hay || puedoAbrirAqui);
+  }, [hay, puedoAbrirAqui, onHayAlgo]);
 
-  if (!hay && !modero) return null;
+  if (!hay && !puedoAbrirAqui) return null;
 
   return (
     <section className="flex flex-col gap-2">
@@ -125,11 +128,12 @@ export function SalasAbiertas({
               Entrar
             </Boton>
             {/*
-              Cerrar, sólo la propia. Las reglas no dejan cerrar la sala de otro
-              —ni a quien modera—, así que enseñar el botón a todo el mundo sería
-              ofrecer algo que va a fallar.
+              Cerrar: el anfitrión, y cualquier moderador — una sala que su
+              anfitrión dejó abierta (se le apagó el móvil) sigue facturando en
+              Agora hasta que alguien la cierre. Las reglas dejan a quien modera
+              cambiar `abierta` a false y nada más.
             */}
-            {s.anfitrion === yo ? (
+            {s.anfitrion === yo || modero ? (
               <button
                 onClick={async () => {
                   await cerrarSala(s.canal).catch(() =>
@@ -146,13 +150,19 @@ export function SalasAbiertas({
         </div>
       ))}
 
-      {modero && !abriendo ? (
+      {modero && !hayVoz() ? (
+        <p className="text-xs leading-relaxed text-tenue">
+          Para abrir un devocional usa la app de Android: es donde se puede hablar.
+        </p>
+      ) : null}
+
+      {puedoAbrirAqui && !abriendo ? (
         <Boton ancho onClick={() => setAbriendo(true)}>
           Abrir un devocional
         </Boton>
       ) : null}
 
-      {modero && abriendo ? (
+      {puedoAbrirAqui && abriendo ? (
         <div className="rounded-xl border border-borde p-3">
           <p className="text-sm leading-relaxed">
             ¿Cómo se llama? Los demás lo verán aquí en cuanto lo abras.

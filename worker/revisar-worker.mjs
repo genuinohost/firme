@@ -24,6 +24,18 @@
  */
 import { createServer } from "node:http";
 import { createSign, generateKeyPairSync } from "node:crypto";
+import { createRequire } from "node:module";
+
+// Para abrir los tokens de Agora y mirar sus plazos por dentro: medir la
+// longitud decía que llevaban un privilegio más, no cuánto duraba.
+const { AccessToken2 } = createRequire(import.meta.url)("agora-token/src/AccessToken2.js");
+/** Los privilegios RTC de un token: { 1: entrar, 2: publicar audio, … } en segundos. */
+function privilegiosDe(token) {
+  const t = new AccessToken2();
+  if (!t.from_string(token)) return null;
+  const rtc = t.services.find((s) => s.service_type() === 1);
+  return rtc ? { ...rtc.__privileges } : null;
+}
 
 const PROYECTO = "genuino-host";
 const APP_ID = "1d30537aab4a4171b9649dba7f408565";
@@ -95,6 +107,8 @@ const CUENTA_TIMBRE = JSON.stringify({
 let enviados = [];
 /** Cuántas veces se pidió token a Google. */
 let tokensPedidos = 0;
+/** Cuántas veces se pidieron las claves de Google. */
+let clavesPedidas = 0;
 /** Si el FCM de mentira debe negar el envío como si faltara el rol. */
 let fcmSinPermiso = false;
 
@@ -106,6 +120,7 @@ const servidor = createServer((req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
 
   if (url.pathname === "/claves") {
+    clavesPedidas++;
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ keys: [{ ...jwk, kid: KID, alg: "RS256", use: "sig" }] }));
     return;
@@ -284,6 +299,16 @@ console.log("\nSi entra");
   base["salas/devocional"].abierta = siNo(true);
 }
 {
+  const antes = base["salas/devocional"].desde;
+  base["salas/devocional"].desde = numero(Date.now() - 5 * 3600_000);
+  const r = await llamar({ canal: "devocional", token: tokenDe("ana") });
+  debe(
+    "una sala abierta hace cinco horas ya no deja pasar: nadie paga una sala olvidada",
+    r.estado === 409 && r.datos.error === "sala-cerrada",
+  );
+  base["salas/devocional"].desde = antes;
+}
+{
   base["salas/devocional/expulsados/curioso"] = { cuando: numero(1) };
   const r = await llamar({ canal: "devocional", token: tokenDe("curioso") });
   debe("UN EXPULSADO NO ENTRA", r.estado === 403 && r.datos.error === "expulsado");
@@ -300,22 +325,36 @@ let deOyente = null;
   debe("y se reconoce como anfitrión", r.datos.esAnfitrion === true);
   debe("el token empieza por la versión 007 de Agora", String(r.datos.token).startsWith("007"));
   debe("la cuenta del token es la suya", r.datos.cuenta === "ana");
+  const p = privilegiosDe(r.datos.token);
+  debe(
+    "el anfitrión habla la hora entera: no pierde la voz a mitad del devocional",
+    p?.[1] === 3600 && p?.[2] === 3600,
+    JSON.stringify(p),
+  );
 }
 {
   const r = await llamar({ canal: "devocional", token: tokenDe("beto") });
   debe("quien llega ESCUCHA", r.estado === 200 && r.datos.habla === false);
   debe("y no se cree el anfitrión", r.datos.esAnfitrion === false);
   deOyente = r.datos.token;
+  const p = privilegiosDe(r.datos.token);
+  debe(
+    "el token del oyente NO lleva el privilegio de publicar audio",
+    p?.[1] === 3600 && p?.[2] === undefined,
+    JSON.stringify(p),
+  );
 }
 {
   base["salas/devocional/dentro/beto"] = { palabra: siNo(true), mano: siNo(false) };
   const r = await llamar({ canal: "devocional", token: tokenDe("beto") });
   debe("con la palabra dada, HABLA", r.estado === 200 && r.datos.habla === true);
+  const p = privilegiosDe(r.datos.token);
   debe(
-    "y su token es MÁS LARGO: lleva el privilegio de publicar",
-    r.datos.token.length > deOyente.length,
-    `${r.datos.token.length} vs ${deOyente.length}`,
+    "entra una hora, pero HABLA CINCO MINUTOS: si le quitan la palabra y el aviso no llega, Agora lo calla",
+    p?.[1] === 3600 && p?.[2] === 300,
+    JSON.stringify(p),
   );
+  debe("y la app sabe cuándo renovarla", typeof r.datos.caducaPalabra === "number");
   delete base["salas/devocional/dentro/beto"];
 }
 {
@@ -390,6 +429,14 @@ async function llamarA(cuerpo) {
   base["salas/devocional"].abierta = siNo(true);
 }
 {
+  const antes = base["salas/devocional"].desde;
+  base["salas/devocional"].desde = numero(Date.now() - 5 * 3600_000);
+  enviados = [];
+  const r = await llamarA({ canal: "devocional", token: tokenDe("ana") });
+  debe("ni a una sala olvidada de hace cinco horas", r.estado === 409 && enviados.length === 0);
+  base["salas/devocional"].desde = antes;
+}
+{
   enviados = [];
   const r = await llamarA({ canal: "no-existe", token: tokenDe("ana") });
   debe("a una sala que no existe tampoco", r.estado === 404 && enviados.length === 0);
@@ -448,6 +495,26 @@ console.log("\nLo que rodea");
   olvidarClaves();
   const r = await llamar({ canal: "devocional", token: tokenDe("ana") });
   debe("si las claves se olvidan, se vuelven a pedir y todo sigue", r.estado === 200);
+}
+{
+  // Un token con un `kid` inventado no puede convertir cada petición en una
+  // petición a Google: la primera recarga vale, las siguientes esperan.
+  const antes = clavesPedidas;
+  const falso = tokenDe("ana", { cabecera: { kid: "inventado" } });
+  const r1 = await llamar({ canal: "devocional", token: falso });
+  const r2 = await llamar({ canal: "devocional", token: falso });
+  debe("un kid inventado no entra", r1.estado === 401 && r2.estado === 401);
+  debe(
+    "y dos intentos seguidos piden las claves UNA vez, no dos",
+    clavesPedidas - antes <= 1,
+    `pidió ${clavesPedidas - antes}`,
+  );
+  const tras = clavesPedidas;
+  const r3 = await llamar({ canal: "devocional", token: tokenDe("ana") });
+  debe(
+    "y las claves buenas siguen guardadas: el de verdad entra sin volver a pedirlas",
+    r3.estado === 200 && clavesPedidas === tras,
+  );
 }
 
 servidor.close();

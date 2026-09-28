@@ -8,52 +8,80 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
-# 🧭 28 de septiembre de 2026 — EN CURSO: la revisión del timbre y las salas (para la 6.23)
+# 🧭 28 de septiembre de 2026 — 6.23: lo que encontró la revisión del timbre y las salas
 
-**Estado al cortarse la sesión (límite de uso).** Está aplicado en el árbol de trabajo, con
-`tsc` pasando, pero **sin pruebas pasadas, sin compilar Android y sin publicar**:
+## Cómo se revisó
 
-- Portero: las salas caducan a las 4 h (`SALA_DURA_MS`, también en `sala.ts`), HEAD a /apk se
-  reenvía como HEAD, claves de Google sin recargas a lo loco (`ENTRE_RECARGAS_MS`), nota de la
-  cuota en `wrangler.toml`. Los fixtures de `revisar-worker.mjs` ya llevan `desde: Date.now()`.
-  **Falta**: el token con privilegio de hablar de 2 min para quien no es anfitrión
-  (`PALABRA_SEGUNDOS` está definido pero aún no se usa; `buildTokenWithUidAndPrivilege` está en
-  RtcTokenBuilder2.js:162 y la variante con cuenta hay que localizarla), las pruebas nuevas
-  (sala de 7 h → 409; `kid` inventado → una sola recarga), y volver a pasar las 43.
-- Reglas: la ficha de la sala va atada al perfil (`esMiFicha`), cada uno mueve sólo `mano`, el
-  anfitrión sólo palabra/mano/silencio y validado, moderadores pueden CERRAR salas ajenas,
-  expulsados sólo lo propio o el anfitrión, capturas ≤ 700 KB. Pruebas nuevas escritas; **falta
-  pasar `npm run revisar-reglas`**.
-- Nativo: `Timbre.avisar` (la llamada con la app abierta), ServicioAvisos sin la comprobación de
-  reloj y con respaldo por alarma exacta, ServicioAlarma sin START_STICKY y sin borrar la
-  llamada al parar por tope (sólo en Rechazar), llamada encima de alarma manda, micrófono sólo
-  a quien habla (Sala.java / ServicioSala con tipo `mediaPlayback` para oyentes, manifiesto).
-  **Falta compilar** (`npm run apk`).
-- App: `reapuntarmeSiEstoyDentro` y `alLlamar` (App.tsx), portero sólo de `*.genuinohost.
-  workers.dev`, `cerrarSala(canal)` sólo `abierta`, `entrarEnSala` borra la ficha vieja y suelta
-  el audio si no puede apuntarse, `callarme`, `alCambiarLaRed`, `sacarDeLaLista`,
-  `salasAbiertas` por tiempo. **Falta en PantallaSala.tsx**: quitar `palabraAnterior.current =
-  r.habla` y usar `r.microfono`; callarse ANTES del portero al perder la palabra o los
-  micrófonos; salir con `alCambiarLaRed` (estado 5); renovar el papel cada 90 s si hablo sin ser
-  anfitrión; «pide comentar» y ✋ con la palabra puesta; filas como `div` para oyentes y «puede
-  leer» con micrófonos libres; «Quitar de la lista» aparte de «Sacarlo y que no vuelva»; el
-  texto de `sin-microfono` con botón a los ajustes; el «Salir» del anfitrión como «Terminar».
-  Y en SalasAbiertas `modero && hayVoz()` + cerrar para moderadores; ComunidadDeVoz con la
-  verdad («sólo quien lleva la comunidad ve quién está apuntado»); la campana con tolerancia de
-  60 s.
-- Manual, para Alex: activar **Co-host authentication** en el proyecto de Agora (sin eso el
-  papel de oyente del token es decorativo) y regenerar el certificado; ambas en la misma visita.
+Mismo método que la de la 6.18: cuatro revisores (seguridad del portero y las reglas, el timbre
+de punta a punta, las salas y lo que cuestan, lo que ve Joseito), un escéptico por hallazgo y un
+buscador de faltantes. **27 confirmados** (5 altos), 3 refutados, 8 faltantes. Todo lo que es
+código está en la 6.23; lo que sólo puede hacer Alex, abajo.
 
-## También hoy
+## Lo más importante
+
+| Qué pasaba | Arreglo |
+|---|---|
+| **Reinstalar, borrar datos o cambiar de móvil dejaba a la persona «dentro» de la comunidad pero su móvil NO sonaba**: el tema de FCM vive en la instalación, no en la cuenta | `reapuntarmeSiEstoyDentro()` al arrancar la app |
+| Con la app abierta, la llamada repicaba cinco minutos y en pantalla no salía «Entrar» | `Timbre.avisar` → evento `llamada` → la web pinta «te llaman»; si ya estás en esa sala, se calla sola |
+| Un Xiaomi con la hora puesta a mano 12 min adelante **no sonaba nunca** (la «llamada tardía» se medía con el reloj del móvil) | Fuera: FCM ya descarta lo tardío con su ttl de 600 s |
+| Si Android no dejaba arrancar el servicio desde el aviso, el móvil se quedaba mudo | Respaldo: una alarma exacta para ya mismo, con todo lo del receptor |
+| El tope de 5 min o que MIUI matara el servicio **borraban la llamada** («Entrar» desaparecía a las 4:05) | Sólo se olvida con Rechazar |
+| START_STICKY resucitaba una alarma fantasma «Firme / Es la hora.» | Sin resucitar |
+| Llamada y alarma de la rutina a la vez se pisaban | Manda la llamada, con su tono |
+| «Sacarlo» no sacaba del audio; al cerrar la sala nadie se enteraba (6.22) · y si Agora se rendía, la pantalla seguía «dentro» | Se sale solo; `alCambiarLaRed` (estado 5) |
+| Quien entraba con micrófonos libres entraba con el **micrófono abierto** y pedía dos tokens | Entra cerrado; un solo token |
+| Para escuchar se pedía el micrófono; quien lo negaba dos veces se quedaba fuera para siempre | Sólo se pide al recibir la palabra; sin él, se escucha y hay botón a los ajustes |
+| Al quitar la palabra, si fallaba el portero se seguía publicando hasta una hora | Callarse primero, sin esperar al portero |
+| Una sala olvidada abierta facturaba días de Agora, y sólo su anfitrión podía cerrarla | Caduca a las 4 h en el portero; cualquier moderador la cierra (reglas); el anfitrión que sale solo, la cierra |
+| Cualquiera podía aparecer en la sala con el nombre y la foto de otro | `esMiFicha`: la ficha va atada al perfil; cada uno mueve sólo su mano; el anfitrión sólo palabra/mano/silencio |
+| Hablar sin ser anfitrión valía una hora aunque te quitaran la palabra | Privilegio de hablar de **5 min**, renovado cada 2 mientras se tiene (sólo cuenta con co-host activado, ver abajo) |
+| La lista de expulsados de cualquier sala la leía cualquiera | Sólo el propio y el anfitrión |
+| Un `kid` inventado forzaba una petición a Google por intento | Una recarga por minuto como mucho |
+| `comunidad.json` podía mandar las sesiones de todos a cualquier URL | Sólo `*.genuinohost.workers.dev` |
+| La mano de quien ya tenía la palabra no la veía nadie | Se ve, con «Bajarle la mano» |
+
+Y dos cosas que salieron al publicar: el portero pedía el APK a «la última release» de GitHub con
+el nombre que decía la web, así que **entre publicar una release y desplegar su `version.json`
+la descarga daba 502**. Ahora va a la release de esa versión exacta. Y reenviar el HEAD como
+HEAD a GitHub también daba 502 (vuelve sin cuerpo): revertido.
+
+Pruebas: **51 del portero** (antes 43; ahora abren el token y miran los plazos de verdad: el
+oyente sin privilegio de publicar, el anfitrión una hora, quien habla con la palabra 5 min) y
+**130 de reglas** (antes 119).
+
+## ⚠️ Lo que sólo puede hacer Alex, en la misma visita a la consola de Agora
+
+1. **Activar «Co-host authentication»** en el proyecto (Configure → Primary Certificate). La
+   propia librería de tokens lo dice: sin eso, *«Role_Subscriber still has the same privileges as
+   Role_Publisher»*. Es decir: hoy el papel de oyente del token es decorativo y lo que manda es
+   la app; un APK modificado podría hablar. Si no aparece el interruptor, se pide a soporte.
+2. **Regenerar el certificado** (se pegó en el chat) y volver a poner el secreto en el portero.
+
+Mientras no esté el 1, la frase «un APK modificado no se salta esto» que había más abajo en esta
+bitácora **no es cierta**.
+
+## Lo que queda de la revisión (menor)
+
+App Check (lo único que cierra de verdad el relleno anónimo de `fallos`), la tarjeta de la
+comunidad que promete «sonará» aunque falten permisos, y el aviso de la cuota del Worker si
+algún día se agota.
+
+---
+
+# 🧭 28 de septiembre de 2026 — los devocionales: el prompt, el video y el chat
 
 - `docs/devocionales/prompt-maestro.md`: el prompt de DeepSeek con el que Alex genera cada día
-  los devocionales, el registro de días 251-272 y las fechas (Día 271 = 28-09-2026). Alex
-  mandará el video de la dinámica (está en Descargas: «Dinámica de los devocionales
-  28-09-2026.mp4», **sin ver todavía**) y la exportación del WhatsApp con todos los devocionales
-  desde el 1 de enero: archivo del año, para muchas comunidades.
-- Pedido: los **turnos de lectura** (quién lee, letrero sutil «Te toca», «Siguiente: …», saltando
-  a quien no está) y una interfaz de devocionales **como la de YouVersion** (los días arriba, se
-  desplaza entre devocionales). Diseñar después de ver el video.
+  los devocionales, el registro de días 251-272 y las fechas (Día 271 = 28-09-2026).
+- **El video** («Dinámica de los devocionales 28-09-2026.mp4», 2:46): la app de YouVersion con el
+  plan «Caminemos con la Palabra» (tira de días arriba con fecha y ✓, «Día 272 de 365 · ¡EN
+  MARCHA!», las lecturas con círculos, «Iniciar lectura») y el grupo de WhatsApp «DEVOCIONALES
+  DIARIOS» (29 miembros): el mensaje «ORDEN DE LECTURA BÍBLICA DE HOY» con la lista numerada y
+  «hoy continúa el comentario de: …», el devocional del día y la llamada del grupo a las 5:00
+  («1 h 23 min · se unieron 28»).
+- **El chat exportado** (13 MB, 146.678 líneas, desde el 26-08-2025, 484 fotos y 53 audios): de
+  ahí sale el archivo del año. Se queda en Descargas: tiene los mensajes y números de todos; al
+  repositorio sólo pasan los devocionales de Alex.
+- Pedido: los **turnos de lectura** y una pantalla de devocionales **como la de YouVersion**.
 
 ---
 
@@ -593,7 +621,7 @@ mano, y el anfitrión da la palabra. Y eso **no se cumple por educación**:
 1. El rol viaja **firmado dentro del token** de Agora. Comprobado leyendo el código de la
    librería, no de memoria: con rol `SUBSCRIBER` el token **no lleva el privilegio de publicar
    audio**. El oyente no es alguien a quien la app no le enciende el micrófono — es alguien
-   cuyo permiso no incluye encenderlo. Un APK modificado no se salta esto.
+   cuyo permiso no incluye encenderlo. Un APK modificado no se salta esto (⚠️ falso sin «Co-host authentication» en Agora: ver la entrada de la 6.23).
 2. El token lo firma una **Cloud Function**, porque el certificado de Agora no puede viajar en
    la app. Esa función es la puerta: comprueba cuenta, sala abierta y no expulsado.
 3. Quién tiene la palabra vive en `salas/{canal}/dentro/{uid}.palabra`, y **las reglas de

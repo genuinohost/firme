@@ -69,15 +69,16 @@ const sigueAbierta = (sala) =>
 /**
  * Cuánto dura el privilegio de HABLAR de quien no es el anfitrión.
  *
- * Entrar vale una hora; hablar, dos minutos, y la app lo renueva cada noventa
- * segundos mientras tenga la palabra. Así, si el anfitrión se la quita y el
- * aviso no llega —o llega a un cliente que no obedece—, es Agora quien le
- * cierra el micrófono, no el móvil. (Sólo cuenta si el proyecto de Agora tiene
- * activada la autenticación de coanfitrión; ver docs/investigacion/salas-de-voz.md.)
- * El anfitrión queda fuera: es el único que se juega perder la voz a mitad
- * de la lectura por un fallo de red.
+ * Entrar vale una hora; hablar, cinco minutos, y la app lo renueva cada dos
+ * mientras tenga la palabra (tres minutos de margen para un fallo de red a
+ * mitad de una lectura). Así, si el anfitrión se la quita y el aviso no llega
+ * —o llega a un cliente que no obedece—, es Agora quien le cierra el
+ * micrófono a los cinco minutos como mucho, no a la hora. (Sólo cuenta si el
+ * proyecto de Agora tiene activada la autenticación de coanfitrión; ver
+ * docs/investigacion/salas-de-voz.md.) El anfitrión queda fuera: es el único
+ * que se juega perder la voz a mitad del devocional por un fallo de red.
  */
-const PALABRA_SEGUNDOS = 120;
+const PALABRA_SEGUNDOS = 300;
 
 /**
  * Desde dónde se admiten llamadas.
@@ -168,7 +169,11 @@ async function servirElApk(peticion, entorno) {
   }
 
   const archivo = `Genuino-${nombre}.apk`;
-  const deGithub = `${entorno.RELEASES_URL}/${archivo}`;
+  // De la release de ESA versión, no de «la última». Con `latest/download`,
+  // entre publicar la release nueva y desplegar su version.json el portero
+  // pedía Genuino-6.22.apk a la release 6.23, que no lo tiene: 502 a todos
+  // los que iban a actualizar en ese rato (28-09-2026).
+  const deGithub = `${entorno.RELEASES_URL}/v${nombre}/${archivo}`;
 
   /*
     Se deja pasar el `Range`, y no es un adorno.
@@ -184,13 +189,10 @@ async function servirElApk(peticion, entorno) {
     if (v) aGithub.set(cual, v);
   }
 
-  // Se reenvía el método: un HEAD al portero es un HEAD a GitHub, no una
-  // descarga entera con el cuerpo tirado.
-  const apk = await fetch(deGithub, {
-    method: peticion.method === "HEAD" ? "HEAD" : "GET",
-    headers: aGithub,
-    redirect: "follow",
-  });
+  // Siempre GET. Se probó a reenviar el HEAD como HEAD (28-09-2026) y GitHub
+  // lo devuelve sin cuerpo desde su almacén firmado: el portero lo tomaba por
+  // un fallo y contestaba 502 a quien sólo preguntaba el tamaño.
+  const apk = await fetch(deGithub, { headers: aGithub, redirect: "follow" });
   if (!apk.ok || !apk.body) {
     return new Response("No se pudo traer el paquete.", { status: 502 });
   }
@@ -432,16 +434,36 @@ export default {
     // Con la cuenta en texto, no con un número: el uid de Firebase es una cadena
     // y convertirlo a un entero de 32 bits significa inventarse un hash y
     // aceptar colisiones.
-    const permiso = RtcTokenBuilder.buildTokenWithUserAccount(
-      entorno.AGORA_APP_ID,
-      entorno.AGORA_APP_CERTIFICATE,
-      canal,
-      uid,
-      habla ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER,
-      VALE_SEGUNDOS,
-      VALE_SEGUNDOS,
-    );
+    //
+    // Tres casos. El oyente: sólo entrar. El anfitrión: entrar y hablar una
+    // hora. Quien habla sin ser el anfitrión (con la palabra, con los
+    // micrófonos libres, en una llamada de dos): entrar una hora y hablar
+    // PALABRA_SEGUNDOS, con privilegios separados — un solo plazo corto para
+    // todo echaría del canal a quien no renovara a tiempo.
+    const hablaPoco = habla && !esAnfitrion;
+    const permiso = hablaPoco
+      ? RtcTokenBuilder.BuildTokenWithUserAccountAndPrivilege(
+          entorno.AGORA_APP_ID,
+          entorno.AGORA_APP_CERTIFICATE,
+          canal,
+          uid,
+          VALE_SEGUNDOS,
+          VALE_SEGUNDOS,
+          PALABRA_SEGUNDOS,
+          PALABRA_SEGUNDOS,
+          PALABRA_SEGUNDOS,
+        )
+      : RtcTokenBuilder.buildTokenWithUserAccount(
+          entorno.AGORA_APP_ID,
+          entorno.AGORA_APP_CERTIFICATE,
+          canal,
+          uid,
+          habla ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER,
+          VALE_SEGUNDOS,
+          VALE_SEGUNDOS,
+        );
 
+    const ahora = Math.floor(Date.now() / 1000);
     return respuesta(
       {
         appId: entorno.AGORA_APP_ID,
@@ -450,7 +472,9 @@ export default {
         token: permiso,
         habla,
         esAnfitrion,
-        caduca: Math.floor(Date.now() / 1000) + VALE_SEGUNDOS,
+        caduca: ahora + VALE_SEGUNDOS,
+        // Cuándo deja de valer la palabra, para que la app sepa renovarla.
+        ...(hablaPoco ? { caducaPalabra: ahora + PALABRA_SEGUNDOS } : {}),
       },
       200,
       origen,

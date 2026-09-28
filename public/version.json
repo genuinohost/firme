@@ -1,13 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 64,
-  "nombre": "6.22",
+  "codigo": 65,
+  "nombre": "6.23",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La alarma ya se ve como la llamada: asoma arriba de todo mientras suena, con Parar y Posponer a la vista, y vuelve a asomar cada 15 segundos.",
-    "El anfitrion manda: cerrarle el microfono a cualquiera (o a todos), sacarlo de la sala de verdad, y Terminar para todos, que corta la llamada a cada uno por si alguien olvido salir.",
-    "Quien no es el anfitrion entra con el microfono cerrado, y el anfitrion ve todas las manos.",
-    "El devocional publicado dice de 5 a 6."
+    "Salas de voz mas firmes: si el anfitrion te saca o termina, sales de verdad; si se cae la red, lo dice; quien entra con microfonos libres entra callado.",
+    "Para escuchar ya no se pide el microfono: solo cuando te dan la palabra. Si lo negaste, un boton te lleva a los ajustes.",
+    "El timbre: si reinstalas o cambias de movil, vuelves a quedar apuntado al abrir la app; si la llamada llega con la app abierta, sale Entrar o Ahora no; y un movil con la hora mal puesta ya no se queda mudo.",
+    "El anfitrion ve todas las manos, tambien la de quien ya tiene la palabra, y puede sacar a alguien sin vetarlo."
   ],
   "importante": false
 }

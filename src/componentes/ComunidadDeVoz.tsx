@@ -160,7 +160,8 @@ export function ComunidadDeVoz() {
             Entras a escuchar; para hablar, levantas la mano.
           </p>
           <p className="mt-2 text-xs leading-relaxed text-tenue">
-            Es voluntario y salirse es un toque. Nadie más ve que estás.
+            Es voluntario y salirse es un toque. Sólo quien lleva la comunidad ve
+            quién está apuntado; en la sala, los demás ven tu nombre, tu foto y tu racha.
           </p>
           <div className="mt-3">
             <Boton variante="fuerte" ancho deshabilitado={ocupado} onClick={() => void cambiar()}>

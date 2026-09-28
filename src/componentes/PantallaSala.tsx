@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dentro, Sala } from "@/logica/sala";
 import {
   abrirSala,
+  alCambiarLaRed,
   alCaducarElToken,
+  callarme,
   cambiarDePapel,
+  cerrarSala,
+  sacarDeLaLista,
   darLaPalabra,
   entrarEnSala,
   expulsar,
@@ -23,6 +27,7 @@ import {
   verSala,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
+import { abrirAjustesDeLaApp } from "@/logica/despertador";
 import { parar, sonar, vibrar } from "@/logica/sonido";
 import { cuantosMiembros, llamarALaComunidad } from "@/logica/timbre";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
@@ -103,6 +108,8 @@ export function PantallaSala({
   const salaEstuvoAbierta = useRef(false);
   /** Quién habla ahora, con dos segundos de memoria para que el retrato no parpadee. */
   const [foco, setFoco] = useState<string[]>([]);
+  /** Iba a hablar y el móvil no tiene permiso del micrófono: se dice, con botón. */
+  const [sinMicrofono, setSinMicrofono] = useState(false);
 
   /**
    * El papel que teníamos la última vez.
@@ -130,14 +137,23 @@ export function PantallaSala({
       }
       setHabla(r.habla);
       setEsAnfitrion(r.esAnfitrion);
-      palabraAnterior.current = r.habla;
+      // El punto de partida de `palabraAnterior` lo pone la lista al llegar
+      // (`yo.palabra`), no el token: con los micrófonos libres, en una llamada
+      // o siendo anfitrión se habla SIN `palabra`, y compararlos pedía un
+      // token de más a cada uno que entraba hablando — y le abría el micro.
+      //
       // Quien no es el anfitrión entra con el micrófono cerrado aunque pueda
       // hablar (micrófonos libres): abrirlo es un gesto suyo, no un ruido al
       // llegar tarde a mitad de la lectura.
       if (!r.esAnfitrion) {
         setMicroAbierto(false);
         void miMicro(false);
+      } else {
+        setMicroAbierto(r.habla);
       }
+      // Sin permiso del micrófono se entra igual, a escuchar. Si se iba a
+      // hablar (anfitrión, micrófonos libres), se dice y se da el botón.
+      setSinMicrofono(!r.microfono && (r.esAnfitrion || r.micLibre));
       setEstado("dentro");
     } catch (e) {
       if (!sigoAqui()) return;
@@ -271,6 +287,58 @@ export function PantallaSala({
     };
   }, [canal, estado]);
 
+  // ── si Agora nos suelta, decirlo y salir de verdad ─────────────────────
+  //
+  // Sin esto, si la red se caía veinte minutos o el token caducaba sin
+  // renovarse, Agora se rendía y la pantalla seguía diciendo «estás
+  // escuchando», con el aviso fijo de la sala en la barra y la ficha en la
+  // lista de los demás.
+  useEffect(() => {
+    if (estado !== "dentro") return;
+    let quitar: (() => Promise<void>) | null = null;
+    let vivo = true;
+    void alCambiarLaRed((red) => {
+      if (!vivo) return;
+      if (red === 4) setError("Reconectando…");
+      else if (red === 3) setError((e) => (e === "Reconectando…" ? "" : e));
+      else if (red === 5) {
+        void salirDeSala();
+        setError("Se perdió la conexión con la sala. Vuelve a entrar.");
+        setEstado("fuera");
+      }
+    }).then((o) => {
+      if (!vivo) void o.remove();
+      else quitar = () => o.remove();
+    });
+    return () => {
+      vivo = false;
+      void quitar?.();
+    };
+  }, [estado]);
+
+  // ── la palabra caduca: se renueva mientras se tiene ─────────────────────
+  //
+  // Quien habla sin ser el anfitrión recibe un privilegio de hablar de cinco
+  // minutos (PALABRA_SEGUNDOS en el portero). Cada dos se pide otra vez el
+  // papel: si sigue teniendo la palabra, sigue hablando; si se la quitaron y
+  // el aviso se perdió, aquí se entera y se calla.
+  useEffect(() => {
+    if (estado !== "dentro" || !habla || esAnfitrion) return;
+    const id = window.setInterval(() => {
+      void cambiarDePapel(canal)
+        .then((sigue) => {
+          if (sigue) return;
+          setHabla(false);
+          setMicroAbierto(false);
+        })
+        .catch(() => {
+          // Un fallo de red no calla a nadie: quedan tres minutos de margen y
+          // se vuelve a intentar dentro de dos.
+        });
+    }, 120_000);
+    return () => clearInterval(id);
+  }, [estado, habla, esAnfitrion, canal]);
+
   // ── la campana: suena en cada móvil al llegar la hora ───────────────────
   //
   // Cada móvil la hace sonar por su cuenta: la sala dice el instante y todos
@@ -282,7 +350,10 @@ export function PantallaSala({
     if (estado !== "dentro" || !campanaCuando) return;
     if (campanaSonada.current === campanaCuando) return;
     const falta = campanaCuando - Date.now();
-    if (falta < -5000) return;
+    // Un minuto de tolerancia: la hora la pone el reloj del anfitrión y cada
+    // móvil la compara con el suyo. Con cinco segundos, un móvil adelantado
+    // unos segundos no oía «Sonar ahora» nunca.
+    if (falta < -60_000) return;
     const id = window.setTimeout(() => {
       campanaSonada.current = campanaCuando;
       // Suave y corta: dos segundos de campana a poco volumen, sin la
@@ -372,18 +443,35 @@ export function PantallaSala({
     if (palabraAnterior.current === yo.palabra) return;
     palabraAnterior.current = yo.palabra;
     void (async () => {
+      // Me quitaron la palabra (y los micrófonos no están libres): PRIMERO
+      // callarse, sin esperar al portero. Si se esperara y la red fallara,
+      // seguiría publicando con la pantalla diciéndome que tengo la palabra.
+      if (!yo.palabra && !sala?.micLibre) {
+        setHabla(false);
+        setMicroAbierto(false);
+        await callarme().catch(() => {});
+      }
       try {
         // El papel va firmado en el token, así que cambiar de papel es pedir otro.
         const ahoraHabla = await cambiarDePapel(canal);
         setHabla(ahoraHabla);
-        if (ahoraHabla) {
+        if (ahoraHabla && !yo.silenciado) {
           setMicroAbierto(true);
           await miMicro(true);
         }
-      } catch {
-        setError("No se pudo cambiar tu turno. Sal y vuelve a entrar.");
+      } catch (e) {
+        setError(
+          String((e as { message?: string })?.message ?? e).includes("sin-microfono")
+            ? MENSAJE_SIN_MICROFONO
+            : "No se pudo cambiar tu turno. Sal y vuelve a entrar.",
+        );
+        if (String((e as { message?: string })?.message ?? e).includes("sin-microfono")) {
+          setSinMicrofono(true);
+        }
       }
     })();
+    // `sala.micLibre` se lee en el momento; no es lo que dispara esto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yo?.palabra, canal, estado, yo]);
 
   /**
@@ -407,6 +495,13 @@ export function PantallaSala({
     if (micLibreAnterior.current === libre) return;
     micLibreAnterior.current = libre;
     void (async () => {
+      // Recogieron los micrófonos y no tengo la palabra: callarse YA, antes
+      // del portero (ver el efecto de la palabra).
+      if (!libre && !yo?.palabra) {
+        setHabla(false);
+        setMicroAbierto(false);
+        await callarme().catch(() => {});
+      }
       try {
         const ahoraHabla = await cambiarDePapel(canal);
         setHabla(ahoraHabla);
@@ -416,6 +511,8 @@ export function PantallaSala({
         setError("No se pudo cambiar tu turno. Sal y vuelve a entrar.");
       }
     })();
+    // `yo.palabra` se lee en el momento; no es lo que dispara esto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sala?.micLibre, sala, canal, estado, esAnfitrion]);
 
   // ── lo que se ve ────────────────────────────────────────────────────────
@@ -507,11 +604,19 @@ export function PantallaSala({
 
   if (estado === "fuera") {
     const termino = error.startsWith("El anfitrión");
+    const seCayo = error.startsWith("Se perdió la conexión");
     return (
       <Tarjeta className={termino ? "border-acento/40" : "border-fallo/40"}>
-        <Etiqueta>{termino ? "la reunión terminó" : "no se pudo entrar"}</Etiqueta>
+        <Etiqueta>
+          {termino ? "la reunión terminó" : seCayo ? "fuera de la sala" : "no se pudo entrar"}
+        </Etiqueta>
         <p className="mt-2 text-sm leading-relaxed">{error}</p>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-col gap-2">
+          {error === MENSAJE_SIN_MICROFONO ? (
+            <Boton ancho onClick={() => void abrirAjustesDeLaApp()}>
+              Abrir los ajustes de Genuino
+            </Boton>
+          ) : null}
           <Boton ancho onClick={onSalir}>
             Volver
           </Boton>
@@ -559,6 +664,21 @@ export function PantallaSala({
 
         {error ? (
           <p className="mt-2 text-sm leading-relaxed text-fallo">{error}</p>
+        ) : null}
+        {/*
+          Sin permiso del micrófono se escucha igual, pero para hablar hace
+          falta. Android deja de preguntar tras dos negativas, así que se da el
+          botón a los ajustes de la app, que es el único sitio donde se arregla.
+        */}
+        {sinMicrofono ? (
+          <div className="mt-3 rounded-xl border border-acento/40 bg-acento/5 p-3">
+            <p className="text-sm leading-relaxed">{MENSAJE_SIN_MICROFONO}</p>
+            <div className="mt-2">
+              <Boton ancho onClick={() => void abrirAjustesDeLaApp()}>
+                Abrir los ajustes de Genuino
+              </Boton>
+            </div>
+          </div>
         ) : null}
         {avisoCampana ? (
           <p className="aparece mt-3 rounded-xl border border-acento/50 bg-acento/10 px-3 py-2 text-sm text-acento">
@@ -717,8 +837,13 @@ export function PantallaSala({
               .map((g) => (
                 <div key={g.uid} className="flex items-center gap-3">
                   <span className="min-w-0 flex-1 truncate text-sm">{g.nombre}</span>
+                  {/*
+                    Si ya tiene la palabra, no hay nada que dar: sólo atender la
+                    mano. `darLaPalabra(…, true)` escribe `mano: false` y, como la
+                    palabra no cambia, no le pide un token nuevo.
+                  */}
                   <Boton variante="fuerte" onClick={() => void darLaPalabra(canal, g.uid, true)}>
-                    Darle la palabra
+                    {g.palabra ? "Bajarle la mano" : "Darle la palabra"}
                   </Boton>
                 </div>
               ))}
@@ -840,15 +965,15 @@ export function PantallaSala({
             .sort((a, b) => a.entro - b.entro)
             .map((g) => {
               const suena = g.uid === quienSoy.uid ? sonando.yo : sonando.cuentas.has(g.uid);
-              const puedeHablar = g.palabra || g.uid === sala?.anfitrion;
+              // Botón sólo cuando el anfitrión puede hacer algo con la fila;
+              // para los demás, treinta botones que no hacen nada eran ruido
+              // para el lector de pantalla y para el dedo.
+              const tocable = esAnfitrion && g.uid !== quienSoy.uid;
+              const Fila = tocable ? "button" : "div";
               return (
                 <div key={g.uid}>
-                  <button
-                    onClick={() =>
-                      esAnfitrion && g.uid !== quienSoy.uid
-                        ? setTocando(tocando === g.uid ? null : g.uid)
-                        : undefined
-                    }
+                  <Fila
+                    onClick={tocable ? () => setTocando(tocando === g.uid ? null : g.uid) : undefined}
                     className="flex w-full items-center gap-3 rounded-xl px-1 py-1.5 text-left"
                   >
                     {/*
@@ -882,11 +1007,15 @@ export function PantallaSala({
                           ? "anfitrión"
                           : g.silenciado
                             ? "micrófono cerrado por el anfitrión"
-                            : puedeHablar
-                              ? "tiene la palabra"
+                            : g.palabra
+                              ? g.mano
+                                ? "tiene la palabra · pide comentar"
+                                : "tiene la palabra"
                               : g.mano
                                 ? "levantó la mano"
-                                : "escuchando"}
+                                : sala?.micLibre
+                                  ? "puede leer"
+                                  : "escuchando"}
                       </span>
                     </span>
                     {/* Su racha 🔥 y sus faltas 😢 del devocional, para todos. */}
@@ -899,12 +1028,13 @@ export function PantallaSala({
                         {g.faltas ? <span className="ml-1.5 text-tenue">😢{g.faltas}</span> : null}
                       </span>
                     ) : null}
-                    {g.mano && !puedeHablar ? (
+                    {/* La mano vale también con la palabra puesta (Alex, 28-09). */}
+                    {g.mano && g.uid !== sala?.anfitrion ? (
                       <span className="shrink-0 text-acento" aria-label="levantó la mano">
                         ✋
                       </span>
                     ) : null}
-                  </button>
+                  </Fila>
 
                   {/* Lo que puede hacer el anfitrión, y sólo al tocar a alguien. */}
                   {tocando === g.uid ? (
@@ -927,6 +1057,20 @@ export function PantallaSala({
                       >
                         {g.silenciado ? "Abrirle el micrófono" : "Cerrarle el micrófono"}
                       </Boton>
+                      {/*
+                        Dos formas de sacar, porque son dos cosas: quien se cayó
+                        y quedó de fantasma (o se quedó dormido con la llamada
+                        abierta) puede volver mañana; quien interrumpe, no.
+                      */}
+                      <Boton
+                        ancho
+                        onClick={() => {
+                          void sacarDeLaLista(canal, g.uid);
+                          setTocando(null);
+                        }}
+                      >
+                        Sacarlo (puede volver)
+                      </Boton>
                       <Boton
                         variante="fallo"
                         ancho
@@ -935,7 +1079,7 @@ export function PantallaSala({
                           setTocando(null);
                         }}
                       >
-                        Sacarlo de la sala
+                        Sacarlo y que no vuelva
                       </Boton>
                     </div>
                   ) : null}
@@ -1028,7 +1172,24 @@ export function PantallaSala({
           </BotonRedondo>
         ) : null}
 
-        <BotonRedondo etiqueta="Salir" peligro estrecho={habla && !esAnfitrion} onClick={onSalir}>
+        {/*
+          Si el anfitrión sale y ya no queda nadie más, la sala se cierra sola:
+          una sala abierta y vacía aparece en «Juntos» como «sonando ahora» y
+          cada minuto que alguien pase dentro lo paga Alex. Si quedan hermanos
+          no se cierra: puede seguir otro moderador, y para cortar a todos está
+          «Terminar para todos».
+        */}
+        <BotonRedondo
+          etiqueta="Salir"
+          peligro
+          estrecho={habla && !esAnfitrion}
+          onClick={() => {
+            if (esAnfitrion && sala?.abierta && gente.every((g) => g.uid === quienSoy.uid)) {
+              void cerrarSala(canal).catch(() => {});
+            }
+            onSalir();
+          }}
+        >
           <IconoColgar />
         </BotonRedondo>
       </div>
@@ -1164,10 +1325,16 @@ function IconoColgar() {
  * cerrada»—, y los de aquí hay que traducirlos: `sin-microfono` no le dice nada
  * a nadie.
  */
+/** Sin permiso del micrófono: se escucha igual, pero no se habla. */
+const MENSAJE_SIN_MICROFONO =
+  "Sin permiso del micrófono puedes escuchar, pero no hablar. Dáselo en los ajustes de Genuino → Permisos → Micrófono.";
+
 function comoSeDice(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e);
-  if (m.includes("sin-microfono")) {
-    return "Sin permiso del micrófono no se puede entrar a hablar. Puedes dárselo en los ajustes del móvil.";
+  const codigo = String((e as { code?: string })?.code ?? "");
+  if (m.includes("sin-microfono")) return MENSAJE_SIN_MICROFONO;
+  if (codigo.includes("permission-denied") || m.includes("insufficient permissions")) {
+    return "La app no tiene permiso para esta sala. Avisa a quien lleva la app: es cosa del servidor, no tuya.";
   }
   if (m.includes("solo-en-la-app")) return "Las salas funcionan en la app de Android.";
   if (m.includes("sin-cuenta")) return "Hace falta entrar con tu cuenta.";
