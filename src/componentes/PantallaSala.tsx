@@ -11,6 +11,7 @@ import {
   leerSala,
   mano,
   miMicro,
+  ponerCampana,
   ponerMicLibre,
   porElAltavoz,
   renovarToken,
@@ -20,6 +21,7 @@ import {
   verSala,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
+import { parar, sonar, vibrar } from "@/logica/sonido";
 import { cuantosMiembros, llamarALaComunidad } from "@/logica/timbre";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
@@ -44,6 +46,7 @@ import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 export function PantallaSala({
   canal,
   nombreSiHayQueAbrirla,
+  finPrevisto,
   quienSoy,
   onSalir,
 }: {
@@ -58,6 +61,11 @@ export function PantallaSala({
    * queriendo empezar, y la app le mandaba a buscar otro botón.
    */
   nombreSiHayQueAbrirla?: string;
+  /**
+   * A qué hora local acaba la reunión («06:00»). Es la hora con la que nace
+   * la campana cuando el anfitrión abre la sala; después la mueve él.
+   */
+  finPrevisto?: string;
   quienSoy: { uid: string; nombre: string; usuario: string; foto?: string };
   onSalir: () => void;
 }) {
@@ -82,6 +90,12 @@ export function PantallaSala({
   const [tocando, setTocando] = useState<string | null>(null);
   const [llamando, setLlamando] = useState(false);
   const [avisoLlamada, setAvisoLlamada] = useState("");
+  /** La campana: la hora que edita el anfitrión, el aviso al sonar, y a qué instante ya sonamos. */
+  const [horaCampana, setHoraCampana] = useState(finPrevisto ?? "");
+  const [avisoCampana, setAvisoCampana] = useState("");
+  const campanaSonada = useRef(0);
+  /** Quién habla ahora, con dos segundos de memoria para que el retrato no parpadee. */
+  const [foco, setFoco] = useState<string[]>([]);
 
   /**
    * El papel que teníamos la última vez.
@@ -243,6 +257,54 @@ export function PantallaSala({
     };
   }, [canal, estado]);
 
+  // ── la campana: suena en cada móvil al llegar la hora ───────────────────
+  //
+  // Cada móvil la hace sonar por su cuenta: la sala dice el instante y todos
+  // lo leen. No hay push ni servidor: quien está dentro tiene la app abierta.
+  // Quien entra después de la hora no la oye —ya pasó— y a un mismo instante
+  // no se suena dos veces aunque la sala se repinte.
+  const campanaCuando = sala?.campana?.activa ? sala.campana.cuando : 0;
+  useEffect(() => {
+    if (estado !== "dentro" || !campanaCuando) return;
+    if (campanaSonada.current === campanaCuando) return;
+    const falta = campanaCuando - Date.now();
+    if (falta < -5000) return;
+    const id = window.setTimeout(() => {
+      campanaSonada.current = campanaCuando;
+      // Suave y corta: dos segundos de campana a poco volumen, sin la
+      // vibración larga de las alarmas.
+      sonar("campana", 0.3);
+      window.setTimeout(parar, 2200);
+      vibrar([120, 80, 120]);
+      setAvisoCampana("🔔 Se acabó el tiempo. Cierra tu comentario, por favor.");
+      window.setTimeout(() => setAvisoCampana(""), 25_000);
+    }, Math.max(0, falta));
+    return () => clearTimeout(id);
+  }, [campanaCuando, estado]);
+
+  // La hora que edita el anfitrión sigue a la de la sala cuando llega de fuera.
+  useEffect(() => {
+    if (sala?.campana) setHoraCampana(horaDe(sala.campana.cuando));
+  }, [sala?.campana]);
+
+  // ── quién habla, con memoria ─────────────────────────────────────────────
+  //
+  // Alex, 28-09-2026: «cuando alguien hable en la lectura, debe verse la foto
+  // que colocó de perfil». El nivel de voz sube y baja entre palabras; sin
+  // dos segundos de memoria el retrato aparecería y desaparecería a cada
+  // sílaba.
+  useEffect(() => {
+    const ahora = gente
+      .filter((g) => (g.uid === quienSoy.uid ? sonando.yo : sonando.cuentas.has(g.uid)))
+      .map((g) => g.uid);
+    if (ahora.length > 0) {
+      setFoco(ahora);
+      return;
+    }
+    const id = window.setTimeout(() => setFoco([]), 2000);
+    return () => clearTimeout(id);
+  }, [sonando, gente, quienSoy.uid]);
+
   const yo = useMemo(() => gente.find((g) => g.uid === quienSoy.uid), [gente, quienSoy.uid]);
 
   // ── el anfitrión me dio o me quitó la palabra ───────────────────────────
@@ -347,7 +409,9 @@ export function PantallaSala({
                   setAbriendo(true);
                   setError("");
                   try {
-                    await abrirSala(canal, nombreSiHayQueAbrirla!, "devocional");
+                    // La campana nace a la hora en que acaba la reunión, si se
+                    // sabe y aún no pasó; el anfitrión la mueve o la apaga dentro.
+                    await abrirSala(canal, nombreSiHayQueAbrirla!, "devocional", campanaPrevista(finPrevisto));
                     setSala(await leerSala(canal));
                     setEstado("entrando");
                     // Ya no se puede volver atrás desde aquí, así que el guardia
@@ -436,7 +500,57 @@ export function PantallaSala({
         {error ? (
           <p className="mt-2 text-sm leading-relaxed text-fallo">{error}</p>
         ) : null}
+        {avisoCampana ? (
+          <p className="aparece mt-3 rounded-xl border border-acento/50 bg-acento/10 px-3 py-2 text-sm text-acento">
+            {avisoCampana}
+          </p>
+        ) : null}
       </Tarjeta>
+
+      {/*
+        Quien habla, en grande: su foto con el aro verde y su racha 🔥 abajo a
+        la derecha. Alex, 28-09-2026: «que se vea CLARAMENTE, sin que tape la
+        lectura de los demás mientras escuchan». Por eso es una franja encima
+        de la lista y no una capa sobre la pantalla: hasta tres retratos, y si
+        nadie habla no ocupa nada.
+      */}
+      {foco.length > 0 ? (
+        <div className="flex items-start justify-center gap-5 py-1" aria-live="polite">
+          {foco.slice(0, 3).map((uid) => {
+            const g = gente.find((x) => x.uid === uid);
+            if (!g) return null;
+            return (
+              <div key={uid} className="aparece flex w-24 flex-col items-center gap-1.5">
+                <span className="relative">
+                  <span className="flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-logro bg-superficie-alta text-2xl ring-4 ring-logro/30">
+                    {g.foto ? (
+                      <img
+                        src={g.foto}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      g.nombre.trim().charAt(0).toUpperCase() || "·"
+                    )}
+                  </span>
+                  {typeof g.racha === "number" ? (
+                    <span
+                      className="absolute -right-2 -bottom-1 flex items-center rounded-full border border-acento/60 bg-fondo px-1.5 py-0.5 text-xs font-semibold text-acento shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
+                      aria-label={`${g.racha} días seguidos`}
+                    >
+                      🔥{g.racha}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="w-full truncate text-center text-xs">
+                  {g.uid === quienSoy.uid ? "Tú" : g.nombre}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       {/*
         Los micrófonos, para el anfitrión: con permiso o libres.
@@ -552,6 +666,64 @@ export function PantallaSala({
         </Tarjeta>
       ) : null}
 
+      {/*
+        La campana del final, para el anfitrión. Alex, 28-09-2026: el devocional
+        es de 5 a 6, los comentarios de 5:40 a 6:00, y «a las 6 debe sonar a
+        todos en la llamada una campanita suave para alertar que el tiempo
+        terminó. Yo debo tener el poder de apagarla y encenderla cuando quiera».
+        La hora la elige él; «Sonar ahora» la hace sonar en todos al momento.
+      */}
+      {esAnfitrion && sala?.tipo !== "llamada" ? (
+        <Tarjeta>
+          <Etiqueta>la campana</Etiqueta>
+          <p className="mt-2 text-sm leading-relaxed">
+            A esa hora suena suave en el móvil de todos: se acabó el tiempo, a cerrar el
+            comentario.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              type="time"
+              value={horaCampana}
+              onChange={(e) => {
+                setHoraCampana(e.target.value);
+                if (sala?.campana?.activa && e.target.value) {
+                  void ponerCampana(canal, { cuando: msDeHoy(e.target.value), activa: true });
+                }
+              }}
+              className="rounded-xl border border-borde bg-superficie-alta px-3 py-2 text-sm"
+              aria-label="Hora de la campana"
+            />
+            <Boton
+              variante={sala?.campana?.activa ? "logro" : "normal"}
+              onClick={() => {
+                if (!horaCampana) {
+                  setError("Pon primero la hora de la campana.");
+                  return;
+                }
+                void ponerCampana(canal, {
+                  cuando: msDeHoy(horaCampana),
+                  activa: !sala?.campana?.activa,
+                });
+              }}
+            >
+              {sala?.campana?.activa ? "Encendida" : "Apagada"}
+            </Boton>
+            <Boton
+              onClick={() => void ponerCampana(canal, { cuando: Date.now() + 1500, activa: true })}
+            >
+              Sonar ahora
+            </Boton>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-tenue">
+            {sala?.campana?.activa
+              ? sala.campana.cuando > Date.now()
+                ? `Sonará a las ${horaDe(sala.campana.cuando)} en el móvil de todos los que estén dentro.`
+                : `Sonó a las ${horaDe(sala.campana.cuando)}. Pon otra hora si hace falta.`
+              : "Apagada: hoy no suena."}
+          </p>
+        </Tarjeta>
+      ) : null}
+
       <Tarjeta>
         <Etiqueta>en la sala</Etiqueta>
         <div className="mt-3 flex flex-col gap-1.5">
@@ -607,6 +779,16 @@ export function PantallaSala({
                               : "escuchando"}
                       </span>
                     </span>
+                    {/* Su racha 🔥 y sus faltas 😢 del devocional, para todos. */}
+                    {typeof g.racha === "number" ? (
+                      <span
+                        className="shrink-0 text-xs"
+                        aria-label={`${g.racha} días seguidos, ${g.faltas ?? 0} faltas`}
+                      >
+                        <span className="text-acento">🔥{g.racha}</span>
+                        {g.faltas ? <span className="ml-1.5 text-tenue">😢{g.faltas}</span> : null}
+                      </span>
+                    ) : null}
                     {g.mano && !puedeHablar ? (
                       <span className="shrink-0 text-acento" aria-label="levantó la mano">
                         ✋
@@ -729,6 +911,33 @@ export function PantallaSala({
       </div>
     </div>
   );
+}
+
+// ------------------------------------------------------------ la campana
+
+/** «06:00» de hoy, en milisegundos. */
+function msDeHoy(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  const f = new Date();
+  f.setHours(h || 0, m || 0, 0, 0);
+  return f.getTime();
+}
+
+/** Un instante como «06:00», en hora local. */
+function horaDe(ms: number): string {
+  const f = new Date(ms);
+  return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
+}
+
+/**
+ * Con qué campana nace la sala: a la hora en que acaba la reunión, si se sabe
+ * y todavía no pasó. Si ya pasó (se abre tarde), sin campana: el anfitrión la
+ * pone si quiere.
+ */
+function campanaPrevista(fin?: string): Sala["campana"] {
+  if (!fin) return undefined;
+  const cuando = msDeHoy(fin);
+  return cuando > Date.now() ? { cuando, activa: true } : undefined;
 }
 
 // ------------------------------------------------------------ los botones

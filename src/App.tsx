@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cargar, guardar, idNuevo } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
-import { aHora, claveFecha, desdeClave, minutoActual, sucesosDelDia } from "@/logica/dia";
+import { aHora, claveFecha, desdeClave, finDe, minutoActual, sucesosDelDia } from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, limpiarAvisosViejos, pedirPermisosNativos } from "@/logica/alarmasNativas";
 import { apuntarQueSeSalio, darPorAbierta, tocaPedirlo } from "@/logica/cerradura";
@@ -155,6 +155,8 @@ export default function App() {
     canal: string;
     /** El de la reunión publicada, por si hay que abrirla. */
     nombre?: string;
+    /** A qué hora local acaba: con eso nace la campana de la sala. */
+    fin?: string;
     quien: { uid: string; nombre: string; usuario: string; foto?: string };
   } | null>(null);
 
@@ -555,7 +557,7 @@ export default function App() {
    * foto de cada uno, y una lista de treinta identificadores no es una reunión.
    * Quien no tiene perfil todavía se entera aquí, que es cuando le importa.
    */
-  const entrarEnSala = async (canal: string, nombre?: string) => {
+  const entrarEnSala = async (canal: string, nombre?: string, fin?: string) => {
     try {
       const uid = await miUid();
       const perfil = uid ? await leerPerfil(uid) : null;
@@ -566,6 +568,7 @@ export default function App() {
       setSala({
         canal,
         nombre,
+        fin,
         quien: {
           uid,
           nombre: perfil.nombre,
@@ -716,7 +719,7 @@ export default function App() {
 
         {pestaña === "comunidad" ? (
           <PantallaComunidad
-            onEntrarEnSala={(canal, nombre) => void entrarEnSala(canal, nombre)}
+            onEntrarEnSala={(canal, nombre, fin) => void entrarEnSala(canal, nombre, fin)}
             onPonerEnRutina={ponerReunionEnRutina}
           />
         ) : null}
@@ -1187,6 +1190,7 @@ export default function App() {
             <PantallaSala
               canal={sala.canal}
               nombreSiHayQueAbrirla={sala.nombre}
+              finPrevisto={sala.fin}
               quienSoy={sala.quien}
               onSalir={() => setSala(null)}
             />
@@ -1219,7 +1223,8 @@ export default function App() {
                   // Entrar es cumplirlo: es lo que el bloque pedía.
                   registrar(disparo.suceso, "cumplido", undefined, fechaHoy);
                   cerrar();
-                  void entrarEnSala(canal, nombre);
+                  // El bloque sabe a qué hora acaba: con eso nace la campana.
+                  void entrarEnSala(canal, nombre, aHora(finDe(disparo.suceso)));
                 }
               : undefined
           }

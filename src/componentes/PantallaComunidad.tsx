@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   actualizar,
   estadoReunion,
+  finLocalDe,
   horaLocalDe,
   leerGuardada,
   salaDeLaUrl,
@@ -14,6 +15,7 @@ import { copiar } from "@/logica/compartir";
 import { Muro } from "./Muro";
 import { ComunidadDeVoz } from "./ComunidadDeVoz";
 import { QuienPuedeLlamar } from "./QuienPuedeLlamar";
+import { Asistencia } from "./Asistencia";
 import { SalasAbiertas } from "./SalasAbiertas";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
@@ -68,7 +70,8 @@ export function PantallaComunidad({
    * Si no se pasa —en la web, donde no hay voz— se abre como un enlace normal y
    * la propia pantalla de la sala explica que esto es de la app.
    */
-  onEntrarEnSala?: (canal: string, nombre?: string) => void;
+  /** `fin` es a qué hora local acaba la reunión: la campana de la sala arranca ahí. */
+  onEntrarEnSala?: (canal: string, nombre?: string, fin?: string) => void;
   /**
    * Poner una reunión que es sala de Genuino en la rutina, para que suene a su
    * hora como una alarma. Sólo tiene sentido con las salas propias: una
@@ -110,10 +113,10 @@ export function PantallaComunidad({
    * el sitio — alguien tiene que abrirlo, y el mejor momento para ofrecérselo es
    * cuando toca la reunión a su hora.
    */
-  const abrir = async (url: string, nombre?: string) => {
+  const abrir = async (url: string, nombre?: string, fin?: string) => {
     const canal = salaDeLaUrl(url);
     if (canal && onEntrarEnSala) {
-      onEntrarEnSala(canal, nombre);
+      onEntrarEnSala(canal, nombre, fin);
       return;
     }
     if (!(await abrirEnlace(url))) setSinAbrir(url);
@@ -176,6 +179,8 @@ export function PantallaComunidad({
       <ComunidadDeVoz />
       {/* Sólo la ve el dueño: la lista de quién puede llamar y abrir el devocional. */}
       <QuienPuedeLlamar />
+      {/* Sólo quien modera: quién viene al devocional, su racha y sus faltas. */}
+      <Asistencia />
 
       {vacia ? (
         <Vacio>
@@ -194,7 +199,7 @@ export function PantallaComunidad({
               key={r.id}
               reunion={r}
               ahora={ahora}
-              onEntrar={() => abrir(r.url, r.nombre)}
+              onEntrar={() => abrir(r.url, r.nombre, finLocalDe(r))}
               onPonerEnRutina={
                 onPonerEnRutina && salaDeLaUrl(r.url) ? () => onPonerEnRutina(r) : undefined
               }

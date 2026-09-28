@@ -8,6 +8,53 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — la campana de las seis, la asistencia y la cara de quien habla
+
+## Lo que pidió Alex
+
+> «El devocional es de 5 a 6, pero los comentarios son de 5:40 a 6:00: a las 6 debe sonar a
+> todos en la llamada una campanita suave para alertar que el tiempo terminó. Yo debo tener el
+> poder de apagarla y encenderla cuando quiera. Además, un control de asistencias e
+> inasistencias: rachas por cada día que conecten, y una carita triste 😢 por cada día que
+> sumen no conectando; todo visible en el perfil de los conectados. Cuando alguien hable, que
+> se vea su foto de perfil y abajo a la derecha su racha dentro de una llama 🔥. Que se vea
+> CLARAMENTE, sin tapar la lectura de los demás.»
+
+## Cómo quedó (6.21)
+
+**La campana.** Vive en la sala (`salas/{canal}.campana = { cuando, activa }`): un instante
+absoluto —suena a la vez en Caracas y en Madrid— y si está encendida. Sólo la escribe el
+anfitrión (reglas). **Cada móvil la hace sonar por su cuenta** al llegar la hora: dos segundos de
+campana a poco volumen, una vibración corta y un aviso en la tarjeta («Se acabó el tiempo.
+Cierra tu comentario»). Ni push ni servidor: quien está dentro tiene la app abierta. Quien entra
+después de la hora no la oye. Nace a la hora en que acaba la reunión publicada (`finLocalDe`) o
+el bloque de la rutina; el anfitrión tiene una tarjeta con la hora, Encendida/Apagada y
+**«Sonar ahora»** (la hace sonar en todos al momento).
+
+**La asistencia.** Entrar a la sala del devocional es asistir: el móvil apunta el día en
+`comunidad/voz/asistencia/{uid}` y calcula la **racha 🔥** (días de reunión seguidos, hacia atrás
+desde hoy) y las **faltas 😢** (días de reunión sin venir en los últimos 30, y sólo desde el primer
+día que vino: quien acaba de llegar no arranca con 29 faltas). Los dos números se copian a la
+ficha de la sala (`dentro/{uid}`), donde los ven los demás. Cada uno escribe lo suyo; la lista
+entera la ve quien modera, en **Juntos → «asistencia al devocional»**, con quién vino hoy. Ocho
+pruebas de la cuenta (`npm run revisar-asistencia`) y doce de reglas más (114 en total).
+
+**Quien habla.** Encima de la lista, una franja con hasta tres retratos grandes de quien está
+sonando: aro verde, la foto de perfil y el 🔥 con la racha abajo a la derecha. Con dos segundos
+de memoria para que no parpadee entre sílabas. Si nadie habla, no ocupa nada: no tapa la
+lectura. En la lista, cada fila lleva 🔥 y 😢.
+
+## Lo que no está decidido
+
+- `comunidad.json` dice que el devocional es a las **03:00 de Caracas**; Alex habla de 5 a 6.
+  La campana nace a la hora que diga la reunión (o el bloque de la rutina), así que si la
+  reunión está mal puesta, la campana nace mal — y el anfitrión la corrige en la tarjeta. Hay
+  que preguntarle cuál es la hora real y corregir el archivo.
+- Los días de reunión (`dias` de la reunión) no llegan a la cuenta de asistencia: se cuenta como
+  diaria. Si el devocional no es todos los días, hay que pasarlos.
+
+---
+
 # 🧭 28 de septiembre de 2026 — la manito, siempre; y la revisión del timbre en marcha
 
 ## «La manito en las llamadas siempre debe estar disponible para pedir permiso para hablar»

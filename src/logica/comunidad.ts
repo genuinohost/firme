@@ -201,9 +201,19 @@ function desplazamientoHorario(zona: string, cuando: Date): number {
 
 /** La hora de la reunión en el reloj de quien la mira. */
 export function horaLocalDe(reunion: Reunion, ahora = new Date()): string {
+  return aHoraLocal(reunion, 0, ahora);
+}
+
+/** A qué hora local termina: la hora más la duración. Para la campana de la sala. */
+export function finLocalDe(reunion: Reunion, ahora = new Date()): string {
+  return aHoraLocal(reunion, reunion.duracionMin, ahora);
+}
+
+function aHoraLocal(reunion: Reunion, masMinutos: number, ahora: Date): string {
   const [h, m] = reunion.hora.split(":").map(Number);
   const minutos =
-    h * 60 + m + (-ahora.getTimezoneOffset() - desplazamientoHorario(reunion.zona, ahora));
+    h * 60 + m + masMinutos +
+    (-ahora.getTimezoneOffset() - desplazamientoHorario(reunion.zona, ahora));
   const norm = ((minutos % 1440) + 1440) % 1440;
   return `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
 }

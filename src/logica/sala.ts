@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { dondeEstaElPortero } from "./comunidad";
 import { miUid } from "./muro";
+import { marcarAsistencia } from "./asistencia";
 import { nube } from "./nube";
 
 /**
@@ -95,6 +96,15 @@ export type Sala = {
    * la sala sólo la escribe él. El portero lo lee al firmar el token.
    */
   micLibre?: boolean;
+  /**
+   * La campana: a ese instante suena suave en el móvil de todos los que están
+   * dentro, para avisar de que el tiempo se acabó y hay que cerrar el
+   * comentario. Alex, el 28-09-2026: el devocional es de 5 a 6, los comentarios
+   * de 5:40 a 6:00, y «a las 6 debe sonar a todos una campanita suave». La
+   * enciende y la apaga él. `cuando` es un instante absoluto, para que suene a
+   * la vez en Caracas y en Madrid; cada móvil la hace sonar por su cuenta.
+   */
+  campana?: { cuando: number; activa: boolean };
 };
 
 /** Uno de los que están dentro. Sale de Firestore, con su nombre y su foto. */
@@ -108,6 +118,9 @@ export type Dentro = {
   mano: boolean;
   /** El anfitrión le dio la palabra. Sólo él puede moverlo. */
   palabra: boolean;
+  /** Días seguidos viniendo al devocional (🔥) y faltas del último mes (😢). */
+  racha?: number;
+  faltas?: number;
 };
 
 /** Lo que devuelve el portero. */
@@ -186,6 +199,7 @@ export async function abrirSala(
   canal: string,
   nombre: string,
   tipo: Sala["tipo"] = "devocional",
+  campana?: Sala["campana"],
 ): Promise<void> {
   const uid = await miUid();
   if (!uid) throw new Error("sin-cuenta");
@@ -199,7 +213,17 @@ export async function abrirSala(
     // Se nace con permiso. Que sea el anfitrión quien decida soltar los
     // micrófonos, y no que se encuentre treinta abiertos sin haberlo pedido.
     micLibre: false,
+    ...(campana ? { campana } : {}),
   });
+}
+
+/** Poner, mover o apagar la campana. Sólo el anfitrión, y lo garantizan las reglas. */
+export async function ponerCampana(
+  canal: string,
+  campana: NonNullable<Sala["campana"]>,
+): Promise<void> {
+  const { updateDoc } = await import("firebase/firestore");
+  await updateDoc(await refSala(canal), { campana });
 }
 
 /**
@@ -271,6 +295,8 @@ export async function verQuienEsta(
           entro: typeof x.entro === "number" ? x.entro : 0,
           mano: x.mano === true,
           palabra: x.palabra === true,
+          ...(typeof x.racha === "number" ? { racha: x.racha } : {}),
+          ...(typeof x.faltas === "number" ? { faltas: x.faltas } : {}),
         };
       }),
     );
@@ -337,6 +363,12 @@ export async function entrarEnSala(
   const permiso = await pedirPermiso(canal);
   const sala = await leerSala(canal);
 
+  // Venir a un devocional es asistir: se apunta el día, sube la racha (o
+  // arranca) y los dos números van a la ficha, donde los ven los demás. Si
+  // falla, se entra igual: la asistencia no puede dejar a nadie fuera.
+  const asistencia =
+    sala?.tipo === "devocional" ? await marcarAsistencia(quienSoy).catch(() => null) : null;
+
   await nativa.entrar({
     appId: permiso.appId,
     canal: permiso.canal,
@@ -356,6 +388,7 @@ export async function entrarEnSala(
     mano: false,
     // Se entra en silencio siempre. Las reglas no admitirían otra cosa.
     palabra: false,
+    ...(asistencia ? { racha: asistencia.racha, faltas: asistencia.faltas } : {}),
   });
 
   // En un devocional el altavoz; en una llamada de dos, el auricular.

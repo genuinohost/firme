@@ -708,6 +708,87 @@ await debe(
   assertFails(getDoc(doc(curioso, "moderadores", "dueno"))),
 );
 
+// ── La campana, la asistencia y la racha en la sala ───────────────────────
+await debe(
+  "el anfitrión pone la campana",
+  assertSucceeds(
+    updateDoc(doc(moderador, "salas", SALA), { campana: { cuando: 1, activa: true } }),
+  ),
+);
+await debe(
+  "otro no toca la campana",
+  assertFails(updateDoc(doc(ana, "salas", SALA), { campana: { cuando: 1, activa: false } })),
+);
+await debe(
+  "la campana no admite campos de más",
+  assertFails(
+    updateDoc(doc(moderador, "salas", SALA), { campana: { cuando: 1, activa: true, x: 1 } }),
+  ),
+);
+const asistencia = (extra = {}) => ({
+  nombre: "Ana",
+  usuario: "ana",
+  dias: ["2026-09-27", "2026-09-28"],
+  racha: 2,
+  faltas: 0,
+  ultimo: "2026-09-28",
+  ...extra,
+});
+await debe(
+  "cada uno apunta su asistencia",
+  assertSucceeds(setDoc(doc(ana, "comunidad/voz/asistencia/ana"), asistencia())),
+);
+await debe(
+  "nadie apunta la asistencia de otro",
+  assertFails(setDoc(doc(curioso, "comunidad/voz/asistencia/ana"), asistencia())),
+);
+await debe(
+  "una racha negativa no vale",
+  assertFails(setDoc(doc(ana, "comunidad/voz/asistencia/ana"), asistencia({ racha: -1 }))),
+);
+await debe(
+  "quien modera ve la lista de asistencia",
+  assertSucceeds(getDocs(collection(moderador, "comunidad/voz/asistencia"))),
+);
+await debe(
+  "un extraño no ve la lista de asistencia",
+  assertFails(getDocs(collection(curioso, "comunidad/voz/asistencia"))),
+);
+await debe(
+  "cada uno lee su asistencia; un extraño la de otro no",
+  Promise.all([
+    assertSucceeds(getDoc(doc(ana, "comunidad/voz/asistencia/ana"))),
+    assertFails(getDoc(doc(curioso, "comunidad/voz/asistencia/ana"))),
+  ]),
+);
+await debe(
+  "al entrar a la sala se lleva la racha y las faltas",
+  assertSucceeds(
+    setDoc(doc(ana, `salas/${SALA}/dentro/ana`), {
+      nombre: "Ana",
+      usuario: "ana",
+      entro: 1,
+      mano: false,
+      palabra: false,
+      racha: 2,
+      faltas: 0,
+    }),
+  ),
+);
+await debe(
+  "una racha que no es número entero no entra en la sala",
+  assertFails(
+    setDoc(doc(beto, `salas/${SALA}/dentro/beto`), {
+      nombre: "Beto",
+      usuario: "beto",
+      entro: 1,
+      mano: false,
+      palabra: false,
+      racha: "muchas",
+    }),
+  ),
+);
+
 await entorno.cleanup();
 
 console.log(

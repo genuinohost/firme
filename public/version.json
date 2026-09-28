@@ -1,10 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 62,
-  "nombre": "6.20",
+  "codigo": 63,
+  "nombre": "6.21",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La manito siempre esta: si puedes hablar y no eres el anfitrion, hay cuatro botones (altavoz, micro, mano, salir). Con microfonos libres para leer, para comentar se pide la palabra con la mano."
+    "La campana de las seis: a la hora que ponga el anfitrion suena suave en el movil de todos los que estan en la sala, con un aviso para cerrar el comentario. El la enciende, la apaga, la mueve o la hace sonar ahora.",
+    "Asistencia al devocional: entrar a la sala cuenta como venir. Cada uno lleva su racha de dias seguidos y sus faltas del mes, que se ven en la sala; quien modera ve la lista entera en Juntos.",
+    "Cuando alguien habla se ve su foto en grande con su racha en una llama. Sin tapar la lectura."
   ],
   "importante": false
 }

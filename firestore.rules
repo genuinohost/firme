@@ -232,14 +232,21 @@ service cloud.firestore {
       }
 
       function salaRazonable(d) {
-        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre'])
+        return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre', 'campana'])
           && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
           && d.abierta is bool
           && d.desde is number
           && d.tipo in ['devocional', 'llamada']
           // Micrófonos libres. Vive en la sala y no en cada ficha porque es una
           // decisión del anfitrión sobre todos, y la sala sólo la escribe él.
-          && (!('micLibre' in d) || d.micLibre is bool);
+          && (!('micLibre' in d) || d.micLibre is bool)
+          // La campana del final: un instante y si está encendida. También del
+          // anfitrión, porque suena en el móvil de todos.
+          && (!('campana' in d) || (
+            d.campana is map
+            && d.campana.keys().hasOnly(['cuando', 'activa'])
+            && d.campana.cuando is number
+            && d.campana.activa is bool));
       }
 
       // La lee cualquiera que haya entrado: hace falta para saber si la sala
@@ -268,13 +275,17 @@ service cloud.firestore {
       // ------------------------------------------------------ quién está dentro
       match /dentro/{quien} {
         function dentroRazonable(d) {
-          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra'])
+          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra', 'racha', 'faltas'])
             && d.nombre is string && d.nombre.size() <= 40
             && d.usuario is string && d.usuario.size() <= 20
             && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000))
             && d.entro is number
             && d.mano is bool
-            && d.palabra is bool;
+            && d.palabra is bool
+            // La racha 🔥 y las faltas 😢 del devocional, copiadas de su
+            // asistencia al entrar para que los demás las vean en la sala.
+            && (!('racha' in d) || (d.racha is int && d.racha >= 0 && d.racha <= 10000))
+            && (!('faltas' in d) || (d.faltas is int && d.faltas >= 0 && d.faltas <= 10000));
         }
 
         // Todos ven la lista: es una reunión, no una sala a oscuras.
@@ -332,6 +343,29 @@ service cloud.firestore {
       allow get: if esElMismo(uid);
       allow list: if esModerador();
       allow create, update: if esElMismo(uid) && miembroRazonable(request.resource.data);
+      allow delete: if esElMismo(uid);
+    }
+
+    // ------------------------------------------------------- la asistencia
+    //
+    // Quién vino al devocional, su racha (días seguidos) y sus faltas (del
+    // último mes). Alex, 28-09-2026: «debo tener un control de asistencias e
+    // inasistencias». Cada móvil apunta lo suyo al entrar a la sala; la lista
+    // entera la ve quien modera. Los dos números se copian a `dentro/{uid}`
+    // al entrar, que es donde los ven los demás.
+    match /comunidad/voz/asistencia/{uid} {
+      function asistenciaRazonable(d) {
+        return d.keys().hasOnly(['nombre', 'usuario', 'dias', 'racha', 'faltas', 'ultimo'])
+          && d.nombre is string && d.nombre.size() <= 40
+          && d.usuario is string && d.usuario.size() <= 20
+          && d.dias is list && d.dias.size() <= 120
+          && d.racha is int && d.racha >= 0 && d.racha <= 10000
+          && d.faltas is int && d.faltas >= 0 && d.faltas <= 10000
+          && d.ultimo is string && d.ultimo.size() == 10;
+      }
+      allow get: if esElMismo(uid) || esModerador();
+      allow list: if esModerador();
+      allow create, update: if esElMismo(uid) && asistenciaRazonable(request.resource.data);
       allow delete: if esElMismo(uid);
     }
 
