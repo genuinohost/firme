@@ -8,6 +8,45 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — 6.22: la alarma que se ve, y el anfitrión manda
+
+## «Así como la llamada se ve fácilmente, así debe verse cada alarma»
+
+Alex: «cuando suena una alarma de las tareas pasa lo mismo que cuando había una llamada: no
+se encontraba entre las notificaciones y no salía como algo prioritario». Y también: «la sala
+de devocionales, todos los días de 5 a 6, es junto a las alarmas LO MÁS IMPORTANTE».
+
+**La causa era una línea:** `setSilent(true)` en la notificación de la alarma. Una notificación
+«silenciosa» Android la manda a la sección de abajo de la bandeja, plegada, y **nunca la asoma
+arriba** (heads-up). La llamada se veía porque va con estilo de llamada y Android la sube a la
+fuerza; la alarma, con PRIORITY_MAX, CATEGORY_ALARM, coloreada y republicada cada 15 s, seguía
+enterrada por ese `setSilent`. Fuera: el canal ya era mudo y sin vibración, así que ahora
+**asoma sin sonar** (el sonido lo pone el reproductor), con Parar y Posponer a la vista, y la
+republicación de cada 15 s la vuelve a asomar mientras repica.
+
+Y `comunidad.json` decía que el devocional era a las **03:00** de Caracas; Alex dice de 5 a 6.
+Corregido a 05:00: de ahí sale la hora con la que nace la campana.
+
+## El anfitrión manda (Alex, 28-09-2026)
+
+> «Debo tener la opción de mutear micrófonos encima de los participantes y también de sacarlos
+> de la llamada. Cuando finaliza el devocional hay hermanos que olvidan cerrar la llamada. Debí
+> tener la opción de poder finalizar la llamada para todos.»
+
+| Qué | Cómo |
+|---|---|
+| **Cerrarle el micrófono** a alguien | `dentro/{uid}.silenciado`, sólo lo pone el anfitrión (reglas, como `palabra`). Al que lo lleva, su app le cierra el micro y no le deja abrirlo; en la fila se lee «micrófono cerrado por el anfitrión». Y «Cerrar todos los micros» de golpe |
+| **Sacarlo de la sala** | Existía, pero **el expulsado seguía oyendo** (lo encontró la revisión): ahora, en cuanto su ficha desaparece de la lista, su app suelta el audio y sale: «El anfitrión te sacó de la sala» |
+| **Terminar para todos** | Cierra la sala y vacía la lista; a cada uno le llega, suelta el audio y sale con «El anfitrión terminó el devocional». Pide dos toques |
+
+De paso, dos cosas de la revisión que tocaban el mismo sitio: quien no es el anfitrión **entra
+con el micrófono cerrado** aunque pueda hablar (antes, con micrófonos libres, entraba abierto a
+mitad de la lectura), y **el anfitrión ve todas las manos**, también la de quien tiene la palabra.
+
+Reglas: 119 comprobaciones (5 nuevas).
+
+---
+
 # 🧭 28 de septiembre de 2026 — la campana de las seis, la asistencia y la cara de quien habla
 
 ## Lo que pidió Alex
@@ -46,10 +85,7 @@ lectura. En la lista, cada fila lleva 🔥 y 😢.
 
 ## Lo que no está decidido
 
-- `comunidad.json` dice que el devocional es a las **03:00 de Caracas**; Alex habla de 5 a 6.
-  La campana nace a la hora que diga la reunión (o el bloque de la rutina), así que si la
-  reunión está mal puesta, la campana nace mal — y el anfitrión la corrige en la tarjeta. Hay
-  que preguntarle cuál es la hora real y corregir el archivo.
+- ~~`comunidad.json` decía 03:00 de Caracas~~ — Alex confirmó de 5 a 6; corregido en la 6.22.
 - Los días de reunión (`dias` de la reunión) no llegan a la cuenta de asistencia: se cuenta como
   diaria. Si el devocional no es todos los días, hay que pasarlos.
 

@@ -776,6 +776,35 @@ await debe(
   ),
 );
 await debe(
+  "el anfitrión silencia a alguien",
+  assertSucceeds(updateDoc(doc(moderador, `salas/${SALA}/dentro/ana`), { silenciado: true })),
+);
+await debe(
+  "el silenciado no se quita el silencio",
+  assertFails(updateDoc(doc(ana, `salas/${SALA}/dentro/ana`), { silenciado: false })),
+);
+await debe(
+  "el silenciado sí puede levantar la mano",
+  assertSucceeds(updateDoc(doc(ana, `salas/${SALA}/dentro/ana`), { mano: true })),
+);
+await debe(
+  "nadie entra ya silenciado por su cuenta (ni sin silencio se lo pone otro)",
+  assertFails(
+    setDoc(doc(curioso, `salas/${SALA}/dentro/curioso`), {
+      nombre: "Curioso",
+      usuario: "curioso",
+      entro: 1,
+      mano: false,
+      palabra: false,
+      silenciado: true,
+    }),
+  ),
+);
+await debe(
+  "el anfitrión vacía la lista al terminar para todos",
+  assertSucceeds(deleteDoc(doc(moderador, `salas/${SALA}/dentro/ana`))),
+);
+await debe(
   "una racha que no es número entero no entra en la sala",
   assertFails(
     setDoc(doc(beto, `salas/${SALA}/dentro/beto`), {

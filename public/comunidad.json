@@ -46,7 +46,7 @@
       "nombre": "Devocional de la madrugada",
       "descripcion": "Oración juntos para empezar el día",
       "dias": [],
-      "hora": "03:00",
+      "hora": "05:00",
       "duracionMin": 60,
       "zona": "America/Caracas",
       "url": "genuino://sala/devocional-madrugada",

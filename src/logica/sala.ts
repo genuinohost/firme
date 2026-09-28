@@ -121,6 +121,13 @@ export type Dentro = {
   /** Días seguidos viniendo al devocional (🔥) y faltas del último mes (😢). */
   racha?: number;
   faltas?: number;
+  /**
+   * El anfitrión le cerró el micrófono. Sólo él lo pone y lo quita; al que
+   * lo lleva, su app le cierra el micro y no le deja abrirlo. Alex,
+   * 28-09-2026: «debo tener la opción de mutear micrófonos encima de los
+   * participantes», sobre todo al acabar, cuando alguien olvida colgar.
+   */
+  silenciado?: boolean;
 };
 
 /** Lo que devuelve el portero. */
@@ -297,6 +304,7 @@ export async function verQuienEsta(
           palabra: x.palabra === true,
           ...(typeof x.racha === "number" ? { racha: x.racha } : {}),
           ...(typeof x.faltas === "number" ? { faltas: x.faltas } : {}),
+          ...(x.silenciado === true ? { silenciado: true } : {}),
         };
       }),
     );
@@ -325,6 +333,35 @@ export async function darLaPalabra(
   const { updateDoc } = await import("firebase/firestore");
   // Al dar la palabra se le baja la mano: ya se le atendió.
   await updateDoc(await refDentro(canal, aQuien), { palabra: se, mano: false });
+}
+
+/** Cerrarle o abrirle el micrófono a alguien. Sólo el anfitrión; lo garantizan las reglas. */
+export async function silenciar(canal: string, aQuien: string, si: boolean): Promise<void> {
+  const { updateDoc } = await import("firebase/firestore");
+  await updateDoc(await refDentro(canal, aQuien), { silenciado: si });
+}
+
+/**
+ * Terminar para todos: cerrar la sala y vaciar la lista.
+ *
+ * Alex, 28-09-2026: «cuando finaliza el devocional hay hermanos que olvidan
+ * cerrar la llamada. Debí tener la opción de poder finalizar la llamada para
+ * todos». A cada uno le llega que la sala se cerró y que ya no está en la
+ * lista, y su app suelta el audio y sale sola.
+ */
+export async function terminarParaTodos(
+  canal: string,
+  nombre: string,
+  tipo: Sala["tipo"],
+): Promise<void> {
+  await cerrarSala(canal, nombre, tipo);
+  const { bd } = await nube();
+  const { collection, getDocs, writeBatch } = await import("firebase/firestore");
+  const dentro = await getDocs(collection(bd, "salas", canal, "dentro"));
+  if (dentro.empty) return;
+  const lote = writeBatch(bd);
+  dentro.docs.forEach((d) => lote.delete(d.ref));
+  await lote.commit();
 }
 
 /** Sacar a alguien, y que no pueda volver. */

@@ -1,12 +1,13 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 63,
-  "nombre": "6.21",
+  "codigo": 64,
+  "nombre": "6.22",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La campana de las seis: a la hora que ponga el anfitrion suena suave en el movil de todos los que estan en la sala, con un aviso para cerrar el comentario. El la enciende, la apaga, la mueve o la hace sonar ahora.",
-    "Asistencia al devocional: entrar a la sala cuenta como venir. Cada uno lleva su racha de dias seguidos y sus faltas del mes, que se ven en la sala; quien modera ve la lista entera en Juntos.",
-    "Cuando alguien habla se ve su foto en grande con su racha en una llama. Sin tapar la lectura."
+    "La alarma ya se ve como la llamada: asoma arriba de todo mientras suena, con Parar y Posponer a la vista, y vuelve a asomar cada 15 segundos.",
+    "El anfitrion manda: cerrarle el microfono a cualquiera (o a todos), sacarlo de la sala de verdad, y Terminar para todos, que corta la llamada a cada uno por si alguien olvido salir.",
+    "Quien no es el anfitrion entra con el microfono cerrado, y el anfitrion ve todas las manos.",
+    "El devocional publicado dice de 5 a 6."
   ],
   "importante": false
 }

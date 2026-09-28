@@ -16,6 +16,8 @@ import {
   porElAltavoz,
   renovarToken,
   salirDeSala,
+  silenciar,
+  terminarParaTodos,
   verQuienEsta,
   verQuienHabla,
   verSala,
@@ -94,6 +96,11 @@ export function PantallaSala({
   const [horaCampana, setHoraCampana] = useState(finPrevisto ?? "");
   const [avisoCampana, setAvisoCampana] = useState("");
   const campanaSonada = useRef(0);
+  /** «Terminar para todos» pide tocar dos veces. */
+  const [confirmarFin, setConfirmarFin] = useState(false);
+  /** Para saber que me sacaron o que la sala se cerró: hay que haber estado. */
+  const estuveEnLaLista = useRef(false);
+  const salaEstuvoAbierta = useRef(false);
   /** Quién habla ahora, con dos segundos de memoria para que el retrato no parpadee. */
   const [foco, setFoco] = useState<string[]>([]);
 
@@ -124,6 +131,13 @@ export function PantallaSala({
       setHabla(r.habla);
       setEsAnfitrion(r.esAnfitrion);
       palabraAnterior.current = r.habla;
+      // Quien no es el anfitrión entra con el micrófono cerrado aunque pueda
+      // hablar (micrófonos libres): abrirlo es un gesto suyo, no un ruido al
+      // llegar tarde a mitad de la lectura.
+      if (!r.esAnfitrion) {
+        setMicroAbierto(false);
+        void miMicro(false);
+      }
       setEstado("dentro");
     } catch (e) {
       if (!sigoAqui()) return;
@@ -307,6 +321,47 @@ export function PantallaSala({
 
   const yo = useMemo(() => gente.find((g) => g.uid === quienSoy.uid), [gente, quienSoy.uid]);
 
+  // ── el anfitrión terminó, o me sacó ─────────────────────────────────────
+  //
+  // Hasta la 6.21, «Sacarlo de la sala» borraba la ficha pero el expulsado
+  // seguía oyendo (y hablando) hasta que saliera él; y al cerrar la sala los
+  // de dentro no se enteraban. Ahora, en cuanto la sala deja de estar abierta
+  // o mi ficha desaparece de la lista, se suelta el audio y se sale.
+  useEffect(() => {
+    if (estado !== "dentro") return;
+    if (sala?.abierta) {
+      salaEstuvoAbierta.current = true;
+      return;
+    }
+    if (!salaEstuvoAbierta.current || esAnfitrion) return;
+    void salirDeSala();
+    setError("El anfitrión terminó el devocional. Gracias por venir.");
+    setEstado("fuera");
+  }, [sala?.abierta, estado, esAnfitrion]);
+
+  useEffect(() => {
+    if (estado !== "dentro") return;
+    if (gente.some((g) => g.uid === quienSoy.uid)) {
+      estuveEnLaLista.current = true;
+      return;
+    }
+    if (!estuveEnLaLista.current) return;
+    void salirDeSala();
+    setError(
+      sala && !sala.abierta
+        ? "El anfitrión terminó el devocional. Gracias por venir."
+        : "El anfitrión te sacó de la sala.",
+    );
+    setEstado("fuera");
+  }, [gente, estado, quienSoy.uid, sala]);
+
+  // ── me silenciaron ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (estado !== "dentro" || !yo?.silenciado) return;
+    setMicroAbierto(false);
+    void miMicro(false);
+  }, [yo?.silenciado, estado]);
+
   // ── el anfitrión me dio o me quitó la palabra ───────────────────────────
   useEffect(() => {
     if (estado !== "dentro" || !yo) return;
@@ -451,9 +506,10 @@ export function PantallaSala({
   }
 
   if (estado === "fuera") {
+    const termino = error.startsWith("El anfitrión");
     return (
-      <Tarjeta className="border-fallo/40">
-        <Etiqueta>no se pudo entrar</Etiqueta>
+      <Tarjeta className={termino ? "border-acento/40" : "border-fallo/40"}>
+        <Etiqueta>{termino ? "la reunión terminó" : "no se pudo entrar"}</Etiqueta>
         <p className="mt-2 text-sm leading-relaxed">{error}</p>
         <div className="mt-3">
           <Boton ancho onClick={onSalir}>
@@ -464,7 +520,9 @@ export function PantallaSala({
     );
   }
 
-  const manos = gente.filter((g) => g.mano && !g.palabra);
+  // Todas las manos menos la del anfitrión: también la de quien tiene la
+  // palabra o los micrófonos libres, que pide turno para comentar.
+  const manos = gente.filter((g) => g.mano && g.uid !== sala?.anfitrion);
   const conLaPalabra = gente.filter((g) => g.palabra || g.uid === sala?.anfitrion);
 
   return (
@@ -486,15 +544,17 @@ export function PantallaSala({
         <p
           className={`mt-3 text-sm leading-relaxed ${habla ? "text-logro" : "text-tenue"}`}
         >
-          {habla
-            ? microAbierto
-              ? sonando.yo
-                ? "Tienes la palabra y se te está oyendo."
-                : "Tienes la palabra. Habla."
-              : sala?.micLibre && !esAnfitrion
-                ? "Micrófonos libres: abre el tuyo cuando te toque leer. Para comentar, levanta la mano."
-                : "Tienes la palabra, pero tu micrófono está cerrado."
-            : "Estás escuchando. Levanta la mano para comentar."}
+          {yo?.silenciado
+            ? "El anfitrión cerró tu micrófono. Cuando te lo abra, podrás hablar."
+            : habla
+              ? microAbierto
+                ? sonando.yo
+                  ? "Tienes la palabra y se te está oyendo."
+                  : "Tienes la palabra. Habla."
+                : sala?.micLibre && !esAnfitrion
+                  ? "Micrófonos libres: abre el tuyo cuando te toque leer. Para comentar, levanta la mano."
+                  : "Tienes la palabra, pero tu micrófono está cerrado."
+              : "Estás escuchando. Levanta la mano para comentar."}
         </p>
 
         {error ? (
@@ -724,6 +784,54 @@ export function PantallaSala({
         </Tarjeta>
       ) : null}
 
+      {/*
+        Al terminar, para el anfitrión. Alex, 28-09-2026: «cuando finaliza el
+        devocional hay hermanos que olvidan cerrar la llamada. Debí tener la
+        opción de poder finalizar la llamada para todos». Cerrar la sala le
+        corta la llamada a cada uno; silenciar a todos, para el cierre en
+        oración. Terminar pide dos toques: no hay vuelta atrás.
+      */}
+      {esAnfitrion ? (
+        <Tarjeta className="border-fallo/30">
+          <Etiqueta>al terminar</Etiqueta>
+          <p className="mt-2 text-sm leading-relaxed">
+            Terminar cierra la sala para todos: a cada uno se le corta la llamada, por si
+            alguien olvidó salir.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Boton
+              ancho
+              onClick={() => {
+                gente
+                  .filter((g) => g.uid !== quienSoy.uid && !g.silenciado)
+                  .forEach((g) => void silenciar(canal, g.uid, true));
+              }}
+            >
+              Cerrar todos los micros
+            </Boton>
+            <Boton
+              variante="fallo"
+              ancho
+              onClick={async () => {
+                if (!confirmarFin) {
+                  setConfirmarFin(true);
+                  window.setTimeout(() => setConfirmarFin(false), 6000);
+                  return;
+                }
+                try {
+                  await terminarParaTodos(canal, sala?.nombre ?? "Una sala", sala?.tipo ?? "devocional");
+                  onSalir();
+                } catch {
+                  setError("No se pudo cerrar la sala. Mira tu conexión.");
+                }
+              }}
+            >
+              {confirmarFin ? "¿Seguro? Toca otra vez" : "Terminar para todos"}
+            </Boton>
+          </div>
+        </Tarjeta>
+      ) : null}
+
       <Tarjeta>
         <Etiqueta>en la sala</Etiqueta>
         <div className="mt-3 flex flex-col gap-1.5">
@@ -772,11 +880,13 @@ export function PantallaSala({
                       <span className="block truncate text-xs text-tenue">
                         {g.uid === sala?.anfitrion
                           ? "anfitrión"
-                          : puedeHablar
-                            ? "tiene la palabra"
-                            : g.mano
-                              ? "levantó la mano"
-                              : "escuchando"}
+                          : g.silenciado
+                            ? "micrófono cerrado por el anfitrión"
+                            : puedeHablar
+                              ? "tiene la palabra"
+                              : g.mano
+                                ? "levantó la mano"
+                                : "escuchando"}
                       </span>
                     </span>
                     {/* Su racha 🔥 y sus faltas 😢 del devocional, para todos. */}
@@ -807,6 +917,15 @@ export function PantallaSala({
                         }}
                       >
                         {g.palabra ? "Quitarle la palabra" : "Darle la palabra"}
+                      </Boton>
+                      <Boton
+                        ancho
+                        onClick={() => {
+                          void silenciar(canal, g.uid, !g.silenciado);
+                          setTocando(null);
+                        }}
+                      >
+                        {g.silenciado ? "Abrirle el micrófono" : "Cerrarle el micrófono"}
                       </Boton>
                       <Boton
                         variante="fallo"
@@ -871,17 +990,21 @@ export function PantallaSala({
 
         {habla ? (
           <BotonRedondo
-            etiqueta={microAbierto ? "Silenciar" : "Abrir micro"}
-            activo={microAbierto}
+            etiqueta={yo?.silenciado ? "Cerrado" : microAbierto ? "Silenciar" : "Abrir micro"}
+            activo={microAbierto && !yo?.silenciado}
             grande
             estrecho={!esAnfitrion}
             onClick={() => {
+              if (yo?.silenciado) {
+                setError("El anfitrión cerró tu micrófono. Levanta la mano si quieres hablar.");
+                return;
+              }
               const nuevo = !microAbierto;
               setMicroAbierto(nuevo);
               void miMicro(nuevo);
             }}
           >
-            <IconoMicro tachado={!microAbierto} />
+            <IconoMicro tachado={!microAbierto || !!yo?.silenciado} />
           </BotonRedondo>
         ) : (
           <BotonRedondo

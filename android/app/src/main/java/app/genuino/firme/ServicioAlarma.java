@@ -256,7 +256,21 @@ public class ServicioAlarma extends Service {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOngoing(true)
                 .setAutoCancel(false)
-                .setSilent(true) // el sonido lo pone el reproductor, no esto
+                /*
+                  Sin setSilent(true), a proposito. Una notificacion «silenciosa»
+                  Android la manda a la seccion de abajo de la bandeja, plegada,
+                  y NUNCA la asoma arriba (heads-up). Por eso la llamada —que
+                  va con estilo de llamada y Android la sube a la fuerza— se
+                  veia, y la alarma no. Alex, 28-09-2026: «no se encontraba
+                  entre las notificaciones y no salia como algo prioritario».
+
+                  El canal ya es mudo y sin vibracion, asi que esto ASOMA sin
+                  sonar: el sonido lo pone el reproductor. Y con alertar cada
+                  vez, la republicacion de cada quince segundos la vuelve a
+                  asomar mientras repique.
+                */
+                .setDefaults(0)
+                .setOnlyAlertOnce(false)
                 // Coloreado y a pantalla completa: las dos cosas que hacen que
                 // no se confunda con los demas avisos de la bandeja.
                 .setColorized(true)

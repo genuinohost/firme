@@ -275,7 +275,7 @@ service cloud.firestore {
       // ------------------------------------------------------ quién está dentro
       match /dentro/{quien} {
         function dentroRazonable(d) {
-          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra', 'racha', 'faltas'])
+          return d.keys().hasOnly(['nombre', 'usuario', 'foto', 'entro', 'mano', 'palabra', 'racha', 'faltas', 'silenciado'])
             && d.nombre is string && d.nombre.size() <= 40
             && d.usuario is string && d.usuario.size() <= 20
             && (!('foto' in d) || (d.foto is string && d.foto.size() <= 60000))
@@ -285,7 +285,9 @@ service cloud.firestore {
             // La racha 🔥 y las faltas 😢 del devocional, copiadas de su
             // asistencia al entrar para que los demás las vean en la sala.
             && (!('racha' in d) || (d.racha is int && d.racha >= 0 && d.racha <= 10000))
-            && (!('faltas' in d) || (d.faltas is int && d.faltas >= 0 && d.faltas <= 10000));
+            && (!('faltas' in d) || (d.faltas is int && d.faltas >= 0 && d.faltas <= 10000))
+            // El micrófono cerrado por el anfitrión. Como `palabra`: sólo él.
+            && (!('silenciado' in d) || d.silenciado is bool);
         }
 
         // Todos ven la lista: es una reunión, no una sala a oscuras.
@@ -295,14 +297,16 @@ service cloud.firestore {
         allow create: if esElMismo(quien)
           && dentroRazonable(request.resource.data)
           && request.resource.data.palabra == false
+          && request.resource.data.get('silenciado', false) == false
           && !exists(/databases/$(database)/documents/salas/$(canal)/expulsados/$(quien));
 
-        // Levantar la mano es lo propio. La palabra la da el anfitrión, y por
-        // eso al tocar lo suyo `palabra` tiene que quedarse igual.
+        // Levantar la mano es lo propio. La palabra la da el anfitrión, y el
+        // silencio también: al tocar lo suyo, los dos tienen que quedarse igual.
         allow update: if (
             esElMismo(quien)
             && dentroRazonable(request.resource.data)
             && request.resource.data.palabra == resource.data.palabra
+            && request.resource.data.get('silenciado', false) == resource.data.get('silenciado', false)
           ) || esAnfitrion();
 
         // Salirse, o que el anfitrión te saque.
