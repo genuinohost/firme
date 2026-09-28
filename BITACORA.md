@@ -8,6 +8,30 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — la manito, siempre; y la revisión del timbre en marcha
+
+## «La manito en las llamadas siempre debe estar disponible para pedir permiso para hablar»
+
+Alex, 28-09-2026. Hasta la 6.19 el botón del medio era el micrófono si podías hablar y la mano
+si no: con **micrófonos libres** para la lectura, o con la palabra dada, la mano desaparecía, y
+quien quería COMENTAR no tenía cómo pedir turno sin abrir el micro encima de la lectura.
+
+Ahora, si puedes hablar y no eres el anfitrión, hay **cuatro botones**: altavoz, micro (grande),
+mano y salir, algo más estrechos para que quepan en 360 px. Al anfitrión no le sale: es él quien
+da la palabra. El texto de micrófonos libres lo dice: «abre el tuyo cuando te toque leer; para
+comentar, levanta la mano». Publicado en la **6.20**.
+
+## En marcha: la revisión del timbre y las salas
+
+Con el mismo método que la del movimiento (cuatro lentes + un escéptico por hallazgo + un
+buscador de faltantes), pero sobre lo que de verdad importa: **seguridad** del portero y de las
+reglas (¿puede un extraño hacer sonar 30 móviles, sacar un token de publicador, gastar el saldo
+de Agora?), el **timbre** de punta a punta (FCM → ServicioAvisos → ServicioAlarma → «te llaman»),
+las **salas** (tokens, papeles, micLibre, el anfitrión que se va, el foreground service, lo que
+cuesta) y **lo que ve Joseito**. Lo que confirme va a la siguiente versión.
+
+---
+
 # 🧭 28 de septiembre de 2026 — la 6.19: lo que encontró la revisión de la 6.18
 
 ## Cómo se revisó

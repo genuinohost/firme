@@ -1,14 +1,10 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 61,
-  "nombre": "6.19",
+  "codigo": 62,
+  "nombre": "6.20",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Quien puede llamar: en Juntos, el dueno nombra y quita a los que pueden abrir el devocional y hacer sonar los moviles.",
-    "Lo que encontro la revision del movimiento: la G de la racha ya no tapa nada, las filas no celebran al cambiar de dia, el corazon no rebota al abrir, la intro no sale dos veces con una alarma ni despues del codigo.",
-    "Menos gasto: el brillo y la brasa se apagan solos, la cuenta atras rueda corto, y los dialogos ya no saltan al abrirse.",
-    "Al actualizar ya no se ve la version vieja un momento ni se recarga sola: el APK no usa el service worker.",
-    "Tocar la frase de animo la retira."
+    "La manito siempre esta: si puedes hablar y no eres el anfitrion, hay cuatro botones (altavoz, micro, mano, salir). Con microfonos libres para leer, para comentar se pide la palabra con la mano."
   ],
   "importante": false
 }

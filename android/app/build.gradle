@@ -16,8 +16,8 @@ android {
         applicationId "app.genuino.firme"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 61
-        versionName "6.19"
+        versionCode 62
+        versionName "6.20"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // ------------------------------------------ que arquitecturas van

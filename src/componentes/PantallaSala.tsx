@@ -428,7 +428,7 @@ export function PantallaSala({
                 ? "Tienes la palabra y se te está oyendo."
                 : "Tienes la palabra. Habla."
               : sala?.micLibre && !esAnfitrion
-                ? "Micrófonos libres. Abre el tuyo cuando te toque."
+                ? "Micrófonos libres: abre el tuyo cuando te toque leer. Para comentar, levanta la mano."
                 : "Tienes la palabra, pero tu micrófono está cerrado."
             : "Estás escuchando. Levanta la mano para comentar."}
         </p>
@@ -660,11 +660,24 @@ export function PantallaSala({
 
         En el medio va el micrófono si puedes hablar, y la mano si no: es el
         mismo sitio para «lo que puedes hacer ahora», y el pulgar lo aprende.
+
+        Y si puedes hablar SIN ser el anfitrión —te dieron la palabra, o los
+        micrófonos están libres para la lectura—, la mano sigue ahí, a un lado.
+        Alex, el 28-09-2026: «la manito en las llamadas siempre debe estar
+        disponible para pedir permiso para hablar». Con los micrófonos libres
+        para leer por turnos, quien quiere COMENTAR pide turno con la mano, no
+        abre el micro encima de la lectura. Al anfitrión no le hace falta: es
+        él quien da la palabra.
       */}
-      <div className="flex items-start justify-center gap-6 pt-2">
+      <div
+        className={`flex items-start justify-center pt-2 ${
+          habla && !esAnfitrion ? "gap-3" : "gap-6"
+        }`}
+      >
         <BotonRedondo
           etiqueta={altavoz ? "Altavoz" : "Auricular"}
           activo={altavoz}
+          estrecho={habla && !esAnfitrion}
           onClick={() => {
             const nuevo = !altavoz;
             setAltavoz(nuevo);
@@ -679,6 +692,7 @@ export function PantallaSala({
             etiqueta={microAbierto ? "Silenciar" : "Abrir micro"}
             activo={microAbierto}
             grande
+            estrecho={!esAnfitrion}
             onClick={() => {
               const nuevo = !microAbierto;
               setMicroAbierto(nuevo);
@@ -698,7 +712,18 @@ export function PantallaSala({
           </BotonRedondo>
         )}
 
-        <BotonRedondo etiqueta="Salir" peligro onClick={onSalir}>
+        {habla && !esAnfitrion ? (
+          <BotonRedondo
+            etiqueta={yo?.mano ? "Bajar la mano" : "Pedir la palabra"}
+            activo={!!yo?.mano}
+            estrecho
+            onClick={() => void mano(canal, !yo?.mano)}
+          >
+            <IconoMano />
+          </BotonRedondo>
+        ) : null}
+
+        <BotonRedondo etiqueta="Salir" peligro estrecho={habla && !esAnfitrion} onClick={onSalir}>
           <IconoColgar />
         </BotonRedondo>
       </div>
@@ -721,6 +746,7 @@ function BotonRedondo({
   activo,
   grande,
   peligro,
+  estrecho,
   onClick,
 }: {
   children: React.ReactNode;
@@ -728,16 +754,21 @@ function BotonRedondo({
   activo?: boolean;
   grande?: boolean;
   peligro?: boolean;
+  /** Con cuatro botones en fila caben en un móvil de 360 px sólo así. */
+  estrecho?: boolean;
   onClick: () => void;
 }) {
-  const tamano = grande ? "size-[72px]" : "size-14";
+  const tamano = grande ? (estrecho ? "size-16" : "size-[72px]") : estrecho ? "size-[52px]" : "size-14";
   const color = peligro
     ? "bg-fallo text-fondo"
     : activo
       ? "bg-logro text-fondo"
       : "bg-superficie-alta text-texto border border-borde";
   return (
-    <button onClick={onClick} className="flex w-20 flex-col items-center gap-1.5">
+    <button
+      onClick={onClick}
+      className={`flex ${estrecho ? "w-16" : "w-20"} flex-col items-center gap-1.5`}
+    >
       <span
         className={`flex ${tamano} items-center justify-center rounded-full transition active:scale-95 ${color}`}
       >
