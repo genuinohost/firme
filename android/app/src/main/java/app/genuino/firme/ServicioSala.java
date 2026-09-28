@@ -40,9 +40,13 @@ public class ServicioSala extends Service {
     /** Como se llama la sala, para poder decirlo en el aviso. */
     private static final String EXTRA_NOMBRE = "nombre";
 
-    static void arrancar(Context contexto, String nombre) {
+    /** Si el servicio puede declararse «de microfono»: solo con el permiso concedido. */
+    private static final String EXTRA_MICRO = "conMicrofono";
+
+    static void arrancar(Context contexto, String nombre, boolean conMicrofono) {
         Intent i = new Intent(contexto, ServicioSala.class);
         i.putExtra(EXTRA_NOMBRE, nombre);
+        i.putExtra(EXTRA_MICRO, conMicrofono);
         // `startForegroundService` obliga a llamar a startForeground en cinco
         // segundos o el sistema mata el proceso. Se hace en onStartCommand, lo
         // primero.
@@ -61,6 +65,10 @@ public class ServicioSala extends Service {
     public int onStartCommand(Intent intencion, int banderas, int id) {
         String nombre = intencion != null ? intencion.getStringExtra(EXTRA_NOMBRE) : null;
         if (nombre == null || nombre.isEmpty()) nombre = "Una sala";
+        // Sin permiso de microfono, un servicio de tipo microfono revienta en
+        // Android 14 (SecurityException). Quien solo escucha va como
+        // reproduccion, que es lo que hace.
+        boolean conMicrofono = intencion != null && intencion.getBooleanExtra(EXTRA_MICRO, false);
 
         crearCanal();
 
@@ -83,7 +91,10 @@ public class ServicioSala extends Service {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceCompat.startForeground(
-                    this, ID_AVISO, aviso, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+                    this, ID_AVISO, aviso,
+                    conMicrofono
+                            ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                            : ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         } else {
             startForeground(ID_AVISO, aviso);
         }

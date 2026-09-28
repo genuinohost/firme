@@ -201,24 +201,32 @@ public class Sala extends Plugin {
      */
     @PluginMethod
     public void entrar(PluginCall llamada) {
-        if (getPermissionState("microfono") != PermissionState.GRANTED) {
-            esperandoPermiso = llamada;
-            llamada.setKeepAlive(true);
-            requestPermissionForAlias("microfono", llamada, "traselPermiso");
+        boolean habla = Boolean.TRUE.equals(llamada.getBoolean("habla", false));
+        // El microfono se pide solo a quien va a HABLAR. Para escuchar no hace
+        // falta (Agora entra como oyente sin publicar nada), y pedirselo a un
+        // oyente era la forma de que lo negara dos veces y se quedara fuera
+        // del devocional para siempre con un mensaje que hablaba de hablar.
+        if (!habla || tieneMicrofono()) {
+            entrarDeVerdad(llamada);
             return;
         }
-        entrarDeVerdad(llamada);
+        esperandoPermiso = llamada;
+        llamada.setKeepAlive(true);
+        requestPermissionForAlias("microfono", llamada, "traselPermiso");
+    }
+
+    private boolean tieneMicrofono() {
+        return getPermissionState("microfono") == PermissionState.GRANTED;
     }
 
     @PermissionCallback
     private void traselPermiso(PluginCall llamada) {
         PluginCall guardada = esperandoPermiso != null ? esperandoPermiso : llamada;
         esperandoPermiso = null;
-        if (getPermissionState("microfono") != PermissionState.GRANTED) {
-            // Sin microfono se puede escuchar, pero no es lo que se pidio. Se
-            // dice claro para que la web pueda ofrecer entrar solo a escuchar.
-            guardada.reject("sin-microfono");
-            return;
+        if (!tieneMicrofono()) {
+            // Sin microfono se entra igual, a escuchar. La web se entera por
+            // `microfono: false` y lo dice, con el boton a los ajustes.
+            guardada.getData().put("habla", false);
         }
         entrarDeVerdad(guardada);
     }
@@ -277,11 +285,13 @@ public class Sala extends Plugin {
 
             canalActual = canal;
             nombreActual = nombre;
-            // Y el servicio, para que salir de la app no saque de la sala.
-            ServicioSala.arrancar(getContext(), nombre);
+            // Y el servicio, para que salir de la app no saque de la sala. De
+            // tipo microfono solo si hay permiso: sin el, Android 14 lo mata.
+            ServicioSala.arrancar(getContext(), nombre, habla && tieneMicrofono());
 
             JSObject ok = new JSObject();
             ok.put("habla", habla);
+            ok.put("microfono", tieneMicrofono());
             llamada.resolve(ok);
         } catch (Exception e) {
             llamada.reject("fallo-al-entrar", e);
@@ -319,9 +329,16 @@ public class Sala extends Plugin {
     /**
      * Cambiar de oyente a quien habla, o al contrario.
      *
-     * <p>Hace falta el token nuevo: el rol va firmado dentro, asi que cambiar de
-     * papel sin cambiar de token no cambia nada. Es justamente lo que hace que la
-     * moderacion no se pueda saltar desde el cliente.
+     * <p>Para HABLAR hace falta el token nuevo: el privilegio de publicar va
+     * firmado dentro (y Agora lo hace cumplir si el proyecto tiene activada la
+     * autenticacion de coanfitrion; ver docs/investigacion/salas-de-voz.md).
+     * Para CALLARSE no: bajar a oyente es una decision local y no debe esperar
+     * a nadie — un microfono que sigue abierto porque fallo la red es peor que
+     * un token que llega tarde.
+     *
+     * <p>Y si para hablar falta el permiso del microfono, se pide aqui: es el
+     * momento en que la persona levanto la mano y el anfitrion le dio la
+     * palabra, cuando entiende para que se le pide.
      */
     @PluginMethod
     public void rol(PluginCall llamada) {
@@ -331,18 +348,46 @@ public class Sala extends Plugin {
         }
         String token = llamada.getString("token");
         boolean habla = Boolean.TRUE.equals(llamada.getBoolean("habla", false));
-        if (token == null) {
+        if (habla && token == null) {
             llamada.reject("falta-el-token");
             return;
         }
+        if (habla && !tieneMicrofono()) {
+            esperandoRol = llamada;
+            llamada.setKeepAlive(true);
+            requestPermissionForAlias("microfono", llamada, "traselPermisoParaHablar");
+            return;
+        }
+        aplicarRol(llamada, token, habla);
+    }
+
+    private PluginCall esperandoRol;
+
+    @PermissionCallback
+    private void traselPermisoParaHablar(PluginCall llamada) {
+        PluginCall guardada = esperandoRol != null ? esperandoRol : llamada;
+        esperandoRol = null;
+        if (!tieneMicrofono()) {
+            guardada.reject("sin-microfono");
+            return;
+        }
+        aplicarRol(guardada, guardada.getString("token"), true);
+    }
+
+    private void aplicarRol(PluginCall llamada, String token, boolean habla) {
         try {
-            motor.renewToken(token);
+            if (token != null) motor.renewToken(token);
             ChannelMediaOptions op = new ChannelMediaOptions();
             op.clientRoleType = habla
                     ? Constants.CLIENT_ROLE_BROADCASTER
                     : Constants.CLIENT_ROLE_AUDIENCE;
             op.publishMicrophoneTrack = habla;
             motor.updateChannelMediaOptions(op);
+            // Al pasar a hablar, el servicio sube a tipo microfono (ya con
+            // permiso); al callarse se queda como esta, que no estorba.
+            if (habla && nombreActual != null) {
+                ServicioSala.arrancar(getContext(), nombreActual, true);
+            }
             llamada.resolve();
         } catch (Exception e) {
             llamada.reject("no-se-pudo-cambiar-el-rol", e);

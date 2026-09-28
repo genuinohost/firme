@@ -4,6 +4,14 @@
 # Blaze exige tarjeta, y a Alex se la rechazaron el 25-09-2026: Google Cloud no
 # opera en Venezuela. El plan gratuito de Workers no pide tarjeta y da 100.000
 # peticiones al dia — un devocional de treinta gasta treinta.
+#
+# ⚠️ CUALQUIER url publica del Worker cuenta contra esas 100.000 (tambien un
+# HEAD a /apk, un POST vacio o un token invalido): si alguien las agota, el
+# portero contesta el error 1027 hasta medianoche UTC y esa madrugada no hay ni
+# tokens ni timbre. Aceptado a sabiendas (28-09-2026): la alarma a hora fija no
+# depende de esto. La unica palanca gratuita real, si ocurre, es sacarlo de
+# workers.dev a un subdominio propio con los DNS en Cloudflare, donde el
+# limitador de peticiones frena ANTES de que cuenten.
 
 name = "genuino-portero"
 main = "src/index.js"

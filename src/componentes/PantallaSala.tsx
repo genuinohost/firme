@@ -819,7 +819,7 @@ export function PantallaSala({
                   return;
                 }
                 try {
-                  await terminarParaTodos(canal, sala?.nombre ?? "Una sala", sala?.tipo ?? "devocional");
+                  await terminarParaTodos(canal);
                   onSalir();
                 } catch {
                   setError("No se pudo cerrar la sala. Mira tu conexión.");

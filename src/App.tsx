@@ -45,7 +45,13 @@ import { leerPerfil } from "@/logica/nube";
 import { pasarLaApp } from "@/logica/pasarApp";
 import { horaLocalDe, salaDeLaUrl, type Reunion } from "@/logica/comunidad";
 import { respaldarSiToca } from "@/logica/respaldoNube";
-import { atenderLlamada, llamadaPendiente, type LlamadaPendiente } from "@/logica/timbre";
+import {
+  alLlamar,
+  atenderLlamada,
+  llamadaPendiente,
+  reapuntarmeSiEstoyDentro,
+  type LlamadaPendiente,
+} from "@/logica/timbre";
 import { DialogoTarea } from "@/componentes/DialogoTarea";
 import { Cita, vars } from "@/componentes/piezas";
 import { reducido, resorte } from "@/logica/resorte";
@@ -229,12 +235,33 @@ export default function App() {
       setLlamada(l);
     };
     void mirar();
+    // Si la persona está dentro de la comunidad, que este móvil vuelva a
+    // apuntarse al tema: reinstalar o estrenar móvil lo pierde en silencio.
+    void reapuntarmeSiEstoyDentro();
+    // Y si la llamada llega con la app abierta, lo nativo avisa aquí.
+    const escucha = alLlamar(() => void mirar());
     const alVolver = () => {
       if (document.visibilityState === "visible") void mirar();
     };
     document.addEventListener("visibilitychange", alVolver);
-    return () => document.removeEventListener("visibilitychange", alVolver);
+    return () => {
+      document.removeEventListener("visibilitychange", alVolver);
+      void escucha?.then((e) => e.remove());
+    };
   }, []);
+
+  /**
+   * Si la llamada es a la sala en la que ya estás —el anfitrión que llama y
+   * también está apuntado, o alguien que entró antes de que sonara—, no hay
+   * nada que decidir: se calla el timbre y se olvida. Antes sólo se escondía
+   * la pantalla y el tono seguía cinco minutos encima del audio de la sala.
+   */
+  useEffect(() => {
+    if (llamada && sala && sala.canal === llamada.canal) {
+      setLlamada(null);
+      void atenderLlamada();
+    }
+  }, [llamada, sala]);
 
   /**
    * La copia en la nube, sola y en silencio.
@@ -1156,7 +1183,11 @@ export default function App() {
             </p>
             <h2 className="mt-3 text-3xl font-semibold leading-tight">{llamada.nombre}</h2>
             <p className="mt-2 text-sm text-tenue">
-              {llamada.sono ? "Está empezando ahora." : "Te llamaron hace un rato. Puede que siga."}
+              {!llamada.sono
+                ? "Te llamaron hace un rato. Puede que siga."
+                : Date.now() - llamada.cuando < 60_000
+                  ? "Está empezando ahora."
+                  : `Te llamaron hace ${Math.round((Date.now() - llamada.cuando) / 60_000)} min. Puede que siga.`}
             </p>
             <div className="mt-8 flex flex-col gap-3">
               <button

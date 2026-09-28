@@ -25,8 +25,12 @@ const { RtcRole, RtcTokenBuilder } = agoraToken;
  *
  * 1. **Si entras.** Hace falta cuenta, que la sala exista y esté abierta, y no
  *    estar expulsado.
- * 2. **Si hablas.** Se entra de oyente, y Agora no le da el privilegio de
- *    publicar audio a un oyente. Habla el anfitrión y quien él haya llamado.
+ * 2. **Si hablas.** Se entra de oyente: el token del oyente no lleva el
+ *    privilegio de publicar audio. Habla el anfitrión y quien él haya llamado.
+ *    ⚠️ Agora sólo hace cumplir ese privilegio si el proyecto tiene activada
+ *    la **autenticación de coanfitrión** (Co-host authentication); sin eso el
+ *    papel del token es decorativo y manda el booleano `habla` que obedece la
+ *    app. Ver docs/investigacion/salas-de-voz.md.
  *
  * Y lo decide **el mismo código**: `puedeHablar` vive en `functions/decidir.js`
  * y lo usan los dos porteros. Si algún día vuelve el de Firebase, no habrá dos
@@ -49,6 +53,31 @@ const { RtcRole, RtcTokenBuilder } = agoraToken;
  * el techo para el caso raro de que ese aviso no llegue.
  */
 const VALE_SEGUNDOS = 3600;
+
+/**
+ * Cuánto puede vivir una sala aunque nadie la cierre.
+ *
+ * Un devocional dura una hora; cuatro es margen de sobra. Pasado esto el
+ * portero deja de firmar tokens —y de renovarlos— aunque `abierta` siga en
+ * true: si al anfitrión se le apagó el móvil con la sala abierta, una sala
+ * olvidada no puede facturar días de Agora a quien la encuentre en «Juntos».
+ */
+const SALA_DURA_MS = 4 * 3600_000;
+const sigueAbierta = (sala) =>
+  sala.abierta === true && Date.now() - Number(sala.desde ?? 0) < SALA_DURA_MS;
+
+/**
+ * Cuánto dura el privilegio de HABLAR de quien no es el anfitrión.
+ *
+ * Entrar vale una hora; hablar, dos minutos, y la app lo renueva cada noventa
+ * segundos mientras tenga la palabra. Así, si el anfitrión se la quita y el
+ * aviso no llega —o llega a un cliente que no obedece—, es Agora quien le
+ * cierra el micrófono, no el móvil. (Sólo cuenta si el proyecto de Agora tiene
+ * activada la autenticación de coanfitrión; ver docs/investigacion/salas-de-voz.md.)
+ * El anfitrión queda fuera: es el único que se juega perder la voz a mitad
+ * de la lectura por un fallo de red.
+ */
+const PALABRA_SEGUNDOS = 120;
 
 /**
  * Desde dónde se admiten llamadas.
@@ -155,7 +184,13 @@ async function servirElApk(peticion, entorno) {
     if (v) aGithub.set(cual, v);
   }
 
-  const apk = await fetch(deGithub, { headers: aGithub, redirect: "follow" });
+  // Se reenvía el método: un HEAD al portero es un HEAD a GitHub, no una
+  // descarga entera con el cuerpo tirado.
+  const apk = await fetch(deGithub, {
+    method: peticion.method === "HEAD" ? "HEAD" : "GET",
+    headers: aGithub,
+    redirect: "follow",
+  });
   if (!apk.ok || !apk.body) {
     return new Response("No se pudo traer el paquete.", { status: 502 });
   }
@@ -253,7 +288,7 @@ async function llamar(peticion, entorno, origen) {
   if (!sala) {
     return respuesta({ error: "sala-no-existe", porque: PORQUE["sala-no-existe"] }, 404, origen);
   }
-  if (sala.abierta !== true) {
+  if (!sigueAbierta(sala)) {
     return respuesta({ error: "sala-cerrada", porque: PORQUE["sala-cerrada"] }, 409, origen);
   }
 
@@ -376,7 +411,7 @@ export default {
     if (!sala) {
       return respuesta({ error: "sala-no-existe", porque: PORQUE["sala-no-existe"] }, 404, origen);
     }
-    if (sala.abierta !== true) {
+    if (!sigueAbierta(sala)) {
       return respuesta({ error: "sala-cerrada", porque: PORQUE["sala-cerrada"] }, 409, origen);
     }
     if (expulsado) {

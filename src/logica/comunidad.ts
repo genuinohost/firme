@@ -258,5 +258,20 @@ const PORTERO_POR_DEFECTO = "https://genuino-portero.genuinohost.workers.dev";
 /** A qué dirección se le piden los permisos de entrada. */
 export function dondeEstaElPortero(): string {
   const publicado = leerGuardada().portero;
-  return publicado && publicado.startsWith("https://") ? publicado : PORTERO_POR_DEFECTO;
+  return publicado && esPorteroDeConfianza(publicado) ? publicado : PORTERO_POR_DEFECTO;
+}
+
+/**
+ * Sólo un portero nuestro. `comunidad.json` puede mover el portero a otro
+ * Worker, pero no a cualquier sitio: a esa dirección se le manda la sesión de
+ * Firebase de cada uno (el ID token), y quien pudiera escribir el archivo del
+ * hosting no debe poder llevarse las sesiones de toda la comunidad.
+ */
+function esPorteroDeConfianza(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === "https:" && /(^|\.)genuinohost\.workers\.dev$/.test(hostname);
+  } catch {
+    return false;
+  }
 }

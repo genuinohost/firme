@@ -41,10 +41,11 @@ type SalaNativa = {
     cuenta: string;
     habla: boolean;
     nombre: string;
-  }): Promise<{ habla: boolean }>;
+  }): Promise<{ habla: boolean; microfono?: boolean }>;
   salir(): Promise<void>;
   micro(o: { abierto: boolean }): Promise<void>;
-  rol(o: { token: string; habla: boolean }): Promise<void>;
+  /** Sin token sólo se puede BAJAR a oyente; para hablar hace falta el token nuevo. */
+  rol(o: { token?: string; habla: boolean }): Promise<void>;
   renovar(o: { token: string }): Promise<void>;
   altavoz(o: { puesto: boolean }): Promise<void>;
   addListener(
@@ -208,6 +209,9 @@ export async function abrirSala(
   tipo: Sala["tipo"] = "devocional",
   campana?: Sala["campana"],
 ): Promise<void> {
+  // Desde donde no se puede entrar no se abre: si no, desde el navegador
+  // quedaba una sala «sonando ahora» para los treinta y nadie dentro.
+  if (!hayVoz()) throw new Error("solo-en-la-app");
   const uid = await miUid();
   if (!uid) throw new Error("sin-cuenta");
   const { setDoc } = await import("firebase/firestore");
@@ -260,13 +264,16 @@ export async function verSala(
   });
 }
 
-/** Cerrarla. Los que estén dentro se quedan hasta que salgan; no entra nadie más. */
-export async function cerrarSala(canal: string, nombre: string, tipo: Sala["tipo"]): Promise<void> {
+/**
+ * Cerrarla: no entra nadie más ni se renueva ningún token, y a los de dentro
+ * les llega que se cerró y su app sale sola. Puede el anfitrión, y cualquier
+ * moderador si el anfitrión la dejó abierta (se le apagó el móvil).
+ */
+export async function cerrarSala(canal: string): Promise<void> {
   const { updateDoc } = await import("firebase/firestore");
-  // Se mandan los cinco campos porque las reglas validan el documento entero.
-  const uid = await miUid();
-  if (!uid) throw new Error("sin-cuenta");
-  await updateDoc(await refSala(canal), { nombre, anfitrion: uid, abierta: false, tipo });
+  // Sólo `abierta`: en un update las reglas ven el documento fusionado, y la
+  // regla del moderador exige que no cambie nada más.
+  await updateDoc(await refSala(canal), { abierta: false });
 }
 
 // --------------------------------------------------- quién está dentro
@@ -335,6 +342,24 @@ export async function darLaPalabra(
   await updateDoc(await refDentro(canal, aQuien), { palabra: se, mano: false });
 }
 
+/** Quitar a alguien de la lista SIN vetarlo: para limpiar a quien se cayó. Sólo el anfitrión. */
+export async function sacarDeLaLista(canal: string, aQuien: string): Promise<void> {
+  const { deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(await refDentro(canal, aQuien));
+}
+
+/**
+ * Volver a oyente YA, sin esperar al portero.
+ *
+ * Callarse no necesita token: el token sólo hace falta para hablar. Si se
+ * esperara al portero y la red fallara, la persona seguiría publicando hasta
+ * que caducara el token con la pantalla diciéndole que tiene la palabra.
+ */
+export async function callarme(): Promise<void> {
+  await nativa.micro({ abierto: false });
+  await nativa.rol({ habla: false });
+}
+
 /** Cerrarle o abrirle el micrófono a alguien. Sólo el anfitrión; lo garantizan las reglas. */
 export async function silenciar(canal: string, aQuien: string, si: boolean): Promise<void> {
   const { updateDoc } = await import("firebase/firestore");
@@ -349,12 +374,8 @@ export async function silenciar(canal: string, aQuien: string, si: boolean): Pro
  * todos». A cada uno le llega que la sala se cerró y que ya no está en la
  * lista, y su app suelta el audio y sale sola.
  */
-export async function terminarParaTodos(
-  canal: string,
-  nombre: string,
-  tipo: Sala["tipo"],
-): Promise<void> {
-  await cerrarSala(canal, nombre, tipo);
+export async function terminarParaTodos(canal: string): Promise<void> {
+  await cerrarSala(canal);
   const { bd } = await nube();
   const { collection, getDocs, writeBatch } = await import("firebase/firestore");
   const dentro = await getDocs(collection(bd, "salas", canal, "dentro"));
@@ -392,10 +413,17 @@ export function enQueSalaEstoy(): string | null {
 export async function entrarEnSala(
   canal: string,
   quienSoy: { nombre: string; usuario: string; foto?: string },
-): Promise<{ habla: boolean; esAnfitrion: boolean }> {
+): Promise<{ habla: boolean; esAnfitrion: boolean; micLibre: boolean; microfono: boolean }> {
   if (!hayVoz()) throw new Error("solo-en-la-app");
   const uid = await miUid();
   if (!uid) throw new Error("sin-cuenta");
+
+  // Si quedó una ficha de otra vez (se cayó la red, MIUI mató la app), se
+  // borra antes de pedir permiso: así el portero no la lee —con la palabra
+  // de ayer puesta— y se entra en silencio, como siempre; y apuntarse es
+  // crear, no sobrescribir, que las reglas no dejarían.
+  const { deleteDoc, setDoc } = await import("firebase/firestore");
+  await deleteDoc(await refDentro(canal, uid)).catch(() => {});
 
   const permiso = await pedirPermiso(canal);
   const sala = await leerSala(canal);
@@ -406,7 +434,7 @@ export async function entrarEnSala(
   const asistencia =
     sala?.tipo === "devocional" ? await marcarAsistencia(quienSoy).catch(() => null) : null;
 
-  await nativa.entrar({
+  const entrada = await nativa.entrar({
     appId: permiso.appId,
     canal: permiso.canal,
     token: permiso.token,
@@ -416,22 +444,37 @@ export async function entrarEnSala(
   });
   dentroDe = canal;
 
-  const { setDoc } = await import("firebase/firestore");
-  await setDoc(await refDentro(canal, uid), {
-    nombre: quienSoy.nombre,
-    usuario: quienSoy.usuario,
-    ...(quienSoy.foto ? { foto: quienSoy.foto } : {}),
-    entro: Date.now(),
-    mano: false,
-    // Se entra en silencio siempre. Las reglas no admitirían otra cosa.
-    palabra: false,
-    ...(asistencia ? { racha: asistencia.racha, faltas: asistencia.faltas } : {}),
-  });
+  try {
+    await setDoc(await refDentro(canal, uid), {
+      nombre: quienSoy.nombre,
+      usuario: quienSoy.usuario,
+      ...(quienSoy.foto ? { foto: quienSoy.foto } : {}),
+      entro: Date.now(),
+      mano: false,
+      // Se entra en silencio siempre. Las reglas no admitirían otra cosa.
+      palabra: false,
+      ...(asistencia ? { racha: asistencia.racha, faltas: asistencia.faltas } : {}),
+    });
+  } catch (e) {
+    // Aparecer en la lista significa estar. Si no se pudo, no se está: se
+    // suelta el audio antes de decirlo, o quedaría un micrófono en una sala
+    // en la que nadie te ve.
+    await nativa.salir().catch(() => {});
+    dentroDe = null;
+    throw e;
+  }
 
   // En un devocional el altavoz; en una llamada de dos, el auricular.
   await nativa.altavoz({ puesto: sala?.tipo !== "llamada" });
 
-  return { habla: permiso.habla, esAnfitrion: permiso.esAnfitrion };
+  return {
+    // Lo que dice el nativo, no el portero: sin permiso de micrófono se entra
+    // igual, pero a escuchar.
+    habla: entrada.habla,
+    esAnfitrion: permiso.esAnfitrion,
+    micLibre: sala?.micLibre === true,
+    microfono: entrada.microfono !== false,
+  };
 }
 
 /**
@@ -507,6 +550,17 @@ export function alCaducarElToken(
 }
 
 /**
+ * Cuando cambia la conexión con Agora. 4 es «reconectando»; 5, que se rindió
+ * (veinte minutos sin red, o el token caducó sin renovarse). Sin oír esto la
+ * pantalla decía «dentro» de una sala en la que ya no se estaba.
+ */
+export function alCambiarLaRed(
+  hacer: (estado: number, motivo: number) => void,
+): Promise<{ remove: () => Promise<void> }> {
+  return nativa.addListener("estadoDeRed", (d) => hacer(d.estado ?? 0, d.motivo ?? 0));
+}
+
+/**
  * Las salas abiertas ahora mismo.
  *
  * Se consulta sólo por `abierta` y se ordena aquí, en el móvil. Con `orderBy`
@@ -518,13 +572,22 @@ export function alCaducarElToken(
 export async function salasAbiertas(): Promise<Sala[]> {
   const { bd } = await nube();
   const { collection, getDocs, limit, query, where } = await import("firebase/firestore");
+  // Por tiempo y no por `abierta`: el portero deja de firmar tokens a las
+  // cuatro horas (SALA_DURA_MS, el mismo techo que en el Worker), así que una
+  // sala más vieja está cerrada aunque nadie la cerrara — y sin esto las
+  // salas olvidadas de cada día se comían los veinte huecos de la lista y la
+  // de hoy podía no salir. Un rango sobre un solo campo no pide índice.
   const r = await getDocs(
-    query(collection(bd, "salas"), where("abierta", "==", true), limit(20)),
+    query(collection(bd, "salas"), where("desde", ">", Date.now() - SALA_DURA_MS), limit(20)),
   );
   return r.docs
     .map((d) => ({ canal: d.id, ...(d.data() as Omit<Sala, "canal">) }))
+    .filter((s) => s.abierta === true)
     .sort((a, b) => b.desde - a.desde);
 }
+
+/** Cuánto vive una sala aunque nadie la cierre. El mismo número que en el portero. */
+export const SALA_DURA_MS = 4 * 3600_000;
 
 /**
  * Un identificador de canal a partir del nombre que escribió una persona.

@@ -220,7 +220,7 @@ base = {
     nombre: texto("Devocional"),
     anfitrion: texto("ana"),
     abierta: siNo(true),
-    desde: numero(1),
+    desde: numero(Date.now()),
     tipo: texto("devocional"),
   },
 };
@@ -331,7 +331,7 @@ let deOyente = null;
     nombre: texto("Ana y Beto"),
     anfitrion: texto("ana"),
     abierta: siNo(true),
-    desde: numero(1),
+    desde: numero(Date.now()),
     tipo: texto("llamada"),
   };
   const r = await llamar({ canal: "llamada", token: tokenDe("beto") });

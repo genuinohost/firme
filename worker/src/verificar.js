@@ -39,20 +39,33 @@
  */
 let guardadas = null;
 let guardadasHasta = 0;
+/** Cuándo se pidieron a Google por última vez. */
+let recargadasEn = 0;
 
 /** Cuánto se fía uno de las claves guardadas. Una hora. */
 const DURAN_MS = 3600_000;
 
-async function clavesDe(url, ahora) {
-  if (guardadas && ahora < guardadasHasta) return guardadas;
+/**
+ * Cuánto hay que esperar entre dos recargas forzadas. Google rota como mucho a
+ * diario: un `kid` desconocido con una recarga reciente no es una rotación,
+ * es un token que no es de Google. Sin esto, un bucle de tokens con `kid`
+ * inventado convertía cada petición en una petición a googleapis.
+ */
+const ENTRE_RECARGAS_MS = 60_000;
+
+async function clavesDe(url, ahora, forzar = false) {
+  if (guardadas && ahora < guardadasHasta && !forzar) return guardadas;
+  if (forzar && ahora - recargadasEn < ENTRE_RECARGAS_MS) return guardadas ?? {};
   const r = await fetch(url);
   if (!r.ok) throw new Error("no se pudieron leer las claves de Google");
   const j = await r.json();
   // El formato de Google es `{ keys: [...] }` (JWK). Se indexa por `kid`.
   const porKid = {};
   for (const k of j.keys ?? []) if (k.kid) porKid[k.kid] = k;
+  // Sólo después de que Google contestara: un fallo no tira las que había.
   guardadas = porKid;
   guardadasHasta = ahora + DURAN_MS;
+  recargadasEn = ahora;
   return porKid;
 }
 
@@ -60,6 +73,7 @@ async function clavesDe(url, ahora) {
 export function olvidarClaves() {
   guardadas = null;
   guardadasHasta = 0;
+  recargadasEn = 0;
 }
 
 function deBase64Url(texto) {
@@ -97,8 +111,9 @@ export async function uidDelToken(token, { proyecto, clavesUrl, ahora = Date.now
   // Se pide otra vez antes de rendirse.
   let clave = jwk;
   if (!clave) {
-    olvidarClaves();
-    clave = (await clavesDe(clavesUrl, ahora))[cabecera.kid];
+    // Sin tirar las guardadas: si Google no contesta, siguen valiendo para
+    // los demás; y si ya se recargaron hace un momento, no se molesta a Google.
+    clave = (await clavesDe(clavesUrl, ahora, true))[cabecera.kid];
   }
   if (!clave) throw new Error("clave-desconocida");
 

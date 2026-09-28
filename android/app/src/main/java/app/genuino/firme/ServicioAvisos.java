@@ -58,13 +58,14 @@ public class ServicioAvisos extends FirebaseMessagingService {
         String nombre = textoDe(datos.get("nombre"), "Devocional");
         String quien = textoDe(datos.get("quien"), "");
 
-        long enviado = mensaje.getSentTime();
-        if (enviado > 0 && System.currentTimeMillis() - enviado > VALE_MS) {
-            // Llego tarde. Se apunta, por si la web quiere decirlo, pero no suena.
-            guardarPendiente(this, canal, nombre, quien, false);
-            return;
-        }
-
+        /*
+          Aqui habia una comprobacion «si el aviso tiene mas de diez minutos,
+          no suena». Restaba la hora del servidor de Google de la hora del
+          movil, asi que lo que media era el desajuste del reloj, no el
+          retraso: un Xiaomi con la hora puesta a mano doce minutos adelante
+          NO SONABA NUNCA. El Worker ya manda el aviso con ttl de 600 s y es
+          FCM quien descarta los tardios; aqui, en la duda, se suena.
+        */
         guardarPendiente(this, canal, nombre, quien, true);
 
         // Y que suene, con lo que ya sabe sonar.
@@ -81,10 +82,33 @@ public class ServicioAvisos extends FirebaseMessagingService {
                 startService(sonar);
             }
         } catch (Exception e) {
-            // Si el sistema no deja arrancar el servicio desde aqui, queda la
-            // llamada pendiente: la web la ensena al abrir. Peor que sonar,
-            // mejor que nada.
+            /*
+              Android 12+ solo deja arrancar el servicio desde aqui si el aviso
+              llego con prioridad alta de verdad. Cuando la rebaja —cajon
+              «restringido», cuota gastada, MIUI—, lanza. En vez de tragarlo y
+              dejar el movil mudo, la llamada se pasa al camino de las alarmas:
+              una alarma exacta para ya mismo, que si tiene permiso para
+              arrancar el servicio y trae lo que aqui falta (reintento,
+              respaldo, ultimo recurso y el apunte en el diario). Y se vuelve a
+              guardar la pendiente con «no sono» hasta que suene por ahi.
+            */
+            guardarPendiente(this, canal, nombre, quien, false);
+            try {
+                AlarmaExacta.programarUna(
+                        getApplicationContext(),
+                        ID_LLAMADA,
+                        System.currentTimeMillis(),
+                        nombre,
+                        "Te llaman al devocional. Toca para entrar.",
+                        "sala:" + canal);
+            } catch (Exception ignorada) {
+                // Sin alarma tampoco: queda la llamada pendiente para la web.
+            }
         }
+
+        // Y si la app esta abierta, que la web lo sepa ya: sin esto, con la
+        // app delante el movil repicaba y en pantalla no salia nada.
+        Timbre.avisar(canal, nombre);
     }
 
     static void guardarPendiente(
@@ -108,6 +132,8 @@ public class ServicioAvisos extends FirebaseMessagingService {
     public void onNewToken(@NonNull String token) {
         // No hace falta guardar el token: no se llama a nadie por token, sino
         // al tema, y las suscripciones a temas sobreviven al cambio de token.
+        // Lo que NO sobrevive es la reinstalacion (ni borrar datos ni estrenar
+        // movil): de eso se encarga la web al arrancar, reapuntarmeSiEstoyDentro.
     }
 
     private static String textoDe(String valor, String pordefecto) {

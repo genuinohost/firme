@@ -227,8 +227,11 @@ await debe(
 console.log("LAS SALAS");
 
 const SALA = "sala-de-ana";
+// La ficha de la sala va con el nombre del PERFIL (las reglas lo comprueban):
+// nadie puede aparecer en la sala con el nombre de otro.
+const NOMBRES = { ana: "Ana", beto: "Beto", curioso: "Curioso" };
 const dentroDe = (uid, extra = {}) => ({
-  nombre: "Quien sea",
+  nombre: NOMBRES[uid] ?? "Quien sea",
   usuario: uid,
   entro: 1,
   mano: false,
@@ -278,6 +281,27 @@ await debe(
     updateDoc(doc(beto, "salas", SALA), { anfitrion: "beto" }),
   ),
 );
+// Una sala que su anfitrión olvidó abierta la cierra cualquier moderador —y
+// sólo la cierra.
+await debe(
+  "quien no modera no cierra la sala de otro",
+  assertFails(updateDoc(doc(beto, "salas", SALA), { abierta: false })),
+);
+await debe(
+  "el dueño cierra una sala que otro dejó abierta",
+  assertSucceeds(updateDoc(doc(dueno, "salas", SALA), { abierta: false })),
+);
+await debe(
+  "pero sólo la cierra: ni la renombra ni la reabre",
+  Promise.all([
+    assertFails(updateDoc(doc(dueno, "salas", SALA), { abierta: false, nombre: "otra" })),
+    assertFails(updateDoc(doc(dueno, "salas", SALA), { abierta: true })),
+  ]),
+);
+await debe(
+  "y el anfitrión sí la reabre",
+  assertSucceeds(updateDoc(doc(moderador, "salas", SALA), { abierta: true })),
+);
 await debe(
   "el anfitrion pone los MICROFONOS LIBRES",
   assertSucceeds(updateDoc(doc(moderador, "salas", SALA), { micLibre: true })),
@@ -307,6 +331,26 @@ await debe(
 await debe(
   "levantar la mano si se puede: es lo propio",
   assertSucceeds(updateDoc(doc(beto, `salas/${SALA}/dentro/beto`), { mano: true })),
+);
+await debe(
+  "nadie entra con el nombre de otro",
+  assertFails(
+    setDoc(doc(curioso, `salas/${SALA}/dentro/curioso`), dentroDe("curioso", { nombre: "Ana" })),
+  ),
+);
+await debe(
+  "ni con una foto que no es la de su perfil",
+  assertFails(
+    setDoc(doc(curioso, `salas/${SALA}/dentro/curioso`), dentroDe("curioso", { foto: "otra" })),
+  ),
+);
+await debe(
+  "al levantar la mano no se cambia el nombre",
+  assertFails(updateDoc(doc(beto, `salas/${SALA}/dentro/beto`), { mano: true, nombre: "Ana" })),
+);
+await debe(
+  "el anfitrión sólo mueve la palabra, la mano y el silencio",
+  assertFails(updateDoc(doc(moderador, `salas/${SALA}/dentro/beto`), { nombre: "Otro" })),
 );
 await debe(
   "NADIE SE DA LA PALABRA A SI MISMO - de esto depende el audio",
@@ -343,6 +387,17 @@ await debe(
 await debe(
   "el anfitrion expulsa",
   assertSucceeds(setDoc(doc(moderador, `salas/${SALA}/expulsados/curioso`), { cuando: 1 })),
+);
+await debe(
+  "el expulsado lee lo suyo (el portero lo lee con su token)",
+  assertSucceeds(getDoc(doc(curioso, `salas/${SALA}/expulsados/curioso`))),
+);
+await debe(
+  "pero nadie saca la lista de expulsados, salvo el anfitrión",
+  Promise.all([
+    assertFails(getDocs(collection(beto, `salas/${SALA}/expulsados`))),
+    assertSucceeds(getDocs(collection(moderador, `salas/${SALA}/expulsados`))),
+  ]),
 );
 await debe(
   "un expulsado NO vuelve a entrar",
@@ -815,6 +870,12 @@ await debe(
       palabra: false,
       racha: "muchas",
     }),
+  ),
+);
+await debe(
+  "una captura más grande que la que manda la app no pasa",
+  assertFails(
+    setDoc(doc(nadie, "fallos", "f-grande", "capturas", "1"), { imagen: "x".repeat(700_001) }),
   ),
 );
 

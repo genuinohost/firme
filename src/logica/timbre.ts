@@ -41,6 +41,11 @@ type TimbreNativo = {
     sono?: boolean;
   }>;
   atendida(): Promise<void>;
+  /** Cuando llega una llamada con la app ya abierta: lo nativo suena y avisa aquí. */
+  addListener(
+    evento: "llamada",
+    cb: (d: { canal: string; nombre: string }) => void,
+  ): Promise<{ remove: () => Promise<void> }>;
 };
 
 const nativo = registerPlugin<TimbreNativo>("Timbre");
@@ -103,6 +108,32 @@ export async function unirmeALaComunidad(quienSoy: { nombre: string; usuario: st
     usuario: quienSoy.usuario,
     desde: Date.now(),
   });
+}
+
+/**
+ * Volver a apuntar este móvil al tema, si la persona está dentro.
+ *
+ * El tema vive en la instalación de Firebase, no en la cuenta: desinstalar,
+ * borrar datos o estrenar móvil lo pierde, pero el espejo de Firestore sigue
+ * diciendo «dentro» y «Llamando a N» lo contaba como un móvil que suena. Se
+ * llama al arrancar la app; suscribirse otra vez a lo mismo es gratis y no
+ * hace nada si ya estaba. (Revisión del timbre, 28-09-2026.)
+ */
+export async function reapuntarmeSiEstoyDentro(): Promise<void> {
+  if (!hayTimbre()) return;
+  if (!(await soyMiembro())) return;
+  try {
+    await nativo.unirse();
+  } catch {
+    // Sin avisos de Google no hay nada que hacer aquí; la tarjeta de la
+    // comunidad ya explica ese fallo cuando la persona la abre.
+  }
+}
+
+/** Cuando llega una llamada con la app abierta. `null` fuera de la app. */
+export function alLlamar(hacer: () => void): Promise<{ remove: () => Promise<void> }> | null {
+  if (!hayTimbre()) return null;
+  return nativo.addListener("llamada", () => hacer());
 }
 
 /** Salirse. El orden contrario: se borra de la lista y se deja de sonar. */

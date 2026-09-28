@@ -55,10 +55,13 @@
             Mientras hay una sala de voz abierta. El tipo `microphone` es lo que
             impide que Android 14 corte el microfono al pasar a segundo plano.
         -->
+        <!-- «microphone» para quien habla; «mediaPlayback» para quien solo
+             escucha sin haber dado el permiso del microfono (sin el, un
+             servicio de tipo microfono revienta en Android 14). -->
         <service
             android:name=".ServicioSala"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone|mediaPlayback" />
 
         <!--
             Recibe «te llaman al devocional» con la app cerrada. Es lo unico

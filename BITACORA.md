@@ -8,6 +8,55 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — EN CURSO: la revisión del timbre y las salas (para la 6.23)
+
+**Estado al cortarse la sesión (límite de uso).** Está aplicado en el árbol de trabajo, con
+`tsc` pasando, pero **sin pruebas pasadas, sin compilar Android y sin publicar**:
+
+- Portero: las salas caducan a las 4 h (`SALA_DURA_MS`, también en `sala.ts`), HEAD a /apk se
+  reenvía como HEAD, claves de Google sin recargas a lo loco (`ENTRE_RECARGAS_MS`), nota de la
+  cuota en `wrangler.toml`. Los fixtures de `revisar-worker.mjs` ya llevan `desde: Date.now()`.
+  **Falta**: el token con privilegio de hablar de 2 min para quien no es anfitrión
+  (`PALABRA_SEGUNDOS` está definido pero aún no se usa; `buildTokenWithUidAndPrivilege` está en
+  RtcTokenBuilder2.js:162 y la variante con cuenta hay que localizarla), las pruebas nuevas
+  (sala de 7 h → 409; `kid` inventado → una sola recarga), y volver a pasar las 43.
+- Reglas: la ficha de la sala va atada al perfil (`esMiFicha`), cada uno mueve sólo `mano`, el
+  anfitrión sólo palabra/mano/silencio y validado, moderadores pueden CERRAR salas ajenas,
+  expulsados sólo lo propio o el anfitrión, capturas ≤ 700 KB. Pruebas nuevas escritas; **falta
+  pasar `npm run revisar-reglas`**.
+- Nativo: `Timbre.avisar` (la llamada con la app abierta), ServicioAvisos sin la comprobación de
+  reloj y con respaldo por alarma exacta, ServicioAlarma sin START_STICKY y sin borrar la
+  llamada al parar por tope (sólo en Rechazar), llamada encima de alarma manda, micrófono sólo
+  a quien habla (Sala.java / ServicioSala con tipo `mediaPlayback` para oyentes, manifiesto).
+  **Falta compilar** (`npm run apk`).
+- App: `reapuntarmeSiEstoyDentro` y `alLlamar` (App.tsx), portero sólo de `*.genuinohost.
+  workers.dev`, `cerrarSala(canal)` sólo `abierta`, `entrarEnSala` borra la ficha vieja y suelta
+  el audio si no puede apuntarse, `callarme`, `alCambiarLaRed`, `sacarDeLaLista`,
+  `salasAbiertas` por tiempo. **Falta en PantallaSala.tsx**: quitar `palabraAnterior.current =
+  r.habla` y usar `r.microfono`; callarse ANTES del portero al perder la palabra o los
+  micrófonos; salir con `alCambiarLaRed` (estado 5); renovar el papel cada 90 s si hablo sin ser
+  anfitrión; «pide comentar» y ✋ con la palabra puesta; filas como `div` para oyentes y «puede
+  leer» con micrófonos libres; «Quitar de la lista» aparte de «Sacarlo y que no vuelva»; el
+  texto de `sin-microfono` con botón a los ajustes; el «Salir» del anfitrión como «Terminar».
+  Y en SalasAbiertas `modero && hayVoz()` + cerrar para moderadores; ComunidadDeVoz con la
+  verdad («sólo quien lleva la comunidad ve quién está apuntado»); la campana con tolerancia de
+  60 s.
+- Manual, para Alex: activar **Co-host authentication** en el proyecto de Agora (sin eso el
+  papel de oyente del token es decorativo) y regenerar el certificado; ambas en la misma visita.
+
+## También hoy
+
+- `docs/devocionales/prompt-maestro.md`: el prompt de DeepSeek con el que Alex genera cada día
+  los devocionales, el registro de días 251-272 y las fechas (Día 271 = 28-09-2026). Alex
+  mandará el video de la dinámica (está en Descargas: «Dinámica de los devocionales
+  28-09-2026.mp4», **sin ver todavía**) y la exportación del WhatsApp con todos los devocionales
+  desde el 1 de enero: archivo del año, para muchas comunidades.
+- Pedido: los **turnos de lectura** (quién lee, letrero sutil «Te toca», «Siguiente: …», saltando
+  a quien no está) y una interfaz de devocionales **como la de YouVersion** (los días arriba, se
+  desplaza entre devocionales). Diseñar después de ver el video.
+
+---
+
 # 🧭 28 de septiembre de 2026 — 6.22: la alarma que se ve, y el anfitrión manda
 
 ## «Así como la llamada se ve fácilmente, así debe verse cada alarma»

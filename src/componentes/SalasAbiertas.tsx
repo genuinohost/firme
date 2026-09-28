@@ -132,7 +132,7 @@ export function SalasAbiertas({
             {s.anfitrion === yo ? (
               <button
                 onClick={async () => {
-                  await cerrarSala(s.canal, s.nombre, s.tipo).catch(() =>
+                  await cerrarSala(s.canal).catch(() =>
                     setError("No se pudo cerrar."),
                   );
                   await mirar();

@@ -30,6 +30,35 @@ public class Timbre extends Plugin {
 
     static final String TEMA = "devocional";
 
+    /**
+     * La instancia viva, si la app esta abierta, para poder avisarle a la web
+     * de que llego una llamada. Debil: si la app se cierra, se va sola.
+     */
+    private static java.lang.ref.WeakReference<Timbre> viva;
+
+    @Override
+    public void load() {
+        viva = new java.lang.ref.WeakReference<>(this);
+    }
+
+    /**
+     * Decirle a la web que llego una llamada, si esta abierta.
+     *
+     * Hasta la 6.22 la web solo preguntaba por la llamada pendiente al abrirse
+     * o al volver a primer plano: con la app delante, el movil repicaba cinco
+     * minutos y en pantalla no salia «Entrar» ni «Ahora no». Sin datos
+     * personales: `quien` no viaja. `true` retiene el aviso si la web todavia
+     * no escucha.
+     */
+    static void avisar(String canal, String nombre) {
+        Timbre t = viva == null ? null : viva.get();
+        if (t == null) return;
+        JSObject d = new JSObject();
+        d.put("canal", canal);
+        d.put("nombre", nombre);
+        t.notifyListeners("llamada", d, true);
+    }
+
     @PluginMethod
     public void unirse(PluginCall llamada) {
         FirebaseMessaging.getInstance().subscribeToTopic(TEMA).addOnCompleteListener(t -> {

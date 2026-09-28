@@ -157,9 +157,25 @@ public class ServicioAlarma extends Service {
 
     @Override
     public int onStartCommand(Intent intencion, int banderas, int idArranque) {
-        String accion = intencion == null ? null : intencion.getAction();
+        /*
+          Sin intent no hay nada que hacer. Con START_STICKY, si el sistema
+          mataba el proceso mientras sonaba, resucitaba el servicio con intent
+          nulo y repicaba cinco minutos una alarma fantasma «Firme / Es la
+          hora.», sin Responder ni Rechazar y sin saber a que sala ir.
+        */
+        if (intencion == null) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        String accion = intencion.getAction();
 
         if (ACCION_PARAR.equals(accion)) {
+            // Solo AQUI se olvida la llamada: este intent llega del boton
+            // Rechazar de la notificacion o de Timbre.atendida(). Que el tope
+            // la calle a los cinco minutos, o que el sistema destruya el
+            // servicio, no es rechazarla: la web tiene que seguir ofreciendo
+            // «Entrar» hasta sus diez minutos.
+            olvidarLlamadaSiLoEs();
             parar();
             return START_NOT_STICKY;
         }
@@ -169,15 +185,44 @@ public class ServicioAlarma extends Service {
             return START_NOT_STICKY;
         }
 
-        int id = intencion == null ? 1 : intencion.getIntExtra("id", 1);
+        int id = intencion.getIntExtra("id", 1);
         String titulo = textoDe(intencion, "titulo", "Firme");
         String cuerpo = textoDe(intencion, "cuerpo", "Es la hora.");
         String idSuceso = textoDe(intencion, "idSuceso", "");
+        boolean nuevaEsLlamada = idSuceso.startsWith("sala:");
+
+        /*
+          La llamada y la alarma de la rutina comparten servicio y aviso. Si se
+          cruzan —el bloque «devocional» de la rutina salta a las 5:00 y Alex
+          llama diez segundos despues—, manda la llamada: es la que lleva a la
+          sala. Una alarma que llega encima de una llamada no la pisa; una
+          llamada que llega encima de una alarma se queda con el aviso Y con el
+          tono, que pasa al de llamada.
+        */
+        if (sonando && esLlamadaActual() && !nuevaEsLlamada) {
+            if (corte != null) mano.removeCallbacks(corte);
+            corte = this::parar;
+            mano.postDelayed(corte, TOPE_MS);
+            return START_NOT_STICKY;
+        }
+        boolean cambiaAllamada = sonando && !esLlamadaActual() && nuevaEsLlamada;
         idSucesoActual = idSuceso;
 
         // Lo primero de todo, antes que el audio: Android mata el servicio si no
         // se pone en primer plano en cinco segundos.
         arrancarEnPrimerPlano(id, titulo, cuerpo, idSuceso);
+
+        if (cambiaAllamada) {
+            // El tono de alarma que ya sonaba se cambia por el de llamada.
+            if (repique != null) mano.removeCallbacks(repique);
+            if (generador != null) {
+                try { generador.release(); } catch (Exception ignorada) { }
+                generador = null;
+            }
+            soltarReproductor();
+            SONANDO = empezarASonar();
+            mano.postDelayed(this::confirmarQueSuena, 1200);
+        }
 
         if (!sonando) {
             sonando = true;
@@ -216,7 +261,18 @@ public class ServicioAlarma extends Service {
             AlarmaExacta.anotarEnElUltimoDisparo(this, "encimaDeOtra", true);
         }
 
-        return START_STICKY;
+        // No se reinicia solo (ver arriba): una alarma que el sistema mato se
+        // vuelve a disparar por el receptor, con sus datos, no de memoria.
+        return START_NOT_STICKY;
+    }
+
+    /** Olvidar la llamada pendiente, si lo que suena es una llamada. */
+    private void olvidarLlamadaSiLoEs() {
+        if (!esLlamadaActual()) return;
+        try {
+            getSharedPreferences(AlarmaExacta.PREFS, MODE_PRIVATE)
+                    .edit().remove(ServicioAvisos.CLAVE_LLAMADA).apply();
+        } catch (Exception ignorada) { }
     }
 
     private static String textoDe(Intent intencion, String clave, String pordefecto) {
@@ -606,15 +662,9 @@ public class ServicioAlarma extends Service {
     private void parar() {
         sonando = false;
         SONANDO = false;
-        // Si lo que se para es una llamada, «Ahora no» desde la notificacion
-        // tiene que olvidarla tambien: si no, al abrir la app diez segundos
-        // despues volveria a salir «te llaman» de algo que ya se rechazo.
-        if (idSucesoActual != null && idSucesoActual.startsWith("sala:")) {
-            try {
-                getSharedPreferences(AlarmaExacta.PREFS, MODE_PRIVATE)
-                        .edit().remove(ServicioAvisos.CLAVE_LLAMADA).apply();
-            } catch (Exception ignorada) { }
-        }
+        // La llamada pendiente NO se borra aqui: parar() corre tambien por el
+        // tope de cinco minutos y al destruirse el servicio, y ninguna de las
+        // dos es rechazarla. Se borra solo en ACCION_PARAR (olvidarLlamadaSiLoEs).
         // Si el receptor llego a sonar por su cuenta, tambien se calla aqui.
         ReceptorAlarma.callarUltimoRecurso();
         if (corte != null) mano.removeCallbacks(corte);
