@@ -13,6 +13,7 @@ import { abrirEnlace } from "@/logica/enlaces";
 import { copiar } from "@/logica/compartir";
 import { Muro } from "./Muro";
 import { ComunidadDeVoz } from "./ComunidadDeVoz";
+import { QuienPuedeLlamar } from "./QuienPuedeLlamar";
 import { SalasAbiertas } from "./SalasAbiertas";
 import { Boton, Etiqueta, Vacio } from "./piezas";
 
@@ -173,6 +174,8 @@ export function PantallaComunidad({
 
       {/* Apuntarse a que te suene. Se esconde sola si no hay cuenta. */}
       <ComunidadDeVoz />
+      {/* Sólo la ve el dueño: la lista de quién puede llamar y abrir el devocional. */}
+      <QuienPuedeLlamar />
 
       {vacia ? (
         <Vacio>

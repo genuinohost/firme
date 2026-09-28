@@ -463,9 +463,45 @@ service cloud.firestore {
     //
     // Que sea sólo el propio importa: nadie puede sacar la lista de quién
     // modera, ni comprobar si tal persona lo es.
+    //
+    // ── Y quién manda (28-09-2026) ───────────────────────────────────────
+    //
+    // Alex, sobre el timbre: «sólo yo (o alguno de los otros administradores
+    // que yo señale)». Dos rangos en la misma lista: el **dueño** (`dueno:
+    // true`, uno solo, se pone con `node scripts/moderador.mjs dueño
+    // correo@…`) y los moderadores que él nombra desde la app. Un moderador
+    // puede llamar, abrir salas y retirar lo ajeno; **sólo el dueño nombra y
+    // quita**, y a él no lo quita nadie. Así ningún moderador puede nombrar a
+    // un tercero ni dejar al dueño fuera de su propia comunidad.
+    //
+    // `dueno` va sin ñ porque el lenguaje de reglas no admite ñ en los
+    // nombres de campo. Nada se puede editar: la única manera de hacerse
+    // dueño es la cuenta de servicio, desde este PC.
+    function esDueno() {
+      return haEntrado()
+        && get(/databases/$(database)/documents/moderadores/$(request.auth.uid))
+          .data.get("dueno", false) == true;
+    }
+    function moderadorRazonable(d) {
+      return d.keys().hasOnly(["nombre", "usuario", "puestoPor", "desde"])
+        && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
+        && d.usuario is string && d.usuario.size() >= 3 && d.usuario.size() <= 20
+        && d.puestoPor == request.auth.uid
+        && d.desde is int;
+    }
     match /moderadores/{uid} {
-      allow read: if esElMismo(uid);
-      allow write: if false;
+      allow get: if esElMismo(uid) || esDueno();
+      allow list: if esDueno();
+      // Nombrar: sólo el dueño, nunca a sí mismo, y sin poder crear otro
+      // dueño: `moderadorRazonable` no admite el campo `dueno`.
+      allow create: if esDueno()
+        && uid != request.auth.uid
+        && moderadorRazonable(request.resource.data);
+      allow update: if false;
+      // Quitar: sólo el dueño, y al dueño no lo quita nadie, ni él mismo.
+      allow delete: if esDueno()
+        && uid != request.auth.uid
+        && resource.data.get("dueno", false) != true;
     }
 
     // ------------------------------------------------------ nombres de usuario

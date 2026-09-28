@@ -71,6 +71,8 @@ const ana = entorno.authenticatedContext("ana").firestore();
 const beto = entorno.authenticatedContext("beto").firestore();
 const curioso = entorno.authenticatedContext("curioso").firestore();
 const moderador = entorno.authenticatedContext("mod").firestore();
+// El dueño: modera como `mod`, y además nombra y quita moderadores.
+const dueno = entorno.authenticatedContext("dueno").firestore();
 const nadie = entorno.unauthenticatedContext().firestore();
 
 const perfil = (nombre, usuario) => ({
@@ -113,6 +115,7 @@ await entorno.withSecurityRulesDisabled(async (libre) => {
     cuando: Date.now(),
   });
   await setDoc(doc(bd, "moderadores", "mod"), { desde: Date.now() });
+  await setDoc(doc(bd, "moderadores", "dueno"), { dueno: true, correo: "d@x", desde: 1 });
   await setDoc(doc(bd, "denuncias", "d1"), { nota: "n-de-ana", de: "beto", motivo: "x" });
   await setDoc(doc(bd, "usuarios", "ana", "bloqueados", "curioso"), { cuando: 1 });
 });
@@ -641,6 +644,68 @@ await debe(
 await debe(
   "nadie puede sacar la lista de moderadores",
   assertFails(getDocs(collection(curioso, "moderadores"))),
+);
+
+// ── El dueño: nombra y quita; nadie lo toca a él ───────────────────────────
+const nombramiento = (puestoPor = "dueno") => ({
+  nombre: "Beto",
+  usuario: "beto",
+  puestoPor,
+  desde: 1,
+});
+await debe(
+  "el dueño ve la lista entera de moderadores",
+  assertSucceeds(getDocs(collection(dueno, "moderadores"))),
+);
+await debe(
+  "un moderador normal NO ve la lista",
+  assertFails(getDocs(collection(moderador, "moderadores"))),
+);
+await debe(
+  "el dueño nombra a un moderador desde la app",
+  assertSucceeds(setDoc(doc(dueno, "moderadores", "beto"), nombramiento())),
+);
+await debe(
+  "un moderador normal no nombra a nadie",
+  assertFails(setDoc(doc(moderador, "moderadores", "ana"), nombramiento("mod"))),
+);
+await debe(
+  "el dueño no puede crear otro dueño",
+  assertFails(
+    setDoc(doc(dueno, "moderadores", "ana"), { ...nombramiento(), dueno: true }),
+  ),
+);
+await debe(
+  "un nombramiento tiene que ir firmado por quien lo hace",
+  assertFails(setDoc(doc(dueno, "moderadores", "ana"), nombramiento("otro"))),
+);
+await debe(
+  "un nombramiento sin nombre no vale",
+  assertFails(setDoc(doc(dueno, "moderadores", "ana"), { ...nombramiento(), nombre: "" })),
+);
+await debe(
+  "nadie edita un moderador (ni para ascenderlo a dueño)",
+  assertFails(updateDoc(doc(dueno, "moderadores", "mod"), { dueno: true })),
+);
+await debe(
+  "un moderador no se asciende a sí mismo",
+  assertFails(updateDoc(doc(moderador, "moderadores", "mod"), { dueno: true })),
+);
+await debe(
+  "el dueño quita a un moderador",
+  assertSucceeds(deleteDoc(doc(dueno, "moderadores", "beto"))),
+);
+await debe(
+  "un moderador no quita a otro",
+  assertFails(deleteDoc(doc(moderador, "moderadores", "dueno"))),
+);
+await debe(
+  "al dueño no lo quita nadie, ni él mismo",
+  assertFails(deleteDoc(doc(dueno, "moderadores", "dueno"))),
+);
+await debe(
+  "un extraño no lee el documento del dueño",
+  assertFails(getDoc(doc(curioso, "moderadores", "dueno"))),
 );
 
 await entorno.cleanup();

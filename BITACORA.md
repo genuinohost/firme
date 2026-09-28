@@ -8,6 +8,50 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 28 de septiembre de 2026 — «los que yo señale»: el dueño nombra desde el móvil
+
+## Lo que faltaba
+
+Alex, al pedir el timbre: «te suena cada vez que yo, y sólo yo (**o alguno de los otros
+administradores que yo señale**), hagan la llamada». La primera mitad estaba desde la 6.15: sólo
+quien está en `moderadores/{uid}` puede llamar. La segunda no: para señalar a alguien había que
+pedírmelo y yo corría `scripts/moderador.mjs` desde este PC con la cuenta de servicio.
+
+## La decisión
+
+Se tomó sin preguntar, porque las alternativas tenían un agujero claro:
+
+| Opción | Qué pasaba |
+|---|---|
+| Cualquier moderador nombra a otros | «los que yo señale» pasa a ser «los que señale cualquiera que yo señalé»; y uno podría quitar a Alex |
+| Una lista aparte de «llamadores» | Dos listas que se desincronizan; el Worker y las reglas ya miran `moderadores` |
+| **Dos rangos en la misma lista** | El **dueño** (`dueno: true`, uno, lo pone la cuenta de servicio) nombra y quita desde la app; los moderadores llaman, abren salas y retiran lo ajeno, pero **no nombran a nadie**; al dueño no lo quita nadie, ni él mismo |
+
+Lo hacen cumplir las **reglas del servidor**: crear sólo el dueño y nunca con el campo `dueno`
+(no se puede fabricar otro dueño); editar nadie (no hay ascensos); borrar sólo el dueño y nunca
+al dueño. La lista entera sólo la ve él. `dueno` va sin ñ porque el lenguaje de reglas no admite
+ñ en nombres de campo.
+
+## Qué hay
+
+- `firestore.rules`: `esDueno()`, `moderadorRazonable()` y el bloque nuevo de `moderadores`.
+  **13 pruebas nuevas** en `revisar-reglas.mjs` (103 en total, todas pasan), incluidas las dos
+  que importan: «nadie edita un moderador (ni para ascenderlo a dueño)» y «al dueño no lo
+  quita nadie, ni él mismo».
+- `scripts/moderador.mjs dueño correo@`: pone el rango con `updateMask` (sin la máscara, PATCH
+  reemplaza el documento entero). `ver` marca DUEÑO y enseña el @usuario.
+- `logica/moderadores.ts` + `componentes/QuienPuedeLlamar.tsx`: en **Juntos**, debajo de la
+  comunidad de voz, una tarjeta que sólo ve el dueño: la lista, «Quitar», y un campo para nombrar
+  por @usuario. Quien no tiene perfil no se puede nombrar, y se dice.
+- **Alex ya es dueño en producción** y las reglas están desplegadas. La tarjeta le saldrá con la
+  6.19 (en la web de `genuino-pro.web.app` ya está).
+
+## Pendiente
+
+- Publicar la 6.19 con esto y con lo que confirme la revisión de la 6.18 (en marcha).
+
+---
+
 # 🧭 28 de septiembre de 2026 (madrugada) — «quiero más power»: el movimiento con peso
 
 ## Lo que pidió, en dos tiempos

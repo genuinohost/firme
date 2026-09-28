@@ -15,7 +15,12 @@
  *
  *   node scripts/moderador.mjs poner correo@gmail.com
  *   node scripts/moderador.mjs quitar correo@gmail.com
+ *   node scripts/moderador.mjs dueño  correo@gmail.com
  *   node scripts/moderador.mjs ver
+ *
+ * Desde el 28-09-2026 hay dos rangos: el **dueño** (uno, se pone aquí) nombra
+ * y quita moderadores desde la app, en Juntos → «quién puede llamar». Un
+ * moderador llama, abre salas y retira lo ajeno, pero no nombra a nadie.
  *
  * ── Por qué a pelo y sin librerías ────────────────────────────────────────
  *
@@ -113,18 +118,23 @@ if (orden === "ver") {
     console.log(`\n${filas.length} moderador(es):`);
     for (const f of filas) {
       const uid = f.name.split("/").pop();
-      const quien = f.fields?.correo?.stringValue ?? "(sin correo apuntado)";
-      console.log(`  ${quien}  ·  ${uid}`);
+      const c = f.fields ?? {};
+      const quien = c.usuario?.stringValue
+        ? `@${c.usuario.stringValue}`
+        : (c.correo?.stringValue ?? "(sin correo apuntado)");
+      const rango = c.dueno?.booleanValue ? "  ·  DUEÑO" : "";
+      console.log(`  ${quien}  ·  ${uid}${rango}`);
     }
     console.log("");
   }
   process.exit(0);
 }
 
-if (!correo || !["poner", "quitar"].includes(orden)) {
+if (!correo || !["poner", "quitar", "dueño", "dueno"].includes(orden)) {
   console.log("Uso:");
   console.log("  node scripts/moderador.mjs poner  correo@gmail.com");
   console.log("  node scripts/moderador.mjs quitar correo@gmail.com");
+  console.log("  node scripts/moderador.mjs dueño  correo@gmail.com   (nombra y quita desde la app)");
   console.log("  node scripts/moderador.mjs ver");
   process.exit(1);
 }
@@ -136,7 +146,24 @@ if (!uid) {
   process.exit(1);
 }
 
-if (orden === "poner") {
+if (orden === "dueño" || orden === "dueno") {
+  // Con `updateMask`: se añade el rango sin pisar lo que ya tenga el documento.
+  // Sin la máscara, PATCH reemplaza el documento entero. Y `dueno` sin ñ,
+  // porque las reglas de Firestore no admiten ñ en los nombres de campo.
+  const mascara = ["dueno", "correo", "desde"].map((c) => `updateMask.fieldPaths=${c}`).join("&");
+  await api(`${DOCS}/moderadores/${uid}?${mascara}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      fields: {
+        dueno: { booleanValue: true },
+        correo: { stringValue: correo },
+        desde: { integerValue: String(Date.now()) },
+      },
+    }),
+  });
+  console.log(`\n${correo} es el dueño: nombra y quita moderadores desde la app (Juntos → quién puede llamar).`);
+  console.log(`uid: ${uid}\n`);
+} else if (orden === "poner") {
   await api(`${DOCS}/moderadores/${uid}`, {
     method: "PATCH",
     body: JSON.stringify({
