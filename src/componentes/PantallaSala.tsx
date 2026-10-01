@@ -31,6 +31,9 @@ import {
   verQuienHabla,
   verSala,
   SALA_DURA_MS,
+  alTocarLaVentanita,
+  cerrarVentanita,
+  ponerFlotante,
 } from "@/logica/sala";
 import { puedoModerar } from "@/logica/muro";
 import { abrirAjustesDeLaApp } from "@/logica/despertador";
@@ -55,7 +58,8 @@ import { agregarOAceptar, escucharAmigos, type Amigo } from "@/logica/nube";
 import { leerBloqueados } from "@/logica/muro";
 import { TextoDevocional } from "./TextoDevocional";
 import { parar, sonar, vibrar } from "@/logica/sonido";
-import { cuantosMiembros, escucharMiembros, llamarALaComunidad } from "@/logica/timbre";
+import { cuantosMiembros, escucharMiembros, llamarALaComunidad, type LlamadaHecha } from "@/logica/timbre";
+import { InformeDeLlamada } from "./InformeDeLlamada";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -84,6 +88,7 @@ export function PantallaSala({
   onSalir,
   onIrA,
   padre,
+  ventanita = false,
 }: {
   canal: string;
   /**
@@ -103,6 +108,8 @@ export function PantallaSala({
   finPrevisto?: string;
   quienSoy: { uid: string; nombre: string; usuario: string; foto?: string };
   onSalir: () => void;
+  /** Si la app está encogida en la ventanita flotante (lo sabe App, que no se desmonta). */
+  ventanita?: boolean;
   /** Pasar a otra sala sin salir de la voz: a un subgrupo, o de vuelta al devocional. */
   onIrA?: (destino: { canal: string; nombre: string; padre?: string }) => void;
   /** Si se viene a un subgrupo: su devocional, adonde volver si algo falla. */
@@ -129,6 +136,8 @@ export function PantallaSala({
   const [tocando, setTocando] = useState<string | null>(null);
   const [llamando, setLlamando] = useState(false);
   const [avisoLlamada, setAvisoLlamada] = useState("");
+  /** La última llamada hecha desde aquí, para decir a quién le sonó (6.27). */
+  const [llamadaHecha, setLlamadaHecha] = useState<LlamadaHecha | null>(null);
   /** La campana: la hora que edita el anfitrión, el aviso al sonar, y a qué instante ya sonamos. */
   const [horaCampana, setHoraCampana] = useState(finPrevisto ?? "");
   const [avisoCampana, setAvisoCampana] = useState("");
@@ -938,6 +947,84 @@ export function PantallaSala({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sala?.micLibre, sala, canal, estado, esAnfitrion]);
 
+  // ── los botones, para la sala y para la ventanita ─────────────────────
+
+  /** Abrir o cerrar el micrófono propio, como el botón grande. */
+  const cambiarMicro = () => {
+    if (yo?.silenciado) {
+      setError("El anfitrión cerró tu micrófono. Levanta la mano si quieres hablar.");
+      return;
+    }
+    const nuevo = !microAbierto;
+    setMicroAbierto(nuevo);
+    void miMicro(nuevo);
+  };
+
+  /** Salir, como el botón rojo. */
+  const salirDeLaSala = () => {
+    // Si el anfitrión sale y ya no queda nadie más, la sala se cierra sola:
+    // una sala abierta y vacía aparece en «Juntos» como «sonando ahora» y
+    // cada minuto que alguien pase dentro lo paga Alex. Con los grupos fuera
+    // está solo, y es lo normal: no se cierra (a la vuelta encontrarían la
+    // sala cerrada). Un grupo tampoco lo cierra su visita: lo cierran el
+    // tiempo o «Traer a todos».
+    if (
+      esAnfitrion &&
+      sala?.abierta &&
+      !sala?.subgrupos &&
+      sala?.tipo !== "subgrupo" &&
+      gente.every((g) => g.uid === quienSoy.uid)
+    ) {
+      void cerrarSala(canal).catch(() => {});
+    }
+    onSalir();
+  };
+
+  // ── la ventanita flotante (6.27) ─────────────────────────────────────────
+  //
+  // Alex, 28-09-2026: «cuando una llamada esté activa, tengamos la opción de
+  // poder salir de la aplicación, y que quede un recuadro flotante con la
+  // posibilidad de abrir y cerrar el micrófono. Al estilo de Google Meet».
+  // Mientras estás dentro, salir de la app la encoge a una ventanita con sus
+  // botones (ver MainActivity). Aquí se le dice qué enseñar, y lo que se toca
+  // en ella hace lo mismo que los botones de abajo.
+  const microDeVerdad = habla && microAbierto && !yo?.silenciado;
+  useEffect(() => {
+    if (estado !== "dentro") return;
+    void ponerFlotante({
+      activo: true,
+      habla,
+      micro: microDeVerdad,
+      mano: !!yo?.mano,
+      silenciado: !!yo?.silenciado,
+    });
+  }, [estado, habla, microDeVerdad, yo?.mano, yo?.silenciado]);
+  // Al salir de la sala (o de esta pantalla), fuera la ventanita.
+  useEffect(() => () => void ponerFlotante({ activo: false }), []);
+  // Los botones de la ventanita, con lo último de la sala: una referencia y
+  // no el efecto de cada render, para no darse de alta y de baja sin parar.
+  const tocarVentanita = useRef<(accion: "micro" | "mano" | "salir") => void>(() => {});
+  tocarVentanita.current = (accion) => {
+    if (accion === "micro" && habla) cambiarMicro();
+    else if (accion === "mano") void mano(canal, !yo?.mano);
+    else if (accion === "salir") salirDeLaSala();
+  };
+  useEffect(() => alTocarLaVentanita((accion) => tocarVentanita.current(accion)), []);
+  // La reunión terminó con la app encogida: la ventanita se va sola a los
+  // pocos segundos, como en Meet al acabar la llamada. Si sólo se cayó la red
+  // o falló la entrada, se queda: al tocarla se ve qué hacer.
+  // (El mismo «terminó» que la tarjeta de fuera, más abajo.)
+  const terminoEnVentanita =
+    ventanita &&
+    estado === "fuera" &&
+    (error.startsWith("El anfitrión terminó") ||
+      (!(sala?.padre ?? padre) && (error.startsWith("El anfitrión") || error === "La sala está cerrada.")));
+  useEffect(() => {
+    if (!terminoEnVentanita) return;
+    const t = window.setTimeout(() => void cerrarVentanita(), 4_000);
+    return () => window.clearTimeout(t);
+  }, [terminoEnVentanita]);
+
   // ── lo que se ve ────────────────────────────────────────────────────────
 
   if (!hayVoz()) {
@@ -958,7 +1045,12 @@ export function PantallaSala({
     );
   }
 
-  if (estado === "entrando") return <Vacio>Entrando en la sala…</Vacio>;
+  if (estado === "entrando") {
+    // En la ventanita, en pequeño: pasar a un subgrupo con la app encogida
+    // pintaba aquí la sala entera en unos pocos centímetros.
+    if (ventanita) return <VentanitaAviso titulo={nombreSiHayQueAbrirla ?? "La sala"} texto="Entrando…" />;
+    return <Vacio>Entrando en la sala…</Vacio>;
+  }
 
   // ── la sala de una reunión que todavía nadie ha abierto ────────────────
   if (estado === "sin-abrir") {
@@ -1034,6 +1126,16 @@ export function PantallaSala({
       error.startsWith("El anfitrión terminó") ||
       (!alDevocional && (error.startsWith("El anfitrión") || error === "La sala está cerrada."));
     const seCayo = error.startsWith("Se perdió la conexión");
+    // En la ventanita no se pueden tocar los botones: se dice qué pasó y, si
+    // la reunión terminó, se cierra sola (efecto de arriba).
+    if (ventanita) {
+      return (
+        <VentanitaAviso
+          titulo={termino ? "La reunión terminó" : seCayo ? "Se perdió la conexión" : "Fuera de la sala"}
+          texto="Toca para volver a Genuino"
+        />
+      );
+    }
     return (
       <Tarjeta className={termino ? "border-acento/40" : "border-fallo/40"}>
         <Etiqueta>
@@ -1122,6 +1224,17 @@ export function PantallaSala({
 
   return (
     <div className="flex flex-col gap-4">
+      {ventanita ? (
+        <Ventanita
+          nombre={sala?.nombre ?? "Sala"}
+          hablan={gente.filter((g) => foco.includes(g.uid))}
+          yoUid={quienSoy.uid}
+          habla={habla}
+          micro={microDeVerdad}
+          mano={!!yo?.mano}
+          cuantos={gente.length}
+        />
+      ) : null}
       {/* Dentro de un subgrupo: cuál, con quién, cuánto queda, y volver. */}
       {sala?.tipo === "subgrupo" && sala.padre ? (
         <EnSubgrupo
@@ -1422,33 +1535,43 @@ export function PantallaSala({
               onClick={async () => {
                 setLlamando(true);
                 setAvisoLlamada("");
-                // Cuantos van a sonar, ANTES de llamar. El 27-09-2026 Alex llamo
-                // a un tema vacio —Google acepta un aviso aunque nadie este
-                // apuntado— y el boton le dijo «Llamando» a nadie. Decir el
-                // numero convierte un silencio en un dato; y si es cero, no
-                // hay a quien llamar y se dice eso.
-                const cuantos = await cuantosMiembros();
-                if (cuantos === 0) {
+                try {
+                  // Cuantos van a sonar, ANTES de llamar. El 27-09-2026 Alex llamo
+                  // a un tema vacio —Google acepta un aviso aunque nadie este
+                  // apuntado— y el boton le dijo «Llamando» a nadie. Decir el
+                  // numero convierte un silencio en un dato; y si es cero, no
+                  // hay a quien llamar y se dice eso.
+                  const cuantos = await cuantosMiembros();
+                  if (cuantos === 0) {
+                    setAvisoLlamada(
+                      "Nadie se ha apuntado todavía a la comunidad. Que entren en Juntos y toquen «Unirme»; entonces sí les sonará.",
+                    );
+                    setLlamando(false);
+                    return;
+                  }
+                  const r = await llamarALaComunidad(canal, sala?.nombre ?? "Devocional");
+                  // Con la lista de cada uno (6.27), el informe dice a quién le
+                  // sonó. Sin ella —un portero viejo—, lo de antes, sin prometer
+                  // que suena: «Llamando a 2» no sabe si sonó.
+                  setLlamadaHecha(r.enviado && r.resultados ? r : null);
                   setAvisoLlamada(
-                    "Nadie se ha apuntado todavia a la comunidad. Que entren en Juntos y toquen «Unirme»; entonces si les sonara.",
+                    r.enviado
+                      ? r.resultados
+                        ? ""
+                        : "Llamada enviada a la comunidad."
+                      : r.porque,
                   );
+                } finally {
+                  // Pase lo que pase, el botón vuelve: «Llamando…» para
+                  // siempre obligaba a salir de la sala.
                   setLlamando(false);
-                  return;
                 }
-                const r = await llamarALaComunidad(canal, sala?.nombre ?? "Devocional");
-                setAvisoLlamada(
-                  r.enviado
-                    ? cuantos == null
-                      ? "Llamando. Les esta sonando ahora mismo."
-                      : `Llamando a ${cuantos}. Les esta sonando ahora mismo.`
-                    : r.porque,
-                );
-                setLlamando(false);
               }}
             >
               {llamando ? "Llamando…" : "Llamar a la comunidad"}
             </Boton>
           </div>
+          {llamadaHecha ? <InformeDeLlamada llamada={llamadaHecha} /> : null}
           {avisoLlamada ? (
             <p className="mt-2 text-xs leading-relaxed text-acento">{avisoLlamada}</p>
           ) : null}
@@ -2105,15 +2228,7 @@ export function PantallaSala({
             activo={microAbierto && !yo?.silenciado}
             grande
             estrecho={!esAnfitrion}
-            onClick={() => {
-              if (yo?.silenciado) {
-                setError("El anfitrión cerró tu micrófono. Levanta la mano si quieres hablar.");
-                return;
-              }
-              const nuevo = !microAbierto;
-              setMicroAbierto(nuevo);
-              void miMicro(nuevo);
-            }}
+            onClick={cambiarMicro}
           >
             <IconoMicro tachado={!microAbierto || !!yo?.silenciado} />
           </BotonRedondo>
@@ -2150,25 +2265,74 @@ export function PantallaSala({
           etiqueta="Salir"
           peligro
           estrecho={habla && !esAnfitrion}
-          onClick={() => {
-            // Con los grupos fuera está solo, y es lo normal: no se cierra (a la
-            // vuelta encontrarían la sala cerrada). Un grupo tampoco lo cierra
-            // su visita: lo cierran el tiempo o «Traer a todos».
-            if (
-              esAnfitrion &&
-              sala?.abierta &&
-              !sala?.subgrupos &&
-              sala?.tipo !== "subgrupo" &&
-              gente.every((g) => g.uid === quienSoy.uid)
-            ) {
-              void cerrarSala(canal).catch(() => {});
-            }
-            onSalir();
-          }}
+          onClick={salirDeLaSala}
         >
           <IconoColgar />
         </BotonRedondo>
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ la ventanita
+
+/** Un aviso corto a toda la ventanita: entrando, o fuera de la sala. */
+function VentanitaAviso({ titulo, texto }: { titulo: string; texto: string }) {
+  return (
+    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-2 bg-fondo p-3 text-center">
+      <p className="w-full truncate text-sm font-medium">{titulo}</p>
+      <p className="text-xs text-tenue">{texto}</p>
+    </div>
+  );
+}
+
+/**
+ * La sala en pequeño, para la ventanita flotante: la ventana es de unos
+ * pocos centímetros y la página entera no se leería. Quién habla, con su
+ * cara, y cómo está tu micrófono. Los botones los pone Android debajo.
+ */
+function Ventanita({
+  nombre,
+  hablan,
+  yoUid,
+  habla,
+  micro,
+  mano,
+  cuantos,
+}: {
+  nombre: string;
+  hablan: Dentro[];
+  yoUid: string;
+  habla: boolean;
+  micro: boolean;
+  mano: boolean;
+  cuantos: number;
+}) {
+  const quien = hablan[0];
+  return (
+    <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-2 bg-fondo p-3 text-center">
+      <p className="w-full truncate text-[10px] font-medium uppercase tracking-[0.12em] text-tenue">{nombre}</p>
+      <span
+        className={`flex size-16 items-center justify-center rounded-full border-2 bg-superficie-alta text-2xl ${
+          quien ? "border-logro ring-4 ring-logro/40" : "border-borde text-tenue"
+        }`}
+      >
+        {quien?.foto ? (
+          <img src={quien.foto} alt="" referrerPolicy="no-referrer" className="size-full rounded-full object-cover" />
+        ) : quien ? (
+          quien.nombre.trim().charAt(0).toUpperCase() || "·"
+        ) : (
+          "🎧"
+        )}
+      </span>
+      <p className="w-full truncate text-sm font-medium">
+        {quien
+          ? `${quien.uid === yoUid ? "Tú" : quien.nombre.split(" ")[0]}${hablan.length > 1 ? ` y ${hablan.length - 1} más` : ""}`
+          : `${cuantos} dentro`}
+      </p>
+      <p className={`text-xs ${habla ? (micro ? "text-logro" : "text-fallo") : mano ? "text-acento" : "text-tenue"}`}>
+        {habla ? (micro ? "Tu micro está abierto" : "Tu micro está cerrado") : mano ? "✋ Pediste la palabra" : "Escuchando"}
+      </p>
     </div>
   );
 }

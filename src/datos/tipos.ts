@@ -76,6 +76,24 @@ export type Tarea = {
    * - "siempre" → cada día, sin fin
    */
   repiteHasta?: string;
+  /**
+   * Qué días de la semana toca, con la misma cuenta que los bloques de la
+   * rutina: 0 = domingo … 6 = sábado.
+   *
+   * Alex, 28-09-2026: «No veo la opción de colocar alarma a una tarea cada
+   * semana. Por ejemplo, todos los lunes.» Es un filtro sobre la repetición:
+   * sólo cuenta si hay `repiteHasta`, y entonces la tarea toca los días de
+   * esta lista que caen entre `fecha` y `repiteHasta`.
+   *
+   * Ausente o vacía → todos los días, como hasta ahora. Así las tareas que ya
+   * estaban guardadas, y las copias de seguridad viejas, siguen igual.
+   */
+  diasSemana?: number[];
+  /**
+   * Si esta tarea se partió al cambiarle el ritmo (6.27): el id de la que la
+   * continúa. Abrirla o borrarla actúa sobre la serie entera (ver partirSerie).
+   */
+  sigue?: string;
   nombre: string;
   /** "HH:MM" o null si es una tarea sin hora fija. */
   hora: string | null;

@@ -61,6 +61,105 @@ public class Sala extends Plugin {
     /** Si ahora se publica voz: para subir el servicio a microfono al volver a la app. */
     private boolean hablaAhora = false;
 
+    // ── El recuadro flotante (6.27) ───────────────────────────────────────
+    //
+    // Lo que la ventanita de «imagen en imagen» ensena en sus botones. Lo
+    // escribe la web (flotante) cada vez que cambia; lo lee MainActivity al
+    // armar los botones. Estaticos porque la actividad y el plugin viven por
+    // separado y la actividad solo necesita leerlos.
+    static volatile boolean flotanteActivo = false;
+    static volatile boolean flotanteHabla = false;
+    static volatile boolean flotanteMicro = false;
+    static volatile boolean flotanteMano = false;
+    static volatile boolean flotanteSilenciado = false;
+
+    /**
+     * Hasta cuando se esta pidiendo el permiso del microfono. El dialogo del
+     * sistema es otra actividad, y en Android 8-11 abrirla dispara
+     * onUserLeaveHint: sin esto, dar la palabra a un oyente sin permiso
+     * encogia la app en la ventanita. Con plazo, por si el callback se pierde.
+     */
+    static volatile long pidiendoPermisoHasta = 0;
+
+    /** Sin sala no hay ventanita: todo a cero (al morir la actividad o al nacer otra). */
+    static void olvidarFlotante() {
+        flotanteActivo = false;
+        flotanteHabla = false;
+        flotanteMicro = false;
+        flotanteMano = false;
+        flotanteSilenciado = false;
+    }
+
+    /** La instancia viva, para pasarle a la web lo que tocan en la ventanita. */
+    private static java.lang.ref.WeakReference<Sala> viva;
+
+    @Override
+    public void load() {
+        viva = new java.lang.ref.WeakReference<>(this);
+    }
+
+    /**
+     * Lo que la ventanita tiene que ensenar: si hay sala, si hablas, si tu
+     * microfono esta abierto, si levantaste la mano y si te lo cerro el
+     * anfitrion. Lo decide todo la web; aqui solo se pinta.
+     */
+    @PluginMethod
+    public void flotante(PluginCall llamada) {
+        flotanteActivo = Boolean.TRUE.equals(llamada.getBoolean("activo", false));
+        flotanteHabla = Boolean.TRUE.equals(llamada.getBoolean("habla", false));
+        flotanteMicro = Boolean.TRUE.equals(llamada.getBoolean("micro", false));
+        flotanteMano = Boolean.TRUE.equals(llamada.getBoolean("mano", false));
+        flotanteSilenciado = Boolean.TRUE.equals(llamada.getBoolean("silenciado", false));
+        refrescarFlotante();
+        llamada.resolve();
+    }
+
+    /*
+      Aqui no se cierra la ventanita al quedarse sin sala: pasar a un
+      subgrupo es salir de una sala y entrar en otra, y cerrarla ahi dejaria
+      a la persona en su grupo con la app escondida. Solo la cierra «Salir»
+      tocado en ella (MainActivity).
+    */
+    private void refrescarFlotante() {
+        android.app.Activity actividad = getActivity();
+        if (!(actividad instanceof MainActivity)) return;
+        MainActivity principal = (MainActivity) actividad;
+        principal.runOnUiThread(principal::actualizarFlotante);
+    }
+
+    /**
+     * Cerrar la ventanita desde la web: cuando la reunion termina (o se cae)
+     * con la app encogida, como Meet al acabar la llamada. Si no esta en la
+     * ventanita, no hace nada.
+     */
+    @PluginMethod
+    public void cerrarVentanita(PluginCall llamada) {
+        android.app.Activity actividad = getActivity();
+        if (actividad instanceof MainActivity) {
+            MainActivity principal = (MainActivity) actividad;
+            principal.runOnUiThread(principal::cerrarVentanita);
+        }
+        llamada.resolve();
+    }
+
+    /** Un boton de la ventanita: se le pasa a la web, que es quien sabe que hacer. */
+    static void accionFlotante(String accion) {
+        Sala s = viva == null ? null : viva.get();
+        if (s == null || accion == null) return;
+        JSObject d = new JSObject();
+        d.put("accion", accion);
+        s.notifyListeners("flotante", d);
+    }
+
+    /** Si la app esta ahora encogida en la ventanita, para que la web se pinte en pequeno. */
+    static void avisarVentanita(boolean activa) {
+        Sala s = viva == null ? null : viva.get();
+        if (s == null) return;
+        JSObject d = new JSObject();
+        d.put("activa", activa);
+        s.notifyListeners("ventanita", d);
+    }
+
     /** La llamada que espera a que se conceda el microfono. */
     private PluginCall esperandoPermiso;
 
@@ -218,6 +317,7 @@ public class Sala extends Plugin {
         }
         esperandoPermiso = llamada;
         llamada.setKeepAlive(true);
+        pidiendoPermisoHasta = System.currentTimeMillis() + 60_000;
         requestPermissionForAlias("microfono", llamada, "traselPermiso");
     }
 
@@ -227,6 +327,7 @@ public class Sala extends Plugin {
 
     @PermissionCallback
     private void traselPermiso(PluginCall llamada) {
+        pidiendoPermisoHasta = 0;
         PluginCall guardada = esperandoPermiso != null ? esperandoPermiso : llamada;
         esperandoPermiso = null;
         if (!tieneMicrofono()) {
@@ -328,6 +429,9 @@ public class Sala extends Plugin {
         nombreActual = null;
         hablaAhora = false;
         ServicioSala.parar(getContext());
+        // Sin sala no hay ventanita: salir de la app vuelve a ser salir.
+        flotanteActivo = false;
+        refrescarFlotante();
         llamada.resolve();
     }
 
@@ -374,6 +478,7 @@ public class Sala extends Plugin {
         if (habla && !tieneMicrofono()) {
             esperandoRol = llamada;
             llamada.setKeepAlive(true);
+            pidiendoPermisoHasta = System.currentTimeMillis() + 60_000;
             requestPermissionForAlias("microfono", llamada, "traselPermisoParaHablar");
             return;
         }
@@ -384,6 +489,7 @@ public class Sala extends Plugin {
 
     @PermissionCallback
     private void traselPermisoParaHablar(PluginCall llamada) {
+        pidiendoPermisoHasta = 0;
         PluginCall guardada = esperandoRol != null ? esperandoRol : llamada;
         esperandoRol = null;
         if (!tieneMicrofono()) {
@@ -483,6 +589,11 @@ public class Sala extends Plugin {
         motor = null;
         canalActual = null;
         ServicioSala.parar(getContext());
+        // Los estaticos de la ventanita sobreviven a la actividad: sin esto,
+        // una app que se recrea (cambiar el tamano de letra en plena sala) o
+        // que se quita de recientes con el proceso vivo se encogia al salir
+        // estando ya fuera de toda sala. (Revision de la 6.27.)
+        olvidarFlotante();
         super.handleOnDestroy();
     }
 }

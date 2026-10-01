@@ -39,6 +39,18 @@ RELEASES_URL = "https://github.com/genuinohost/firme/releases/download"
 FCM_TOKEN_URL = "https://oauth2.googleapis.com/token"
 FCM_URL = "https://fcm.googleapis.com/v1/projects/genuino-host/messages:send"
 FCM_TEMA = "devocional"
+# Mientras alguien siga con la 6.26, el aviso al tema va SIEMPRE en prioridad
+# alta: es lo único que les llega a sus aparatos, y en normal llega tarde con el
+# móvil en reposo. Cuando todos tengan la 6.27, borrar esta línea (el portero
+# bajará el tema a normal cuando no haga falta).
+TEMA_SIEMPRE_ALTO = "1"
+
+# TIMBRE_CLAVE **tampoco** (6.27): cierra la «vuelta» cifrada que lleva cada
+# llamada para que el movil que suena conteste «me sono» sin que nadie pueda
+# inventarse uno. Es aleatoria y no la sabe nadie: se genero y entro por
+# tuberia a `wrangler secret put TIMBRE_CLAVE` el 28-09-2026. Si se pierde, se
+# genera otra igual; lo unico que se rompe son los acuses de las llamadas en
+# curso.
 
 # FCM_CUENTA **no va aqui**: es la cuenta de servicio recortada de Google
 # (genuino-timbre@…, solo puede enviar avisos). Entro por tuberia directa a

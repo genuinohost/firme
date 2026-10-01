@@ -8,6 +8,92 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 1 de octubre de 2026 — 6.27: la llamada que dice a quién le sonó, la ventanita y «cada lunes»
+
+## Lo que pidió Alex (28-09)
+
+> «Probando y no suena la llamada a mis amigos.»
+> «No veo la opción de colocar alarma a una tarea cada semana. Por ejemplo, todos los lunes.»
+> «No veo la opción de que el DEVOCIONAL sea una comunidad de voz.»
+> «Cuando una llamada esté activa, tengamos la opción de poder salir de la aplicación, y que quede
+> un recuadro flotante con la posibilidad de abrir y cerrar el micrófono. Al estilo de Google Meet.»
+
+## Por qué «no sonaba» y no se sabía
+
+La llamada era **un aviso a un tema** de Google, que lo acepta aunque no le llegue a nadie, y
+«Llamando a 2» contaba la lista de Firestore (con el propio Alex dentro), no los móviles que
+sonaron. No había forma de saber a cuál no le llegó. Comprobado el 1-10 en la base: **4 miembros,
+ninguno con token** (nadie tiene aún la 6.27).
+
+## Cómo quedó
+
+- **Aparato por aparato** (`worker/src/index.js` `llamar`): cada aparato deja su token de avisos
+  en la ficha (`comunidad/voz/miembros/{uid}`: `moviles` —uno por aparato, hasta tres: su móvil
+  Y su tableta— y el último en `token`; la ven él y quien modera). El portero lee la lista con el
+  token de quien llama, pide UN token de acceso a Google y manda un aviso a cada aparato, por
+  rondas (primero el principal de cada uno; tope 40: el plan gratuito deja 50 subpeticiones), nunca
+  al móvil de quien llama. Después, el del tema **siempre**, para las apps viejas: en alta si hace
+  falta y en normal si no (Google rebaja a las apps cuyos avisos altos no enseñan nada).
+  ⚠️ **`TEMA_SIEMPRE_ALTO = "1"` en `worker/wrangler.toml`**: mientras alguien siga con la 6.26,
+  el tema va siempre en alta. **Borrar esa línea cuando todos tengan la 6.27** y redesplegar.
+- **«Me sonó»**: cada aviso lleva una *vuelta* cifrada (AES-GCM con `TIMBRE_CLAVE`, secreto nuevo
+  del Worker) con el token de quien llama. El móvil que suena la devuelve a `/sono` con cómo está
+  (avisos, pantalla completa, batería, No molestar, Xiaomi…) y el portero se la reenvía a quien
+  llamó. El portero no guarda nada. El móvil no suena dos veces (reconoce la `llamada`).
+- **El informe** (`InformeDeLlamada.tsx`, `src/logica/llamada.ts`): «Sonó en 1 de 2», y por cada
+  uno qué pasó y qué tocar («tiene la app sin actualizar», «Google no reconoce su móvil: que abra
+  Genuino», «no contestó en un minuto: que toque Probar mi timbre», «le sonó, pero no se le enciende
+  la pantalla»…). Los que no pueden confirmar no cuentan en el «de».
+- **«Probar mi timbre»** (Juntos → comunidad de voz): el portero comprueba con Google
+  (`validate_only`) y a los 15 s hace sonar SU móvil, para probarlo con la app cerrada. Si sonó con
+  la app delante, la pantalla lo dice: eso no prueba lo importante.
+- **La ventanita flotante, tipo Meet** (`MainActivity.java`, imagen en imagen): con una sala
+  abierta, salir de la app la encoge; enseña quién habla y tu micrófono, con botones micro (o mano)
+  y colgar. Se cierra sola cuando termina la reunión; no se pierde al pasar a un subgrupo; el PIN no
+  te saca de la llamada y la ventanita cuenta como estar fuera.
+- **Tareas «Cada semana»** (`DialogoTarea.tsx`, `tocaHoy`): L M X J V S D, sin fin o hasta una
+  fecha. Cambiar el ritmo de una serie que ya empezó la **parte en dos** (`partirSerie`): la de antes
+  se cierra y la nueva empieza hoy, sin reescribir el historial ni la racha. Las partes quedan
+  unidas por `sigue`: abrir una abre la viva (`vivaDe`), borrarla borra todas (`cadenaDe`), y
+  devolverla a hoy la junta con la anterior (`juntarConLaPrevia`).
+- **El devocional con su sala de voz** (`DevocionalDeHoy.tsx`): «Entrar a la sala de voz» si hay
+  una abierta, «Abrir la sala de voz del devocional» (quien modera) y «Unirme a la comunidad de voz».
+
+## Cómo se comprobó
+
+Portero 104 comprobaciones, reglas 192, tareas 89, informe de la llamada 30, `npm run revisar`
+entero y el Java compilando. **Cuatro revisiones con escépticos** (24 + 20 + 10 + 11 hallazgos
+confirmados, todos arreglados). Lo gordo —
+- la primera llamada del día pedía un token de Google **por móvil**: más de 50 subpeticiones y de
+  10 ms de CPU, y a la mitad no le llegaba;
+- sin el tema, el segundo aparato de alguien dejaba de sonar (regresión frente a la 6.26);
+- la ventanita dejaba el diario sin PIN y se abría sola al pedir el permiso del micrófono;
+- cambiar los días de una serie ya empezada reescribía el pasado y tumbaba la racha; y partida,
+  volver a editarla o borrarla duplicaba alarmas;
+- con un solo token por ficha, la tableta de alguien sólo sonaba por el tema (de ahí `moviles`).
+
+## Los devocionales
+
+- **Límite semanal de Max agotado** la noche del 28 al 29 (generar 94 días de golpe): todo parado
+  hasta el 1-10 a las 7:00. El 272 lo pegó Alex; el **273 no llegó a subirse**.
+- **274–280 subidos el 1-10**, revisados (contexto, atribuciones, doctrina: 4 a 14 cosas por día),
+  corregidos y comprobados letra por letra contra la 1909. Redactados sin revisar: hasta el 340.
+- **A partir de ahora, por semanas** (ver memoria `modelo-sonnet-por-defecto`).
+
+## Publicación
+
+APK en GitHub (release v6.27, **importante**: el aviso no se puede descartar), servido por el
+portero (`/apk`, 33,6 MB). Portero desplegado con `TIMBRE_CLAVE` nueva. Reglas y web desplegadas
+el 1-10 a las ~10:50.
+
+## Pendiente
+
+- Que Alex y sus amigos instalen la 6.27 y toquen **«Probar mi timbre»**.
+- Devocionales: 273 y 281–287 (antes del 8-10); 341–365 sin redactar.
+- El reproductor de YouTube (`ver-juntos-en-curso`), la guía de Agora, la cámara en subgrupos.
+
+---
+
 # 🧭 28 de septiembre de 2026 — 6.26: «me gusta» y «agregar» en la sala
 
 ## Lo que pidió Alex

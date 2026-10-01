@@ -49,6 +49,14 @@ type SalaNativa = {
   rol(o: { token?: string; habla: boolean }): Promise<void>;
   renovar(o: { token: string }): Promise<void>;
   altavoz(o: { puesto: boolean }): Promise<void>;
+  /** Lo que enseña la ventanita flotante al salir de la app (6.27). */
+  flotante(o: EstadoFlotante): Promise<void>;
+  cerrarVentanita(): Promise<void>;
+  addListener(
+    evento: "flotante",
+    cb: (d: { accion: "micro" | "mano" | "salir" }) => void,
+  ): Promise<{ remove: () => Promise<void> }>;
+  addListener(evento: "ventanita", cb: (d: { activa: boolean }) => void): Promise<{ remove: () => Promise<void> }>;
   addListener(
     evento: "hablando",
     cb: (d: { quienes: QuienHabla[]; total: number }) => void,
@@ -64,6 +72,58 @@ type SalaNativa = {
 };
 
 const nativa = registerPlugin<SalaNativa>("Sala");
+
+/**
+ * La ventanita flotante, al estilo de Google Meet (6.27).
+ *
+ * Alex, 28-09-2026: «cuando una llamada esté activa, tengamos la opción de
+ * poder salir de la aplicación, y que quede un recuadro flotante con la
+ * posibilidad de abrir y cerrar el micrófono». Es la «imagen en imagen» de
+ * Android: al salir de la app con una sala abierta, la app se encoge a una
+ * ventanita con botones — micrófono (o la mano, si no tienes la palabra) y
+ * colgar. Lo que se toca ahí vuelve aquí como `flotante`, y la sala hace lo
+ * mismo que con sus botones.
+ */
+export type EstadoFlotante = {
+  activo: boolean;
+  habla?: boolean;
+  micro?: boolean;
+  mano?: boolean;
+  silenciado?: boolean;
+};
+
+export async function ponerFlotante(e: EstadoFlotante): Promise<void> {
+  if (!hayVoz()) return;
+  try {
+    await nativa.flotante(e);
+  } catch {
+    // Una app vieja sin ventanita: se sale de la app como siempre.
+  }
+}
+
+/** Cerrar la ventanita (la reunión terminó con la app encogida), como Meet al colgar. */
+export async function cerrarVentanita(): Promise<void> {
+  if (!hayVoz()) return;
+  try {
+    await nativa.cerrarVentanita();
+  } catch {
+    // Una app vieja: se queda hasta que la persona la cierre.
+  }
+}
+
+/** Lo que se toca en la ventanita. Devuelve cómo dejar de escuchar. */
+export function alTocarLaVentanita(hacer: (accion: "micro" | "mano" | "salir") => void): () => void {
+  if (!hayVoz()) return () => {};
+  const escucha = nativa.addListener("flotante", (d) => hacer(d.accion));
+  return () => void escucha.then((e) => e.remove()).catch(() => {});
+}
+
+/** Si la app está ahora encogida en la ventanita. */
+export function alCambiarLaVentanita(hacer: (activa: boolean) => void): () => void {
+  if (!hayVoz()) return () => {};
+  const escucha = nativa.addListener("ventanita", (d) => hacer(d.activa === true));
+  return () => void escucha.then((e) => e.remove()).catch(() => {});
+}
 
 /**
  * Si este aparato puede entrar en una sala.

@@ -1,7 +1,22 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cargar, guardar, idNuevo } from "@/datos/almacen";
 import type { Ajustes, BloqueRutina, Datos, Motivo, Suceso, Tarea } from "@/datos/tipos";
-import { aHora, claveFecha, desdeClave, finDe, minutoActual, sucesosDelDia, tocaHoy } from "@/logica/dia";
+import {
+  aHora,
+  claveFecha,
+  desdeClave,
+  diasEnTexto,
+  finDe,
+  minutoActual,
+  cadenaDe,
+  juntarConLaPrevia,
+  partirSerie,
+  soltarHoy,
+  proximoDia,
+  vivaDe,
+  sucesosDelDia,
+  tocaHoy,
+} from "@/logica/dia";
 import { proximoAviso, useAlarmas, useReloj } from "@/logica/alarmas";
 import { esNativo, limpiarAvisosViejos, pedirPermisosNativos } from "@/logica/alarmasNativas";
 import { apuntarQueSeSalio, darPorAbierta, tocaPedirlo } from "@/logica/cerradura";
@@ -46,12 +61,15 @@ import { pasarLaApp } from "@/logica/pasarApp";
 import { horaLocalDe, salaDeLaUrl, type Reunion } from "@/logica/comunidad";
 import { respaldarSiToca } from "@/logica/respaldoNube";
 import {
+  CANAL_PRUEBA,
   alLlamar,
   atenderLlamada,
   llamadaPendiente,
   reapuntarmeSiEstoyDentro,
+  vigilarMiToken,
   type LlamadaPendiente,
 } from "@/logica/timbre";
+import { alCambiarLaVentanita } from "@/logica/sala";
 import { DialogoTarea, fechaLarga } from "@/componentes/DialogoTarea";
 import { Cita, vars } from "@/componentes/piezas";
 import { reducido, resorte } from "@/logica/resorte";
@@ -148,7 +166,7 @@ export default function App() {
    * app vuelve a primer plano, que es cuando alguien toca la pantalla de la
    * alarma para venir aquí.
    */
-  const [llamada, setLlamada] = useState<LlamadaPendiente | null>(null);
+  const [llamada, setLlamada] = useState<(LlamadaPendiente & { conLaAppDelante?: boolean }) | null>(null);
 
   /**
    * El saludo de un segundo al arrancar. Sólo en frío —lo decide `Intro`— y
@@ -157,6 +175,38 @@ export default function App() {
    */
   const [saludando, setSaludando] = useState(() => tocaSaludar());
 
+  /**
+   * Si la app está encogida en la ventanita flotante (6.27). Vive aquí y no en
+   * la sala: al pasar a un subgrupo la sala se vuelve a montar, y el aviso de
+   * Android no se repite — la sala nueva creía que no estaba encogida.
+   */
+  const [ventanita, setVentanita] = useState(false);
+  /** Si la última llamada (o la prueba) llegó con la app abierta y a la vista. */
+  const pruebaConLaAppDelante = useRef(false);
+  /** Para la cerradura: si hay sala, la llave se echa al salir de ella. */
+  const salaAbierta = useRef(false);
+  const cerrarAlSalirDeLaSala = useRef(false);
+  /**
+   * La ventanita cuenta como estar FUERA de la app, para la cerradura: en ella
+   * el documento nunca pasa a «oculto», y cuarenta minutos en WhatsApp con la
+   * sala encogida no contaban, así que el diario quedaba abierto sin PIN.
+   * (Segunda revisión de la 6.27.)
+   */
+  const enVentanita = useRef(false);
+  useEffect(
+    () =>
+      alCambiarLaVentanita((activa) => {
+        enVentanita.current = activa;
+        setVentanita(activa);
+        if (activa) {
+          apuntarQueSeSalio();
+        } else if (tocaPedirlo()) {
+          if (salaAbierta.current) cerrarAlSalirDeLaSala.current = true;
+          else setBloqueada(true);
+        }
+      }),
+    [],
+  );
   const [sala, setSala] = useState<{
     canal: string;
     /** El de la reunión publicada, por si hay que abrirla. */
@@ -167,6 +217,7 @@ export default function App() {
     padre?: string;
     quien: { uid: string; nombre: string; usuario: string; foto?: string };
   } | null>(null);
+  salaAbierta.current = sala != null;
 
   /**
    * La cerradura.
@@ -234,21 +285,38 @@ export default function App() {
         void atenderLlamada();
         return;
       }
-      setLlamada(l);
+      // Cómo llegó se fija UNA vez por llamada: al volver a primer plano no
+      // puede cambiar lo que ya se dijo de una prueba que sonó delante.
+      setLlamada((antes) => ({
+        ...l,
+        conLaAppDelante:
+          antes && antes.cuando === l.cuando ? antes.conLaAppDelante : pruebaConLaAppDelante.current,
+      }));
     };
     void mirar();
     // Si la persona está dentro de la comunidad, que este móvil vuelva a
     // apuntarse al tema: reinstalar o estrenar móvil lo pierde en silencio.
     void reapuntarmeSiEstoyDentro();
+    // Y que su token siga al día mientras la app viva (6.27).
+    const dejarDeVigilar = vigilarMiToken();
     // Y si la llamada llega con la app abierta, lo nativo avisa aquí.
-    const escucha = alLlamar(() => void mirar());
+    const escucha = alLlamar(() => {
+      // Para la prueba del timbre: si sonó con la app delante, no demuestra
+      // que suene con ella cerrada (donde fallan los Xiaomi).
+      pruebaConLaAppDelante.current = document.visibilityState === "visible";
+      void mirar();
+    });
     const alVolver = () => {
-      if (document.visibilityState === "visible") void mirar();
+      if (document.visibilityState !== "visible") return;
+      // Volver a la app es que la llamada (o la prueba) llegó con ella fuera.
+      pruebaConLaAppDelante.current = false;
+      void mirar();
     };
     document.addEventListener("visibilitychange", alVolver);
     return () => {
       document.removeEventListener("visibilitychange", alVolver);
       void escucha?.then((e) => e.remove());
+      dejarDeVigilar();
     };
   }, []);
 
@@ -328,9 +396,17 @@ export default function App() {
   useEffect(() => {
     const alCambiar = () => {
       if (document.visibilityState === "hidden") {
-        apuntarQueSeSalio();
+        // Con la ventanita, la salida ya se apuntó al encogerse: un «oculto»
+        // después (apagar la pantalla, cerrarla) no puede adelantar esa hora.
+        if (!enVentanita.current) apuntarQueSeSalio();
       } else if (tocaPedirlo()) {
-        setBloqueada(true);
+        // En una sala no se echa la llave: el candado desmontaba la sala (y
+        // con ella la llamada) al volver de la ventanita o de la pantalla
+        // apagada, y el teclado salía dentro del recuadro, sin poder tocarse.
+        // La sala tapa la app entera y no enseña nada privado; la llave se
+        // echa al salir de ella. (Revisión de la 6.27.)
+        if (salaAbierta.current) cerrarAlSalirDeLaSala.current = true;
+        else setBloqueada(true);
       }
     };
     document.addEventListener("visibilitychange", alCambiar);
@@ -722,7 +798,10 @@ export default function App() {
               setDatos((d) => {
                 const registros = { ...d.registros };
                 delete registros[`${fecha}|${s.id}`];
-                return { ...d, registros };
+                // Si esa parte se cerró hoy sólo para guardar lo que se
+                // deshace, hoy deja de ser suyo (ver soltarHoy).
+                const tareas = fecha === fechaHoy ? soltarHoy(d.tareas, s.id, fechaHoy) : d.tareas;
+                return { ...d, tareas, registros };
               })
             }
             onCambiarDia={(n) => setDesplazamiento((v) => v + n)}
@@ -1032,31 +1111,77 @@ export default function App() {
       {tareaAbierta ? (
         <DialogoTarea
           fecha={fecha}
-          tarea={datos.tareas.find((t) => t.id === tareaAbierta)}
-          onGuardar={(tarea: Tarea) => {
-            setDatos((d) => ({
-              ...d,
-              tareas: d.tareas.some((t) => t.id === tarea.id)
-                ? d.tareas.map((t) => (t.id === tarea.id ? tarea : t))
-                : [...d.tareas, tarea],
-            }));
+          tarea={datos.tareas.find((t) => t.id === vivaDe(datos.tareas, tareaAbierta))}
+          onGuardar={(guardada: Tarea) => {
+            // Si cambia el ritmo de una serie que ya empezó, se parte en dos
+            // para no reescribir su pasado (ver partirSerie). `tarea` es la
+            // que sigue de hoy en adelante: la que se anuncia abajo.
+            const anterior = datos.tareas.find((t) => t.id === guardada.id);
+            const { quedan: partes, idDesdeHoy } = partirSerie(anterior, guardada, fechaHoy, idNuevo, {
+              registradoHoy: Boolean(datos.registros[`${fechaHoy}|${guardada.id}`]),
+              registradoSuDia: anterior ? Boolean(datos.registros[`${anterior.fecha}|${anterior.id}`]) : false,
+              minutoAhora: minutoActual(new Date()),
+              graciaMin: datos.ajustes.graciaMin,
+            });
+            // Sin claves `undefined`: la copia en la nube (setDoc) no las admite.
+            const quedan = partes.map((t) => JSON.parse(JSON.stringify(t)) as Tarea);
+            const tarea = quedan.find((t) => t.id === idDesdeHoy) ?? quedan[quedan.length - 1];
+            const vieja = quedan.find((t) => t.id === guardada.id);
+            setDatos((d) => {
+              const conLasPartes = d.tareas.some((t) => t.id === guardada.id)
+                ? d.tareas.flatMap((t) => (t.id === guardada.id ? quedan : [t]))
+                : [...d.tareas, ...quedan];
+              // Devuelta a hoy una parte que hoy ya cubría la anterior: se juntan.
+              const juntas = juntarConLaPrevia(conLasPartes, d.registros, tarea, fechaHoy);
+              const tareas = juntas.tareas;
+              if (idDesdeHoy === guardada.id) return { ...d, tareas, registros: juntas.registros };
+              // Lo ya apuntado de hoy en adelante pasa a la serie nueva, pero
+              // sólo los días que ella toca y la vieja ya no: si no, se movía
+              // a un día que ninguna de las dos pinta, y se perdía.
+              const registros = { ...juntas.registros };
+              for (const [clave, r] of Object.entries(juntas.registros)) {
+                const [dia, id] = clave.split("|");
+                if (id !== guardada.id || dia < fechaHoy) continue;
+                if (vieja && tocaHoy(vieja, dia)) continue;
+                if (!tocaHoy(tarea, dia)) continue;
+                delete registros[clave];
+                registros[`${dia}|${idDesdeHoy}`] = r;
+              }
+              return { ...d, tareas, registros };
+            });
             setTareaAbierta(null);
             // Guardada para otro día: no aparece en el que se está viendo, así
             // que se dice dónde quedó (y a qué hora sonará).
             if (!tocaHoy(tarea, fecha)) {
+              // Se dice el PRÓXIMO día que le toca, desde hoy: su `fecha` puede
+              // quedar atrás (una serie que ya empezó), y «Guardada para el»
+              // ese día —con una alarma que ya no va a sonar— mentiría.
+              const semanal = Boolean(tarea.repiteHasta && tarea.diasSemana?.length);
+              const proxima = proximoDia(tarea, fechaHoy);
               setAvisoMuro(
-                `Guardada para el ${fechaLarga(tarea.fecha)}${tarea.hora ? `. Te sonará a las ${tarea.hora}` : ""}.`,
+                !proxima
+                  ? tarea.repiteHasta
+                    ? "Guardada, pero ya no le queda ningún día por delante."
+                    : "Guardada."
+                  : semanal
+                    ? `Guardada. ${tarea.hora ? "Sonará" : "Aparecerá"} ${diasEnTexto(tarea.diasSemana ?? [])}${
+                        tarea.hora ? ` a las ${tarea.hora}` : ""
+                      }; la próxima, el ${fechaLarga(proxima)}.`
+                    : `Guardada para el ${fechaLarga(proxima)}${tarea.hora ? `. Te sonará a las ${tarea.hora}` : ""}.`,
               );
             }
           }}
           onBorrar={() => {
             setDatos((d) => {
-              // Se va la tarea y también lo que se hubiera anotado de ella.
+              // Se va la tarea —con todas sus partes, si se partió— y también
+              // lo que se hubiera anotado de ella. Antes, borrar una parte
+              // dejaba la otra sonando.
+              const ids = cadenaDe(d.tareas, tareaAbierta);
               const registros = { ...d.registros };
               for (const clave of Object.keys(registros)) {
-                if (clave.endsWith(`|${tareaAbierta}`)) delete registros[clave];
+                if (ids.has(clave.slice(clave.indexOf("|") + 1))) delete registros[clave];
               }
-              return { ...d, tareas: d.tareas.filter((t) => t.id !== tareaAbierta), registros };
+              return { ...d, tareas: d.tareas.filter((t) => !ids.has(t.id)), registros };
             });
             setTareaAbierta(null);
           }}
@@ -1186,7 +1311,41 @@ export default function App() {
         abajo. El botón grande es entrar; el pequeño, no. A las tres de la
         mañana no hay tiempo para más opciones.
       */}
-      {llamada && (!sala || (sala.canal !== llamada.canal && sala.padre !== llamada.canal)) ? (
+      {/*
+        La llamada de PRUEBA («Probar mi timbre», 6.27): no es una sala. Si
+        sonó y la persona la cogió, lo único que hay que decirle es que
+        funciona — «Entrar» la llevaría a una sala que no existe.
+      */}
+      {llamada && llamada.canal === CANAL_PRUEBA ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-fondo p-6">
+          <div className="w-full max-w-sm text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-tenue">prueba del timbre</p>
+            <h2 className="mt-3 text-3xl font-semibold leading-tight">
+              {llamada.conLaAppDelante ? "Sonó, con la app abierta" : "¡Te sonó!"}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-tenue">
+              {llamada.conLaAppDelante
+                ? "Eso no prueba lo importante. Vuelve a probar, y esta vez cierra la app del todo (quítala de las recientes) o apaga la pantalla antes de que pasen los 15 segundos."
+                : !llamada.sono
+                  ? "Llegó, pero tu móvil frenó el timbre y sonó como alarma. Mira en Juntos → comunidad de voz qué le falta a tu móvil."
+                  : "Así te sonará cuando llamen al devocional, aunque tengas la app cerrada."}
+            </p>
+            <div className="mt-8">
+              <button
+                onClick={() => {
+                  pruebaConLaAppDelante.current = false;
+                  setLlamada(null);
+                  void atenderLlamada();
+                }}
+                className="toque w-full rounded-2xl bg-logro px-6 py-4 text-lg font-semibold text-fondo"
+              >
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {llamada && llamada.canal !== CANAL_PRUEBA && (!sala || (sala.canal !== llamada.canal && sala.padre !== llamada.canal)) ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-fondo p-6">
           <div className="w-full max-w-sm text-center">
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-tenue">
@@ -1226,6 +1385,18 @@ export default function App() {
         </div>
       ) : null}
 
+      {/*
+        La ventanita flotante sin sala: se colgó desde la sala o la cerraron
+        para todos mientras la app estaba encogida. La página entera no se lee
+        en unos centímetros; se dice eso y basta.
+      */}
+      {ventanita && !sala ? (
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-2 bg-fondo p-3 text-center">
+          <p className="text-sm font-medium">Saliste de la sala</p>
+          <p className="text-xs text-tenue">Toca para volver a Genuino</p>
+        </div>
+      ) : null}
+
       {sala ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-fondo">
           <div className="zona-segura-arriba zona-segura-abajo mx-auto max-w-lg p-4">
@@ -1237,7 +1408,14 @@ export default function App() {
               nombreSiHayQueAbrirla={sala.nombre}
               finPrevisto={sala.fin}
               quienSoy={sala.quien}
-              onSalir={() => setSala(null)}
+              ventanita={ventanita}
+              onSalir={() => {
+                setSala(null);
+                if (cerrarAlSalirDeLaSala.current) {
+                  cerrarAlSalirDeLaSala.current = false;
+                  setBloqueada(true);
+                }
+              }}
               padre={sala.padre}
               onIrA={(destino) =>
                 setSala((s) =>

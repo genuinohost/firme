@@ -502,11 +502,31 @@ service cloud.firestore {
     // lista entera, sólo quien modera**: quién está apuntado a un grupo de
     // oración es cosa de cada uno, no un dato público.
     match /comunidad/voz/miembros/{uid} {
+      // Desde la 6.27, el token de avisos de SU móvil, cuándo lo dejó y con
+      // qué versión: el portero llama móvil por móvil y así sabe a cuál no le
+      // llegó (un token por aparato en `moviles`; el tema va además para las
+      // apps viejas). Lo ven él y quien modera (quien llama), nadie más.
+      // Una entrada de `moviles`: su token, cuándo y con qué versión. Las reglas
+      // no recorren mapas; con tres como mucho, se miran una a una.
+      function movilRazonable(v) {
+        return v is map && v.keys().hasOnly(['token', 'en', 'version'])
+          && v.token is string && v.token.size() >= 20 && v.token.size() <= 400
+          && v.en is number
+          && (!('version' in v) || (v.version is string && v.version.size() <= 20));
+      }
       function miembroRazonable(d) {
-        return d.keys().hasOnly(['nombre', 'usuario', 'desde'])
+        return d.keys().hasOnly(['nombre', 'usuario', 'desde', 'token', 'tokenEn', 'version', 'moviles'])
           && d.nombre is string && d.nombre.size() <= 40
           && d.usuario is string && d.usuario.size() <= 20
-          && d.desde is number;
+          && d.desde is number
+          && (!('token' in d) || (d.token is string && d.token.size() >= 20 && d.token.size() <= 400))
+          && (!('tokenEn' in d) || d.tokenEn is number)
+          && (!('version' in d) || (d.version is string && d.version.size() <= 20))
+          // Un token por aparato (su móvil y su tableta), como mucho tres.
+          && (!('moviles' in d) || (d.moviles is map && d.moviles.size() <= 3
+            && (d.moviles.size() < 1 || movilRazonable(d.moviles.values()[0]))
+            && (d.moviles.size() < 2 || movilRazonable(d.moviles.values()[1]))
+            && (d.moviles.size() < 3 || movilRazonable(d.moviles.values()[2]))));
       }
       allow get: if esElMismo(uid);
       allow list: if esModerador();

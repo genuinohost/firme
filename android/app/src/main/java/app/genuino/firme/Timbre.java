@@ -15,10 +15,11 @@ import com.google.firebase.messaging.FirebaseMessaging;
  * Apuntarse a la comunidad de voz, y atender la llamada cuando suena.
  *
  * <p><b>Apuntarse es cosa del propio movil.</b> Cada telefono se suscribe el
- * solo al tema {@code devocional} de Firebase. No hay servidor que guarde
- * quien esta apuntado ni lista de tokens: cuando Alex llama, el Worker manda un
- * mensaje al tema y Google lo reparte. Salirse es darse de baja del tema, y
- * desde ese momento ese movil no vuelve a sonar. Voluntario de verdad.
+ * solo al tema {@code devocional} de Firebase y, desde la 6.27, deja ademas
+ * su token en su ficha de la comunidad (la ven el y quien modera): el Worker
+ * llama movil por movil y sabe a cual no le llego. Salirse es darse de baja
+ * del tema y borrar la ficha, y desde ese momento ese movil no vuelve a
+ * sonar. Voluntario de verdad.
  *
  * <p>La lista de miembros que se ve en la app vive en Firestore aparte
  * ({@code comunidad/miembros}) y la lleva la web. Aqui solo esta lo que la web
@@ -65,6 +66,56 @@ public class Timbre extends Plugin {
             if (t.isSuccessful()) llamada.resolve();
             else llamada.reject("no-se-pudo-apuntar", t.getException());
         });
+    }
+
+    /**
+     * El token de avisos de este movil. Desde la 6.27 se guarda en la ficha de
+     * la comunidad para que el portero llame movil por movil y sepa a cual no
+     * le llego; y quien llama lo manda para que le vuelva el «me sono».
+     */
+    @PluginMethod
+    public void miToken(PluginCall llamada) {
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(t -> {
+            if (t.isSuccessful() && t.getResult() != null) {
+                JSObject r = new JSObject();
+                r.put("token", t.getResult());
+                llamada.resolve(r);
+            } else {
+                llamada.reject("sin-token", t.getException());
+            }
+        });
+    }
+
+    /** Google cambio el token de este movil: que la web lo guarde en la ficha, si esta abierta. */
+    static void avisarTokenNuevo() {
+        Timbre t = viva == null ? null : viva.get();
+        if (t == null) return;
+        t.notifyListeners("tokenNuevo", new JSObject(), false);
+    }
+
+    /** Los «me sono» que llegaron a este movil (el de quien llama), como texto JSON. */
+    @PluginMethod
+    public void acuses(PluginCall llamada) {
+        JSObject r = new JSObject();
+        try {
+            r.put("lista", getContext().getSharedPreferences(AlarmaExacta.PREFS, Context.MODE_PRIVATE)
+                    .getString(ServicioAvisos.CLAVE_ACUSES, "[]"));
+        } catch (Exception e) {
+            r.put("lista", "[]");
+        }
+        llamada.resolve(r);
+    }
+
+    /**
+     * Decirle a la web que llego un «me sono», si esta abierta. Sin retener:
+     * los que lleguen con la app cerrada los lee la web de las preferencias.
+     */
+    static void avisarAcuse(String json) {
+        Timbre t = viva == null ? null : viva.get();
+        if (t == null) return;
+        JSObject d = new JSObject();
+        d.put("acuse", json);
+        t.notifyListeners("acuse", d, false);
     }
 
     @PluginMethod

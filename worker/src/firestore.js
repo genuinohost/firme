@@ -57,3 +57,27 @@ export async function leerDocumento(base, ruta, token) {
   const j = await r.json();
   return campos(j.fields ?? {});
 }
+
+/**
+ * Lista los documentos de una colección: `[{ id, ...campos }]`.
+ *
+ * Con el token de quien pide, como `leerDocumento`: si las reglas no le dejan
+ * listar, lanza, y quien llama decide qué hacer sin esa lista. Pide de 300 en
+ * 300 hasta `max`, para no quedarse corto ni pedir sin fin.
+ */
+export async function listarDocumentos(base, ruta, token, max = 900) {
+  const docs = [];
+  let pagina = "";
+  do {
+    const url = `${base}/${ruta}?pageSize=300${pagina ? `&pageToken=${encodeURIComponent(pagina)}` : ""}`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 403 || r.status === 401) throw new Error("firestore-nos-niega");
+    if (!r.ok) throw new Error(`firestore-${r.status}`);
+    const j = await r.json();
+    for (const d of j.documents ?? []) {
+      docs.push({ id: String(d.name ?? "").split("/").pop(), ...campos(d.fields ?? {}) });
+    }
+    pagina = j.nextPageToken ?? "";
+  } while (pagina && docs.length < max);
+  return docs;
+}

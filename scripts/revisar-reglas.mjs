@@ -441,6 +441,62 @@ await debe(
     setDoc(doc(beto, "comunidad/voz/miembros/beto"), { ...miembro("Beto", "beto"), telefono: "x" }),
   ),
 );
+// 6.27: el token de avisos de su móvil, para llamar móvil por móvil.
+const conToken = (extra = {}) => ({
+  ...miembro("Beto", "beto"),
+  token: "token-de-beto-xxxxxxxxxxxxxxxxxxxxxxxx",
+  tokenEn: 1,
+  version: "6.27",
+  ...extra,
+});
+await debe(
+  "cada uno deja el token de avisos de su movil",
+  assertSucceeds(setDoc(doc(beto, "comunidad/voz/miembros/beto"), conToken())),
+);
+await debe(
+  "y lo cambia cuando Google se lo cambia",
+  assertSucceeds(updateDoc(doc(beto, "comunidad/voz/miembros/beto"), { token: "otro-token-de-beto-xxxxxxxxxxxxxxxxxx", tokenEn: 2 })),
+);
+await debe(
+  "un token vacio o gigante no se guarda",
+  Promise.all([
+    assertFails(setDoc(doc(beto, "comunidad/voz/miembros/beto"), conToken({ token: "" }))),
+    assertFails(setDoc(doc(beto, "comunidad/voz/miembros/beto"), conToken({ token: "x".repeat(401) }))),
+    assertFails(setDoc(doc(beto, "comunidad/voz/miembros/beto"), conToken({ version: 627 }))),
+  ]),
+);
+await debe(
+  "cada aparato deja el suyo (movil y tableta), hasta tres",
+  assertSucceeds(
+    updateDoc(doc(beto, "comunidad/voz/miembros/beto"), {
+      moviles: { a: { token: "token-a-xxxxxxxxxxxxxxxxxxxxxxxx", en: 1, version: "6.27" }, b: { token: "token-b-xxxxxxxxxxxxxxxxxxxxxxxx", en: 2, version: "6.27" } },
+    }),
+  ),
+);
+await debe(
+  "y cada entrada con su forma: nada de un token gigante escondido dentro",
+  Promise.all([
+    assertFails(updateDoc(doc(beto, "comunidad/voz/miembros/beto"), { moviles: { a: { token: "x".repeat(401), en: 1 } } })),
+    assertFails(updateDoc(doc(beto, "comunidad/voz/miembros/beto"), { moviles: { a: { token: "token-a-xxxxxxxxxxxxxxxxxxxxxxxx", en: 1, basura: "y" } } })),
+    assertFails(updateDoc(doc(beto, "comunidad/voz/miembros/beto"), { moviles: { a: "un texto suelto" } })),
+  ]),
+);
+await debe(
+  "pero no cuatro",
+  assertFails(
+    updateDoc(doc(beto, "comunidad/voz/miembros/beto"), {
+      moviles: { a: {}, b: {}, c: {}, d: {} },
+    }),
+  ),
+);
+await debe(
+  "nadie cambia el token de otro (seria desviarle la llamada)",
+  assertFails(updateDoc(doc(curioso, "comunidad/voz/miembros/beto"), { token: "token-del-curioso-xxxxxxxxxxxxxxxxxx" })),
+);
+await debe(
+  "el token no lo ve otro miembro, solo quien modera",
+  assertFails(getDoc(doc(curioso, "comunidad/voz/miembros/beto"))),
+);
 await debe(
   "salirse es un toque: cada uno se borra a si mismo",
   assertSucceeds(deleteDoc(doc(beto, "comunidad/voz/miembros/beto"))),

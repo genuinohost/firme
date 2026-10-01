@@ -1,13 +1,14 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 68,
-  "nombre": "6.26",
+  "codigo": 69,
+  "nombre": "6.27",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Mientras alguien habla en la sala: dale me gusta y agregalo como amigo; si ya te mando solicitud, Aceptar. Y una tarjeta te anima a agregar a los hermanos del devocional.",
-    "Las tareas ahora se pueden poner para otro dia (Hoy, Manana o el calendario), con su alarma.",
-    "La reunion del devocional se puede volver a abrir cada dia aunque la de ayer quedara cerrada.",
-    "La racha se ve tambien en los subgrupos."
+    "La llamada a la comunidad ahora dice a quien le sono: Sono en 3 de 4, y de cada uno que le pasa (app sin actualizar, pantalla completa apagada, ahorro de bateria...).",
+    "Probar mi timbre: en Juntos, comunidad de voz. A los 15 segundos te suena, para comprobarlo con la app cerrada.",
+    "Recuadro flotante como Google Meet: sal de la app con una sala abierta y sigue con tu microfono y el boton de colgar.",
+    "Tareas que se repiten cada semana: elige los dias (por ejemplo, todos los lunes).",
+    "El devocional de cada dia lleva su sala de voz: entrar, abrirla o unirte a la comunidad desde la misma tarjeta."
   ],
-  "importante": false
+  "importante": true
 }

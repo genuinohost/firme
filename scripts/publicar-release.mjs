@@ -47,7 +47,11 @@ const gradle = readFileSync(GRADLE, "utf8");
 const codigo = Number(gradle.match(/versionCode\s+(\d+)/)?.[1]);
 const nombre = gradle.match(/versionName\s+"([^"]+)"/)?.[1];
 const etiqueta = `v${nombre}`;
-const novedades = process.argv.slice(2);
+// `--importante`: la versión no se puede descartar para siempre (sigue
+// avisando). Para cuando algo deja de funcionar sin ella: la 6.27, sin la cual
+// el móvil no confirma si le sonó la llamada.
+const importante = process.argv.includes("--importante");
+const novedades = process.argv.slice(2).filter((a) => a !== "--importante");
 
 // El repositorio se saca de git, para no tenerlo escrito en dos sitios.
 // Las dos comprobaciones viven en guardian.mjs, porque el AAB de Play las
@@ -119,7 +123,7 @@ writeFileSync(
       nombre,
       enlace,
       novedades,
-      importante: false,
+      importante,
     },
     null,
     2,

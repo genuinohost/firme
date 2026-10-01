@@ -79,7 +79,7 @@ public class ServicioSala extends Service {
 
         Notification aviso = new NotificationCompat.Builder(this, CANAL)
                 .setContentTitle(nombre)
-                .setContentText("Estas en la sala. Toca para volver.")
+                .setContentText("Estás en la sala. Toca para volver.")
                 .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setContentIntent(alToque)
                 // No se puede descartar: si se descarta, el sistema entiende que

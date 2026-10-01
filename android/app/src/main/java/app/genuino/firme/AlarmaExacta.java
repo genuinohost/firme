@@ -511,7 +511,7 @@ public class AlarmaExacta extends Plugin {
      * Lo unico honrado que se puede hacer es **decirlo en voz alta** en vez de
      * quedarse callado y fallar de madrugada.
      */
-    private static boolean ahorroDeEnergia(Context contexto) {
+    static boolean ahorroDeEnergia(Context contexto) {
         try {
             PowerManager energia = contexto.getSystemService(PowerManager.class);
             return energia != null && energia.isPowerSaveMode();
@@ -528,7 +528,7 @@ public class AlarmaExacta extends Plugin {
      * una de las pocas formas de saber, sin adivinar, que el sistema nos tiene
      * apartados. No hace falta permiso para preguntar por uno mismo.
      */
-    private static String cajonDeReposo(Context contexto) {
+    static String cajonDeReposo(Context contexto) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return "no aplica";
         try {
             android.app.usage.UsageStatsManager uso =
@@ -633,7 +633,7 @@ public class AlarmaExacta extends Plugin {
         }
     }
 
-    private static boolean exentaDeBateria(Context contexto) {
+    static boolean exentaDeBateria(Context contexto) {
         try {
             PowerManager energia = contexto.getSystemService(PowerManager.class);
             return energia != null
@@ -657,7 +657,7 @@ public class AlarmaExacta extends Plugin {
      *
      * <p>Alex lo vio tal cual: «sono pero no encendio la pantalla sola».
      */
-    private static boolean puedePantallaCompleta(Context contexto) {
+    static boolean puedePantallaCompleta(Context contexto) {
         if (Build.VERSION.SDK_INT < 34) return true;
         try {
             NotificationManager gestor = contexto.getSystemService(NotificationManager.class);
@@ -676,7 +676,7 @@ public class AlarmaExacta extends Plugin {
         }
     }
 
-    private static boolean avisosActivos(Context contexto) {
+    static boolean avisosActivos(Context contexto) {
         try {
             return androidx.core.app.NotificationManagerCompat.from(contexto)
                     .areNotificationsEnabled();
@@ -686,7 +686,7 @@ public class AlarmaExacta extends Plugin {
     }
 
     /** Un canal apagado a mano deja el respaldo mudo sin que nadie se entere. */
-    private static boolean canalActivo(Context contexto) {
+    static boolean canalActivo(Context contexto) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
         try {
             NotificationManager gestor = contexto.getSystemService(NotificationManager.class);
@@ -726,7 +726,7 @@ public class AlarmaExacta extends Plugin {
         sonar.setAction(ServicioAlarma.ACCION_SONAR);
         sonar.putExtra("id", 999001);
         sonar.putExtra("titulo", "Prueba en voz alta");
-        sonar.putExtra("cuerpo", "Asi suena la alarma. Pulsa para pararla.");
+        sonar.putExtra("cuerpo", "Así suena la alarma. Pulsa para pararla.");
         sonar.putExtra("idSuceso", "prueba");
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -983,7 +983,10 @@ public class AlarmaExacta extends Plugin {
 
     private void abrir(Intent intencion) {
         try {
-            intencion.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            // NO_USER_ACTION: abrir los ajustes desde la sala no es «salir de
+            // la app»; sin esto, la app se encogia en la ventanita encima de
+            // los ajustes donde habia que tocar «Permisos». (Revision 6.27.)
+            intencion.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_USER_ACTION);
             getContext().startActivity(intencion);
         } catch (Exception ignorada) {
             // Si el sistema lo rechaza no hay nada que hacer desde aqui.

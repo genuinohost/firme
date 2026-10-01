@@ -157,8 +157,13 @@ export function PantallaComunidad({
         </p>
       </header>
 
-      {/* Lo primero: el devocional de hoy, como en YouVersion. Es lo más importante. */}
-      <DevocionalDeHoy />
+      {/*
+        Lo primero: el devocional de hoy, como en YouVersion. Es lo más importante.
+        Lleva dentro su sala de voz (Alex, 28-09-2026: «No veo la opción de que
+        el DEVOCIONAL sea una comunidad de voz»), y por eso recibe las reuniones
+        —de ahí sale la hora de la de cada día— y la forma de entrar en la sala.
+      */}
+      <DevocionalDeHoy reuniones={comunidad.reuniones} onEntrarEnSala={onEntrarEnSala} />
 
       {/*
         El muro va arriba del todo, y no al final con los enlaces.
@@ -180,8 +185,15 @@ export function PantallaComunidad({
         <SalasAbiertas onEntrar={onEntrarEnSala} onHayAlgo={setHaySalas} />
       ) : null}
 
-      {/* Apuntarse a que te suene. Se esconde sola si no hay cuenta. */}
-      <ComunidadDeVoz />
+      {/*
+        Apuntarse a que te suene. Se esconde sola si no hay cuenta.
+        El `id` es el destino de «Unirme a la comunidad de voz», en la tarjeta
+        del devocional de arriba. `empty:hidden`: cuando la tarjeta no se pinta,
+        un div vacío seguiría ocupando un hueco del `gap` de la columna.
+      */}
+      <div id="comunidad-de-voz" className="empty:hidden">
+        <ComunidadDeVoz />
+      </div>
       {/* Sólo la ve el dueño: la lista de quién puede llamar y abrir el devocional. */}
       <QuienPuedeLlamar />
       {/* Sólo quien modera: el orden de lectura y a quién le toca comentar. */}

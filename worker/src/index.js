@@ -1,7 +1,7 @@
 import agoraToken from "agora-token";
 import { nombreDeSalaValido, puedeHablar } from "../../functions/decidir.js";
-import { llamarAlTema } from "./fcm.js";
-import { leerDocumento } from "./firestore.js";
+import { abrirVuelta, cerrarVuelta, enviarAviso, tokenDeAcceso } from "./fcm.js";
+import { leerDocumento, listarDocumentos } from "./firestore.js";
 import { uidDelToken } from "./verificar.js";
 
 const { RtcRole, RtcTokenBuilder } = agoraToken;
@@ -237,11 +237,30 @@ async function servirElApk(peticion, entorno) {
  * Y sólo se puede llamar a una sala **abierta**: una llamada a una sala que no
  * existe deja a treinta personas entrando a la nada.
  *
- * ── Un mensaje, miles de móviles ─────────────────────────────────────────
+ * ── Móvil por móvil, y el tema detrás ────────────────────────────────────
  *
- * No se lee ninguna lista de tokens: cada móvil se apuntó él solo al tema
- * `devocional` al entrar a la comunidad, y aquí se manda un solo aviso al
- * tema. Ver `fcm.js`.
+ * Se lee la lista de la comunidad **con el token de quien llama** (las reglas
+ * sólo dejan listarla a quien modera, que es quien llama) y se manda un aviso
+ * a cada móvil que dejó su token, menos al propio. Lo que conteste Google con
+ * cada uno vuelve en `resultados`, con el nombre: así el botón puede decir
+ * «a Pepa no le llegó» en vez de «Llamando a 2».
+ *
+ * Cada aparato de una persona tiene su propio aviso (la ficha guarda un token
+ * por aparato, `moviles`): su móvil Y su tableta. El aviso al tema va DETRÁS,
+ * y SIEMPRE, para lo que no tenga ficha al día (una app vieja, un móvil cuya
+ * ficha no llegó a escribirse).
+ *
+ * Lo que cambia es su PRIORIDAD. Alta si hace falta de verdad: alguien con la
+ * app vieja (sin token), pasado del tope, un suelto que falló, o la lista sin
+ * leer. Si no, normal: los móviles que ya sonaron por su token lo reconocen
+ * por `llamada` y no pintan nada, y Google rebaja la prioridad de las apps
+ * cuyos avisos ALTOS no enseñan nada; los normales no cuentan. Un token muerto
+ * (`no-registrado`, alguien que desinstaló) tampoco lo sube: el tema no le
+ * sirve de nada a quien ya no tiene la app. Ver `fcm.js`.
+ *
+ * Tope de 40 avisos sueltos: el plan gratuito de Workers deja 50 peticiones
+ * de salida por llamada, y unas pocas se van en comprobar quién llama. Los que
+ * pasen del tope se quedan con el tema (y se dice).
  */
 async function llamar(peticion, entorno, origen) {
   let cuerpo;
@@ -296,21 +315,99 @@ async function llamar(peticion, entorno, origen) {
     return respuesta({ error: "sala-cerrada", porque: PORQUE["sala-cerrada"] }, 409, origen);
   }
 
+  // La lista de la comunidad, con sus tokens. Si no se puede leer (reglas
+  // viejas, Firestore caído), se llama sólo al tema, como hasta la 6.26.
+  let miembros = null;
   try {
-    await llamarAlTema({
-      fcmUrl: entorno.FCM_URL,
-      tokenUrl: entorno.FCM_TOKEN_URL,
-      cuentaJson: entorno.FCM_CUENTA,
-      tema: entorno.FCM_TEMA,
-      datos: { tipo: "llamada", canal, nombre, quien: uid },
+    miembros = await listarDocumentos(base, "comunidad/voz/miembros", token);
+  } catch (e) {
+    console.log("miembros:", e?.message ?? e);
+  }
+
+  const llamada = idDeLlamada();
+  const miToken = typeof cuerpo?.miToken === "string" && cuerpo.miToken.length <= 400 ? cuerpo.miToken : "";
+  const alSonar = `${new URL(peticion.url).origin}/sono`;
+  const comun = { tipo: "llamada", canal, nombre, quien: uid, llamada };
+  const fcm = { fcmUrl: entorno.FCM_URL, tokenUrl: entorno.FCM_TOKEN_URL, cuentaJson: entorno.FCM_CUENTA };
+
+  const otros = (miembros ?? []).filter((m) => m.id !== uid);
+  // Cada aparato de cada uno: la ficha guarda un token por aparato (`moviles`,
+  // desde la 6.27) y el último en `token`. Sin repetir, y nunca el móvil de
+  // quien llama: si quedó en la ficha de otra cuenta (una de prueba, un móvil
+  // prestado), le sonaba a él y el informe decía «le sonó» de la otra persona.
+  const deOtro = (m) => tokensDe(m).filter((t) => t !== miToken);
+  // Por rondas: primero el aparato principal de cada uno y después los demás,
+  // para que el tope corte aparatos de sobra y no personas.
+  const pares = [];
+  for (let ronda = 0; ronda < 3; ronda++) {
+    for (const m of otros) {
+      const t = deOtro(m)[ronda];
+      if (t) pares.push({ m, token: t });
+    }
+  }
+  const aMano = pares.slice(0, MAX_AVISOS_SUELTOS);
+
+  // Nadie más en la comunidad: no hay a quién llamar, y no es un fallo.
+  if (miembros != null && otros.length === 0) {
+    return respuesta({ enviado: true, canal, llamada, tema: null, vuelta: false, resultados: [] }, 200, origen);
+  }
+
+  let tema = null;
+  let sueltos;
+  try {
+    // El token de acceso UNA vez, antes de repartir. Si cada aviso lo pidiera
+    // por su cuenta, con la caché fría (la primera llamada del día) serían
+    // treinta firmas RSA y treinta peticiones a Google: más de las 50
+    // subpeticiones y de los 10 ms de CPU del plan gratuito, y a la mitad no
+    // les llegaría. (Revisión de la 6.27.)
+    await tokenDeAcceso(entorno.FCM_CUENTA, entorno.FCM_TOKEN_URL);
+    sueltos = await Promise.all(
+      aMano.map(async ({ m, token: destino }) => {
+        const datos = { ...comun, para: m.id };
+        // La vuelta sólo si hay con qué volver: sin el token de quien llama
+        // (un fallo al pedirlo, o falta la clave) no hay a quién avisar.
+        if (miToken && entorno.TIMBRE_CLAVE) {
+          datos.vuelta = await cerrarVuelta(entorno.TIMBRE_CLAVE, {
+            l: llamada,
+            p: m.id,
+            t: miToken,
+            n: Date.now(),
+            e: Date.now() + VUELTA_VALE_MS,
+          });
+          datos.sono = alSonar;
+        }
+        return enviarAviso({ ...fcm, destino: { token: destino }, datos });
+      }),
+    );
+    const sinAparato = otros.some((m) => deOtro(m).length === 0);
+    const temaHaceFalta =
+      miembros == null ||
+      sinAparato ||
+      pares.length > aMano.length ||
+      sueltos.some((r) => !r.ok && r.motivo !== "no-registrado");
+    tema = await enviarAviso({
+      ...fcm,
+      destino: { topic: entorno.FCM_TEMA },
+      datos: comun,
+      // TEMA_SIEMPRE_ALTO: mientras haya aparatos con la 6.26 (sin su entrada
+      // en la ficha), el tema es lo único que les llega y en normal llega
+      // tarde. Se quita de wrangler.toml cuando todos tengan la 6.27.
+      prioridad: temaHaceFalta || entorno.TEMA_SIEMPRE_ALTO === "1" ? "high" : "normal",
     });
   } catch (e) {
+    // Sólo llega aquí si no hubo token de acceso de Google: no salió nada.
     const motivo = String(e?.message ?? e);
-    console.log("fcm:", motivo);
+    tema = { ok: false, motivo: /google-no-dio-token-40[13]/.test(motivo) ? "sin-permiso" : "fallo", detalle: motivo };
+    sueltos = aMano.map(() => tema);
+  }
+
+  const algunoSalio = !!tema?.ok || sueltos.some((r) => r.ok);
+  if (!algunoSalio) {
+    console.log("fcm:", [tema, ...sueltos].filter(Boolean).map((r) => r.detalle ?? r.motivo).join(" | ").slice(0, 500));
     // Un 403 de Google no se arregla reintentando: es que la cuenta del timbre
     // no tiene el rol de enviar. Decir «vuelve a probar» ahi es mandar a alguien
     // a mirar donde no esta el fallo — la misma leccion que «mira tu conexion».
-    const sinPermiso = /fcm-403|google-no-dio-token-40[13]/.test(motivo);
+    const sinPermiso = [tema, ...sueltos].some((r) => r?.motivo === "sin-permiso");
     return respuesta(
       sinPermiso
         ? {
@@ -324,11 +421,253 @@ async function llamar(peticion, entorno, origen) {
     );
   }
 
-  return respuesta({ enviado: true, canal, tema: entorno.FCM_TEMA }, 200, origen);
+  // Por persona: le salió si salió a alguno de sus aparatos.
+  const porUid = new Map();
+  aMano.forEach(({ m }, i) => {
+    const lista = porUid.get(m.id) ?? [];
+    lista.push(sueltos[i]);
+    porUid.set(m.id, lista);
+  });
+  // A quien sólo se llega por el tema (app vieja, o pasado el tope), si el
+  // tema falló no le salió nada: se dice «fallo», no «le llega por el camino
+  // de antes». (Revisión de la 6.27.)
+  const porElTema = (estado) => (tema?.ok ? estado : "fallo");
+  const resultados =
+    miembros == null
+      ? null
+      : otros.map((m) => {
+          const rs = porUid.get(m.id);
+          // Si el tope le cortó algún aparato y los que salieron no llegaron,
+          // le queda el tema: no se le dice «no-registrado» a quien sí le llegó.
+          const cortado = rs && deOtro(m).length > rs.length;
+          const estado = rs
+            ? rs.some((r) => r.ok)
+              ? "enviado"
+              : cortado
+                ? porElTema("solo-tema")
+                : rs.every((r) => r.motivo === "no-registrado")
+                  ? "no-registrado"
+                  : "fallo"
+            : deOtro(m).length > 0
+              ? porElTema("solo-tema")
+              : porElTema("sin-token");
+          return { uid: m.id, nombre: String(m.nombre ?? "").slice(0, 40), estado };
+        });
+
+  return respuesta(
+    {
+      enviado: true,
+      canal,
+      llamada,
+      // Si salió el aviso general (siempre se manda; ver arriba).
+      tema: tema == null ? null : tema.ok,
+      vuelta: !!(miToken && entorno.TIMBRE_CLAVE),
+      resultados,
+    },
+    200,
+    origen,
+  );
+}
+
+/** Un token de FCM con buena pinta (los de verdad rondan los 160 caracteres). */
+const tokenValido = (t) => typeof t === "string" && t.length > 20 && t.length <= 400;
+
+/**
+ * Los tokens de los aparatos de un miembro, sin repetir: los de `moviles` (uno
+ * por aparato, desde la 6.27) y el de `token` (el del último que se abrió).
+ * Con un solo token por ficha, el segundo aparato de alguien (su tableta) sólo
+ * sonaba por el tema; y el tema, si no hacía falta para nadie más, salía en
+ * prioridad normal, que con la tableta en reposo llega tarde. (Tercera
+ * revisión de la 6.27.)
+ */
+function tokensDe(m) {
+  const lista = [];
+  if (m?.moviles && typeof m.moviles === "object") {
+    for (const v of Object.values(m.moviles)) if (tokenValido(v?.token)) lista.push(v.token);
+  }
+  if (tokenValido(m?.token)) lista.push(m.token);
+  return [...new Set(lista)].slice(0, 3);
+}
+
+/** Cuántos avisos sueltos como mucho por llamada (ver `llamar`). */
+const MAX_AVISOS_SUELTOS = 40;
+
+/** Cuánto vale una vuelta: lo mismo que el aviso en Google, y un poco más. */
+const VUELTA_VALE_MS = 15 * 60_000;
+
+/** Un identificador corto para reconocer la misma llamada por dos caminos. */
+function idDeLlamada() {
+  const b = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(b, (x) => (x % 36).toString(36)).join("");
+}
+
+/**
+ * Lo que un móvil dice de sí mismo al sonar. Sólo lo que sirve para saber por
+ * qué no se vio o no se oyó, recortado: el portero no reenvía lo que no espera.
+ */
+function estadoLimpio(e) {
+  const o = {};
+  if (!e || typeof e !== "object") return o;
+  for (const k of ["sono", "repetida", "avisos", "canal", "pantalla", "bateria", "ahorro"]) {
+    if (typeof e[k] === "boolean") o[k] = e[k];
+  }
+  for (const [k, max] of [
+    ["cajon", 24],
+    ["noMolestar", 24],
+    ["fabricante", 30],
+    ["modelo", 40],
+    ["android", 10],
+    ["version", 20],
+  ]) {
+    if (typeof e[k] === "string") o[k] = e[k].slice(0, max);
+  }
+  if (Number.isFinite(e.volumen)) o.volumen = Math.max(-1, Math.min(100, Math.round(e.volumen)));
+  return o;
+}
+
+/**
+ * «Me sonó»: lo manda el servicio nativo de un móvil al que se llamó, con la
+ * vuelta que venía en el aviso. El portero la abre y le reenvía a quien llamó
+ * quién era y cómo estaba su móvil. No lleva sesión de Firebase —lo manda el
+ * móvil con la app cerrada, que no la tiene—: lo que lo protege es la vuelta,
+ * que sólo este Worker sabe cerrar y que caduca a los quince minutos.
+ */
+async function sono(peticion, entorno, origen) {
+  if (!entorno.TIMBRE_CLAVE) return respuesta({ error: "sin-vuelta" }, 503, origen);
+  let cuerpo;
+  try {
+    cuerpo = await peticion.json();
+  } catch {
+    return respuesta({ error: "cuerpo" }, 400, origen);
+  }
+  const vuelta = String(cuerpo?.vuelta ?? "");
+  if (!vuelta || vuelta.length > 2048) return respuesta({ error: "vuelta" }, 400, origen);
+  let v;
+  try {
+    v = await abrirVuelta(entorno.TIMBRE_CLAVE, vuelta);
+  } catch {
+    return respuesta({ error: "vuelta" }, 400, origen);
+  }
+  if (!v || typeof v.t !== "string" || typeof v.l !== "string" || !(Date.now() < Number(v.e))) {
+    return respuesta({ error: "caducada" }, 410, origen);
+  }
+  const r = await enviarAviso({
+    fcmUrl: entorno.FCM_URL,
+    tokenUrl: entorno.FCM_TOKEN_URL,
+    cuentaJson: entorno.FCM_CUENTA,
+    destino: { token: v.t },
+    datos: {
+      tipo: "sono",
+      llamada: v.l,
+      para: String(v.p ?? ""),
+      tarda: String(Math.max(0, Date.now() - Number(v.n ?? Date.now()))),
+      estado: JSON.stringify(estadoLimpio(cuerpo?.estado)),
+    },
+    // Normal y no alta: no pinta nada en pantalla, y Google rebaja la
+    // prioridad de quien manda avisos «altos» que no enseñan nada — no se va
+    // a gastar ese crédito en esto, que hace falta para las llamadas.
+    prioridad: "normal",
+  }).catch((e) => ({ ok: false, motivo: "fallo", detalle: String(e?.message ?? e) }));
+  if (!r.ok) console.log("sono:", r.detalle ?? r.motivo);
+  return respuesta({ ok: r.ok }, 200, origen);
+}
+
+/** Cuánto espera la prueba del timbre antes de sonar. */
+const ESPERA_PRUEBA_MS = 15_000;
+
+/** El canal de la prueba: no es una sala; la app lo reconoce y no intenta entrar. */
+const CANAL_PRUEBA = "prueba-del-timbre";
+
+/**
+ * Probar el timbre: que le suene a quien lo pide, a su propio móvil, dentro de
+ * quince segundos — el tiempo de cerrar la app y apagar la pantalla, que es
+ * cuando de verdad se juega (un Xiaomi que no deja despertar a la app suena
+ * con ella abierta y no con ella cerrada).
+ *
+ * Se manda al token que está en SU ficha de la comunidad, leída con SU sesión.
+ * Los tokens de los demás sólo los ve quien modera, que ya puede llamar a todos.
+ *
+ * Antes de decir «te sonará en 15 segundos», se le pregunta a Google si
+ * aceptaría el aviso (`validate_only`): si la cuenta del timbre perdió el rol
+ * o el token caducó, se dice eso, en vez de dejar a la persona tocando la
+ * batería de su Xiaomi por un fallo que no es suyo. (Revisión de la 6.27.)
+ */
+async function probar(peticion, entorno, origen, ctx) {
+  let cuerpo;
+  try {
+    cuerpo = await peticion.json();
+  } catch {
+    return respuesta({ error: "cuerpo", porque: "No se entendió la petición." }, 400, origen);
+  }
+  const token = String(cuerpo?.token ?? "");
+  let uid;
+  try {
+    uid = await uidDelToken(token, { proyecto: entorno.PROYECTO, clavesUrl: entorno.CLAVES_URL });
+  } catch {
+    return respuesta({ error: "sin-sesion", porque: PORQUE["sin-sesion"] }, 401, origen);
+  }
+  let ficha;
+  try {
+    ficha = await leerDocumento(entorno.FIRESTORE_URL, `comunidad/voz/miembros/${uid}`, token);
+  } catch {
+    return respuesta({ error: "sin-conexion", porque: "No se pudo comprobar. Vuelve a probar." }, 502, origen);
+  }
+  if (!ficha) {
+    return respuesta({ error: "no-eres-miembro", porque: "Primero únete a la comunidad de voz." }, 404, origen);
+  }
+  if (typeof ficha.token !== "string" || ficha.token.length < 20) {
+    return respuesta(
+      {
+        error: "sin-token",
+        porque: "Tu móvil todavía no está registrado. Cierra la app del todo, ábrela y vuelve a probar.",
+      },
+      409,
+      origen,
+    );
+  }
+  const fcmPrueba = { fcmUrl: entorno.FCM_URL, tokenUrl: entorno.FCM_TOKEN_URL, cuentaJson: entorno.FCM_CUENTA };
+  const datosPrueba = { tipo: "llamada", canal: CANAL_PRUEBA, nombre: "Prueba del timbre", prueba: "1" };
+  const valida = await enviarAviso({
+    ...fcmPrueba,
+    destino: { token: ficha.token },
+    datos: { ...datosPrueba, llamada: "validar" },
+    soloValidar: true,
+  }).catch((e) => ({
+    ok: false,
+    motivo: /google-no-dio-token-40[13]/.test(String(e?.message)) ? "sin-permiso" : "fallo",
+  }));
+  if (!valida.ok) {
+    const porque =
+      valida.motivo === "no-registrado"
+        ? "Google no reconoce tu móvil. Cierra la app del todo, ábrela y vuelve a probar."
+        : valida.motivo === "sin-permiso"
+          ? "El servidor todavía no tiene permiso de Google para llamar. Es un ajuste de quien lleva la app, no tuyo."
+          : "Google no aceptó la prueba ahora mismo. Vuelve a probar en un momento.";
+    return respuesta({ error: valida.motivo, porque }, valida.motivo === "no-registrado" ? 409 : 502, origen);
+  }
+  const espera = Number(entorno.ESPERA_PRUEBA_MS ?? ESPERA_PRUEBA_MS);
+  const mandar = async () => {
+    if (espera > 0) await new Promise((listo) => setTimeout(listo, espera));
+    const r = await enviarAviso({
+      ...fcmPrueba,
+      destino: { token: ficha.token },
+      datos: { ...datosPrueba, llamada: idDeLlamada() },
+    });
+    if (!r.ok) console.log("prueba:", r.detalle ?? r.motivo);
+    return r;
+  };
+  // Se contesta ya y se manda después: el Worker puede seguir hasta 30 s tras
+  // responder si se le pide con waitUntil. Sin ctx (las pruebas), en el acto.
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(mandar().catch((e) => console.log("prueba:", e?.message ?? e)));
+    return respuesta({ ok: true, segundos: Math.round(espera / 1000) }, 200, origen);
+  }
+  const r = await mandar().catch((e) => ({ ok: false, motivo: String(e?.message ?? e) }));
+  return respuesta({ ok: r.ok, segundos: 0, motivo: r.ok ? undefined : r.motivo }, r.ok ? 200 : 502, origen);
 }
 
 export default {
-  async fetch(peticion, entorno) {
+  async fetch(peticion, entorno, ctx) {
     const origen = peticion.headers.get("Origin") ?? "";
     const ruta = new URL(peticion.url).pathname;
 
@@ -350,6 +689,12 @@ export default {
         return respuesta({ error: "metodo", porque: "Sólo POST." }, 405, origen);
       }
       return llamar(peticion, entorno, origen);
+    }
+    if (ruta === "/sono" || ruta === "/probar") {
+      if (peticion.method !== "POST") {
+        return respuesta({ error: "metodo", porque: "Sólo POST." }, 405, origen);
+      }
+      return ruta === "/sono" ? sono(peticion, entorno, origen) : probar(peticion, entorno, origen, ctx);
     }
 
     if (peticion.method === "OPTIONS") {

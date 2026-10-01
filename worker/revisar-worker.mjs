@@ -111,6 +111,18 @@ let tokensPedidos = 0;
 let clavesPedidas = 0;
 /** Si el FCM de mentira debe negar el envío como si faltara el rol. */
 let fcmSinPermiso = false;
+/** Si la «Firestore» de mentira debe negar listar (reglas viejas sin desplegar). */
+let listaNegada = false;
+/** Si el FCM de mentira debe fallar (500) sólo los avisos al tema. */
+let temaFalla = false;
+/** Cuántas comprobaciones `validate_only` le llegaron al FCM de mentira. */
+let validados = 0;
+/** Un token al que Google contesta 500 (un fallo pasajero suyo). */
+const TOKEN_QUE_FALLA = "token-que-falla-xxxxxxxxxxxxxxxxxxxxxx";
+/** Si el endpoint de tokens de Google debe negar el token de acceso (401). */
+let tokenNegado = false;
+/** Un token que Google ya no reconoce: la app se desinstaló. */
+const TOKEN_CADUCADO = "token-caducado-xxxxxxxxxxxxxxxxxxxxxxxx";
 
 const texto = (s) => ({ stringValue: s });
 const numero = (n) => ({ integerValue: String(n) });
@@ -128,6 +140,11 @@ const servidor = createServer((req, res) => {
 
   if (url.pathname === "/token") {
     tokensPedidos++;
+    if (tokenNegado) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "invalid_client" }));
+      return;
+    }
     let cuerpo = "";
     req.on("data", (c) => (cuerpo += c));
     req.on("end", () => {
@@ -162,7 +179,31 @@ const servidor = createServer((req, res) => {
         res.end();
         return;
       }
-      enviados.push(JSON.parse(cuerpo));
+      const mensaje = JSON.parse(cuerpo);
+      // Como Google con un móvil que ya no está: 404 UNREGISTERED.
+      if (mensaje?.message?.token === TOKEN_CADUCADO) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: { status: "NOT_FOUND", details: [{ errorCode: "UNREGISTERED" }] } }));
+        return;
+      }
+      if (mensaje?.message?.token === TOKEN_QUE_FALLA) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: { status: "INTERNAL" } }));
+        return;
+      }
+      if (temaFalla && mensaje?.message?.topic) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: { status: "INTERNAL" } }));
+        return;
+      }
+      // Sólo comprobar, sin mandar: como Google, contesta y no sale nada.
+      if (mensaje?.validate_only === true) {
+        validados++;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ name: "projects/genuino-host/messages/fake" }));
+        return;
+      }
+      enviados.push(mensaje);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ name: "projects/genuino-host/messages/123" }));
     });
@@ -176,6 +217,20 @@ const servidor = createServer((req, res) => {
     if (!req.headers.authorization?.startsWith("Bearer ")) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: { status: "UNAUTHENTICATED" } }));
+      return;
+    }
+    // Listar una colección: como Firestore, los documentos directamente debajo.
+    if (url.searchParams.has("pageSize")) {
+      if (listaNegada) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: { status: "PERMISSION_DENIED" } }));
+        return;
+      }
+      const documents = Object.keys(base)
+        .filter((k) => k.startsWith(ruta + "/") && !k.slice(ruta.length + 1).includes("/"))
+        .map((k) => ({ name: `projects/${PROYECTO}/databases/(default)/documents/${k}`, fields: base[k] }));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(documents.length ? { documents } : {}));
       return;
     }
     const doc = base[ruta];
@@ -206,6 +261,8 @@ const entorno = {
   FCM_URL: `http://127.0.0.1:${PUERTO}/fcm`,
   FCM_TEMA: "devocional",
   FCM_CUENTA: CUENTA_TIMBRE,
+  TIMBRE_CLAVE: "la-clave-de-la-vuelta-de-las-pruebas",
+  ESPERA_PRUEBA_MS: 0,
 };
 
 const { default: portero } = await import("./src/index.js");
@@ -417,6 +474,9 @@ let deOyente = null;
 // ── El timbre ──────────────────────────────────────────────────────────────
 console.log("\nEl timbre");
 
+// Alguien con la app vieja (sin token): el aviso al tema hace falta por él.
+base["comunidad/voz/miembros/viejo"] = { nombre: texto("Viejo"), usuario: texto("viejo"), desde: numero(1) };
+
 async function llamarA(cuerpo) {
   const r = await portero.fetch(
     new Request("https://portero.genuino/llamar", {
@@ -440,7 +500,7 @@ async function llamarA(cuerpo) {
   enviados = [];
   const r = await llamarA({ canal: "devocional", token: tokenDe("ana"), nombre: "Devocional de la mañana" });
   debe("quien modera SÍ llama", r.estado === 200 && r.datos.enviado === true, JSON.stringify(r.datos));
-  debe("y sale UN aviso, al tema", enviados.length === 1 && enviados[0]?.message?.topic === "devocional");
+  debe("con uno de app vieja en la lista, sale UN aviso, al tema", enviados.length === 1 && enviados[0]?.message?.topic === "devocional");
   debe(
     "el aviso lleva la sala, el nombre y quién llama",
     enviados[0]?.message?.data?.canal === "devocional" &&
@@ -494,6 +554,364 @@ async function llamarA(cuerpo) {
   );
   fcmSinPermiso = false;
 }
+
+// ── Móvil por móvil (6.27) ─────────────────────────────────────────────────
+console.log("\nMóvil por móvil, y «me sonó»");
+
+/** Una petición al portero a una ruta, como la haría la app o el servicio nativo. */
+async function aPortero(ruta, cuerpo, { origen = "https://localhost", ctx, env = entorno } = {}) {
+  const cabeceras = { "Content-Type": "application/json" };
+  if (origen) cabeceras.Origin = origen;
+  const r = await portero.fetch(
+    new Request(`https://portero.genuino${ruta}`, { method: "POST", headers: cabeceras, body: JSON.stringify(cuerpo) }),
+    env,
+    ctx,
+  );
+  return { estado: r.status, datos: await r.json() };
+}
+
+const TOKEN_ANA = "token-de-ana-xxxxxxxxxxxxxxxxxxxxxxxx";
+const TOKEN_PEPA = "token-de-pepa-xxxxxxxxxxxxxxxxxxxxxxx";
+const TOKEN_LLAMA = "token-del-que-llama-xxxxxxxxxxxxxxxxx";
+const miembro = (nombre, tokenFcm) => ({
+  nombre: texto(nombre),
+  usuario: texto(nombre.toLowerCase()),
+  desde: numero(1),
+  ...(tokenFcm ? { token: texto(tokenFcm), tokenEn: numero(1), version: texto("6.27") } : {}),
+});
+base["comunidad/voz/miembros/ana"] = miembro("Ana", TOKEN_ANA);
+base["comunidad/voz/miembros/pepa"] = miembro("Pepa", TOKEN_PEPA);
+base["comunidad/voz/miembros/luis"] = miembro("Luis", null);
+base["comunidad/voz/miembros/rita"] = miembro("Rita", TOKEN_CADUCADO);
+// Un documento de otra colección con el mismo prefijo no es un miembro.
+base["comunidad/voz/miembros/pepa/extra/x"] = { nada: texto("x") };
+
+let aPepa = null;
+let laLlamada = "";
+{
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), nombre: "Devocional", miToken: TOKEN_LLAMA });
+  laLlamada = r.datos.llamada;
+  const sueltos = enviados.filter((e) => e.message.token);
+  debe(
+    "con la lista, sale un aviso a cada móvil con token (Google acepta el de Pepa; el de Rita ya no existe) y otro al tema",
+    r.estado === 200 && sueltos.length === 1 && enviados.filter((e) => e.message.topic === "devocional").length === 1,
+    JSON.stringify(r.datos),
+  );
+  debe("NO se llama al móvil de quien llama", !sueltos.some((e) => e.message.token === TOKEN_ANA));
+  debe(
+    "todos los avisos llevan la MISMA llamada (así el móvil no suena dos veces)",
+    typeof laLlamada === "string" && laLlamada.length >= 8 && enviados.every((e) => e.message.data.llamada === laLlamada),
+  );
+  const estados = Object.fromEntries((r.datos.resultados ?? []).map((x) => [x.uid, x.estado]));
+  debe(
+    "el resultado dice, por persona, si salió, si tiene la app vieja o si Google ya no la encuentra",
+    estados.pepa === "enviado" && estados.luis === "sin-token" && estados.rita === "no-registrado" && !("ana" in estados),
+    JSON.stringify(estados),
+  );
+  debe("y lleva el nombre de cada uno", r.datos.resultados?.find((x) => x.uid === "pepa")?.nombre === "Pepa");
+  aPepa = sueltos.find((e) => e.message.token === TOKEN_PEPA)?.message;
+  debe(
+    "el aviso a Pepa dice para quién es, trae la vuelta y dónde contestar",
+    aPepa?.data?.para === "pepa" && aPepa?.data?.vuelta?.length > 40 && aPepa?.data?.sono === "https://portero.genuino/sono",
+  );
+  debe("y es de datos, con prioridad alta", !aPepa?.notification && aPepa?.android?.priority === "high");
+  debe(
+    "el token de quien llama NO viaja a la vista de quien recibe",
+    !JSON.stringify(enviados.filter((e) => e.message.token)).includes(TOKEN_LLAMA),
+  );
+  debe("el aviso al tema no lleva vuelta ni para quién", !enviados.find((e) => e.message.topic)?.message?.data?.vuelta && !enviados.find((e) => e.message.topic)?.message?.data?.para);
+}
+{
+  enviados = [];
+  const r = await aPortero(
+    "/sono",
+    {
+      vuelta: aPepa.data.vuelta,
+      estado: { sono: true, avisos: true, pantalla: false, bateria: false, fabricante: "Xiaomi", basura: "x".repeat(5000), volumen: 250 },
+    },
+    { origen: null },
+  );
+  debe(
+    "«me sonó» con una vuelta buena se le reenvía a quien llamó, sin sesión (lo manda el móvil con la app cerrada)",
+    r.estado === 200 &&
+      enviados.length === 1 &&
+      enviados[0].message.token === TOKEN_LLAMA &&
+      enviados[0].message.data.tipo === "sono" &&
+      enviados[0].message.data.para === "pepa" &&
+      enviados[0].message.data.llamada === laLlamada,
+    JSON.stringify(enviados),
+  );
+  const est = JSON.parse(enviados[0]?.message?.data?.estado ?? "{}");
+  debe(
+    "el estado del móvil llega recortado a lo que se espera",
+    est.sono === true && est.pantalla === false && est.fabricante === "Xiaomi" && !("basura" in est) && est.volumen === 100,
+    JSON.stringify(est),
+  );
+  debe("el acuse va con prioridad normal: no gasta la de las llamadas", enviados[0]?.message?.android?.priority === "normal");
+  debe("y dice cuánto tardó", Number(enviados[0]?.message?.data?.tarda) >= 0);
+}
+{
+  const { cerrarVuelta } = await import("./src/fcm.js");
+  enviados = [];
+  const v = aPepa.data.vuelta;
+  const tocada = v.slice(0, 20) + (v[20] === "A" ? "B" : "A") + v.slice(21);
+  const r1 = await aPortero("/sono", { vuelta: tocada }, { origen: null });
+  const r2 = await aPortero("/sono", { vuelta: "una-vuelta-inventada" }, { origen: null });
+  const ajena = await cerrarVuelta("otra-clave", { l: "x", p: "pepa", t: TOKEN_LLAMA, n: 1, e: Date.now() + 60_000 });
+  const r3 = await aPortero("/sono", { vuelta: ajena }, { origen: null });
+  const vieja = await cerrarVuelta(entorno.TIMBRE_CLAVE, { l: "x", p: "pepa", t: TOKEN_LLAMA, n: 1, e: Date.now() - 1 });
+  const r4 = await aPortero("/sono", { vuelta: vieja }, { origen: null });
+  debe("una vuelta TOCADA no se acepta", r1.estado === 400);
+  debe("ni una inventada", r2.estado === 400);
+  debe("ni una cerrada con otra clave", r3.estado === 400);
+  debe("ni una caducada", r4.estado === 410);
+  debe("y ninguna de esas avisa a nadie", enviados.length === 0);
+}
+{
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana") });
+  debe(
+    "sin el token de quien llama (la web) sale igual, pero sin vuelta: no habría a quién volver",
+    r.estado === 200 && r.datos.vuelta === false && enviados.filter((e) => e.message.token).every((e) => !e.message.data.vuelta),
+  );
+}
+{
+  listaNegada = true;
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe(
+    "si la lista no se puede leer, se llama al tema como hasta la 6.26",
+    r.estado === 200 && enviados.length === 1 && !!enviados[0].message.topic && r.datos.resultados === null,
+    JSON.stringify(r.datos),
+  );
+  listaNegada = false;
+}
+{
+  // Sin Pepa: sólo el móvil de Rita, que ya no existe, y Luis con la app vieja.
+  const guardado = { ...base };
+  delete base["comunidad/voz/miembros/pepa"];
+  fcmSinPermiso = false;
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana") });
+  debe("con el tema en marcha y un móvil caducado, la llamada sale igual", r.estado === 200 && r.datos.resultados?.find((x) => x.uid === "rita")?.estado === "no-registrado");
+  base = guardado;
+}
+{
+  enviados = [];
+  const r = await aPortero("/probar", { token: tokenDe("pepa") });
+  debe(
+    "probar el timbre le suena a quien lo pide, a SU móvil, como una llamada de prueba",
+    r.estado === 200 &&
+      enviados.length === 1 &&
+      enviados[0].message.token === TOKEN_PEPA &&
+      enviados[0].message.data.canal === "prueba-del-timbre" &&
+      enviados[0].message.data.prueba === "1" &&
+      enviados[0].message.data.tipo === "llamada",
+    JSON.stringify(r.datos),
+  );
+  enviados = [];
+  const r2 = await aPortero("/probar", { token: tokenDe("luis") });
+  debe("con la app vieja (sin token) se le dice qué hacer, y no sale nada", r2.estado === 409 && enviados.length === 0);
+  const r3 = await aPortero("/probar", { token: tokenDe("curioso") });
+  debe("quien no es de la comunidad no prueba", r3.estado === 404);
+  const r4 = await aPortero("/probar", { token: "" });
+  debe("sin sesión, nada", r4.estado === 401);
+}
+{
+  // En Cloudflare: se contesta ya y el aviso sale después, con waitUntil.
+  const pendientes = [];
+  enviados = [];
+  const r = await aPortero(
+    "/probar",
+    { token: tokenDe("pepa") },
+    { ctx: { waitUntil: (p) => pendientes.push(p) }, env: { ...entorno, ESPERA_PRUEBA_MS: 30 } },
+  );
+  debe("la prueba contesta antes de sonar, para dar tiempo a cerrar la app", r.estado === 200 && enviados.length === 0 && pendientes.length === 1);
+  await Promise.all(pendientes);
+  debe("y el aviso sale al rato", enviados.length === 1 && enviados[0].message.token === TOKEN_PEPA);
+}
+{
+  // La primera llamada del día, con la caché fría: UN token de Google para
+  // todos, no uno por móvil (se pasaba de las 50 subpeticiones).
+  const { olvidarToken } = await import("./src/fcm.js");
+  olvidarToken();
+  const antes = tokensPedidos;
+  enviados = [];
+  await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe("con la caché fría se pide UN token de Google, no uno por móvil", tokensPedidos - antes === 1, `pidió ${tokensPedidos - antes}`);
+}
+{
+  // Todos con la app nueva y su token bien: el tema no hace falta.
+  const guardado = { ...base };
+  delete base["comunidad/voz/miembros/luis"];
+  delete base["comunidad/voz/miembros/rita"];
+  delete base["comunidad/voz/miembros/viejo"];
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  const tema = enviados.find((e) => e.message.topic);
+  debe(
+    "si todos tienen token y Google los acepta, el tema sale IGUAL (para su tableta) pero con prioridad normal",
+    r.estado === 200 &&
+      enviados.filter((e) => e.message.token).length === 1 &&
+      tema?.message?.android?.priority === "normal" &&
+      r.datos.tema === true,
+    JSON.stringify(r.datos),
+  );
+  // Y si además hay un token muerto (alguien desinstaló), el tema no sube a alta.
+  base["comunidad/voz/miembros/rita"] = miembro("Rita", TOKEN_CADUCADO);
+  enviados = [];
+  await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe(
+    "un token muerto no sube el tema a prioridad alta: no le sirve a quien ya no tiene la app",
+    enviados.find((e) => e.message.topic)?.message?.android?.priority === "normal",
+  );
+  base = guardado;
+}
+{
+  // Un fallo pasajero de Google con el suelto de Pepa: el tema sube a alta.
+  const guardado = { ...base };
+  delete base["comunidad/voz/miembros/luis"];
+  delete base["comunidad/voz/miembros/rita"];
+  delete base["comunidad/voz/miembros/viejo"];
+  base["comunidad/voz/miembros/pepa"] = miembro("Pepa", TOKEN_QUE_FALLA);
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe(
+    "si el suelto de alguien falla, el tema sale con prioridad ALTA y su fila dice «fallo»",
+    r.estado === 200 &&
+      enviados.find((e) => e.message.topic)?.message?.android?.priority === "high" &&
+      r.datos.resultados?.find((x) => x.uid === "pepa")?.estado === "fallo" &&
+      r.datos.tema === true,
+    JSON.stringify(r.datos),
+  );
+  base = guardado;
+}
+{
+  // Más de 40 con token: 40 sueltos, el resto por el tema (alto), y se dice.
+  const guardado = { ...base };
+  for (const k of Object.keys(base)) if (k.startsWith("comunidad/") && !k.endsWith("/ana")) delete base[k];
+  for (let i = 0; i < 45; i++) base[`comunidad/voz/miembros/m${i}`] = miembro(`M${i}`, `token-de-m${i}-xxxxxxxxxxxxxxxxxxxxxxxx`);
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  const estados = (r.datos.resultados ?? []).map((x) => x.estado);
+  debe(
+    "con 45 con token: 40 sueltos, el tema en alta y 5 «solo-tema»",
+    r.estado === 200 &&
+      enviados.filter((e) => e.message.token).length === 40 &&
+      enviados.find((e) => e.message.topic)?.message?.android?.priority === "high" &&
+      estados.filter((e) => e === "solo-tema").length === 5,
+    `${enviados.length} avisos, ${JSON.stringify(estados.slice(38))}`,
+  );
+  base = guardado;
+}
+{
+  // Google niega el envío a TODOS, con la lista leída: es del servidor.
+  fcmSinPermiso = true;
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe("si Google niega todos los envíos (con lista), «servidor-sin-permiso»", r.estado === 502 && r.datos.error === "servidor-sin-permiso", JSON.stringify(r.datos));
+  const p = await aPortero("/probar", { token: tokenDe("pepa") });
+  debe("y la prueba lo dice antes de prometer nada", p.estado === 502 && p.datos.error === "sin-permiso" && enviados.length === 0, JSON.stringify(p.datos));
+  fcmSinPermiso = false;
+}
+{
+  // Google no da token de acceso (cuenta sin permiso): ni un aviso, y se dice.
+  const { olvidarToken } = await import("./src/fcm.js");
+  olvidarToken();
+  tokenNegado = true;
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe("sin token de acceso de Google, «servidor-sin-permiso» y ningún aviso", r.estado === 502 && r.datos.error === "servidor-sin-permiso" && enviados.length === 0, JSON.stringify(r.datos));
+  tokenNegado = false;
+  olvidarToken();
+}
+{
+  // Pepa con móvil y tableta: un aviso a cada aparato, los dos con su vuelta.
+  const guardado = { ...base };
+  for (const k of Object.keys(base)) if (k.startsWith("comunidad/") && !k.endsWith("/ana")) delete base[k];
+  const TABLETA = "token-de-la-tableta-xxxxxxxxxxxxxxxxx";
+  base["comunidad/voz/miembros/pepa"] = {
+    ...miembro("Pepa", TOKEN_PEPA),
+    moviles: {
+      mapValue: {
+        fields: {
+          movil: { mapValue: { fields: { token: texto(TOKEN_PEPA), en: numero(1), version: texto("6.27") } } },
+          tableta: { mapValue: { fields: { token: texto(TABLETA), en: numero(2), version: texto("6.27") } } },
+        },
+      },
+    },
+  };
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  const aPepa = enviados.filter((e) => e.message.token);
+  debe(
+    "con móvil y tableta, sale un aviso a CADA aparato (sin repetir el token de la ficha)",
+    aPepa.length === 2 && new Set(aPepa.map((e) => e.message.token)).size === 2 && aPepa.every((e) => e.message.data.para === "pepa" && e.message.data.vuelta),
+    JSON.stringify(aPepa.map((e) => e.message.token)),
+  );
+  debe(
+    "y el tema, entonces, en normal: ya no hace falta para su tableta",
+    enviados.find((e) => e.message.topic)?.message?.android?.priority === "normal" &&
+      r.datos.resultados?.find((x) => x.uid === "pepa")?.estado === "enviado",
+  );
+  // El móvil de quien llama, colado en la ficha de Pepa (una cuenta de prueba): no se le llama.
+  base["comunidad/voz/miembros/pepa"].moviles.mapValue.fields.prestado = {
+    mapValue: { fields: { token: texto(TOKEN_LLAMA), en: numero(3), version: texto("6.27") } },
+  };
+  enviados = [];
+  await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe("nunca se llama al móvil de quien llama, aunque esté en la ficha de otro", !enviados.some((e) => e.message.token === TOKEN_LLAMA));
+  delete base["comunidad/voz/miembros/pepa"].moviles.mapValue.fields.prestado;
+  // Si la tableta ya no existe, a Pepa le salió igual (por el móvil).
+  base["comunidad/voz/miembros/pepa"].moviles.mapValue.fields.tableta.mapValue.fields.token = texto(TOKEN_CADUCADO);
+  const r2 = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  debe("si uno de sus aparatos ya no existe, le salió por el otro: «enviado»", r2.datos.resultados?.find((x) => x.uid === "pepa")?.estado === "enviado");
+  base = guardado;
+}
+{
+  // Sin la clave de la vuelta: la llamada sale igual, sin «me sonó»; /sono se niega.
+  const sinClave = { ...entorno };
+  delete sinClave.TIMBRE_CLAVE;
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA }, { env: sinClave });
+  debe("sin TIMBRE_CLAVE la llamada sale, sin vuelta", r.estado === 200 && r.datos.vuelta === false && enviados.every((e) => !e.message.data.vuelta));
+  const s = await aPortero("/sono", { vuelta: "lo-que-sea" }, { origen: null, env: sinClave });
+  debe("y /sono contesta que no hay vuelta (503)", s.estado === 503);
+}
+{
+  // Sólo quien llama en la lista: nadie más a quien llamar, y no es un fallo.
+  const guardado = { ...base };
+  for (const k of Object.keys(base)) if (k.startsWith("comunidad/") && !k.endsWith("/ana")) delete base[k];
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana") });
+  debe("sin nadie más en la comunidad, 200 con la lista vacía y sin avisos", r.estado === 200 && r.datos.resultados?.length === 0 && enviados.length === 0);
+  base = guardado;
+}
+{
+  // El tema falla y el aviso a Pepa sale: a Luis (app vieja) no le llegó nada.
+  temaFalla = true;
+  enviados = [];
+  const r = await aPortero("/llamar", { canal: "devocional", token: tokenDe("ana"), miToken: TOKEN_LLAMA });
+  const estados = Object.fromEntries((r.datos.resultados ?? []).map((x) => [x.uid, x.estado]));
+  debe(
+    "si el tema falla, al de la app vieja se le dice «fallo», no «le llega por el camino de antes»",
+    r.estado === 200 && estados.luis === "fallo" && estados.pepa === "enviado" && r.datos.tema === false,
+    JSON.stringify(estados),
+  );
+  temaFalla = false;
+}
+{
+  // La prueba con un token que Google ya no reconoce: se dice antes de prometer.
+  base["comunidad/voz/miembros/rita"] = miembro("Rita", TOKEN_CADUCADO);
+  enviados = [];
+  const r = await aPortero("/probar", { token: tokenDe("rita") });
+  debe("probar con un token caducado lo dice ANTES de prometer que sonará", r.estado === 409 && r.datos.error === "no-registrado" && enviados.length === 0);
+  const antes = validados;
+  await aPortero("/probar", { token: tokenDe("pepa") });
+  debe("y la buena se comprueba con Google (validate_only) antes de contestar", validados - antes === 1);
+}
+for (const k of Object.keys(base)) if (k.startsWith("comunidad/")) delete base[k];
 delete base["moderadores/ana"];
 
 // ── Lo que rodea ───────────────────────────────────────────────────────────

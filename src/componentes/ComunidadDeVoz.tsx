@@ -14,6 +14,7 @@ import { leerPerfil } from "@/logica/nube";
 import {
   cuantosMiembros,
   hayTimbre,
+  probarMiTimbre,
   salirmeDeLaComunidad,
   soyMiembro,
   unirmeALaComunidad,
@@ -47,6 +48,13 @@ export function ComunidadDeVoz() {
   const [cuantos, setCuantos] = useState<number | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
+  /**
+   * Probar el timbre (6.27). Alex, 28-09-2026: «no suena la llamada a mis
+   * amigos». Cada uno puede comprobar, sin esperar a una llamada de verdad,
+   * que su móvil suena con la app cerrada — que es donde fallan los Xiaomi.
+   */
+  const [probando, setProbando] = useState(false);
+  const [avisoPrueba, setAvisoPrueba] = useState("");
   /**
    * Lo que le falta a ESTE móvil para que la llamada se vea, no sólo suene.
    *
@@ -180,6 +188,31 @@ export function ComunidadDeVoz() {
               entrar con un toque.
             </p>
           )}
+          {hayTimbre() ? (
+            <div className="mt-3">
+              <Boton
+                variante="fuerte"
+                ancho
+                deshabilitado={probando}
+                onClick={async () => {
+                  setProbando(true);
+                  setAvisoPrueba("");
+                  const r = await probarMiTimbre();
+                  setAvisoPrueba(
+                    r.ok
+                      ? r.segundos > 0
+                        ? `Listo. En ${r.segundos} segundos te sonará: cierra la app (quítala de las recientes) o apaga la pantalla, para probarlo como de verdad. Si no suena, mira abajo qué le falta a tu móvil.`
+                        : "Listo: te está sonando."
+                      : r.porque,
+                  );
+                  setProbando(false);
+                }}
+              >
+                {probando ? "Pidiendo la prueba…" : "Probar mi timbre"}
+              </Boton>
+              {avisoPrueba ? <p className="mt-2 text-xs leading-relaxed text-acento">{avisoPrueba}</p> : null}
+            </div>
+          ) : null}
           <div className="mt-3">
             <Boton ancho deshabilitado={ocupado} onClick={() => void cambiar()}>
               {ocupado ? "Un momento…" : "Salirme de la comunidad"}
