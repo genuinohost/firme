@@ -18,7 +18,7 @@
     "revisar-planes": "vite-node scripts/revisar-planes.ts",
     "capturas": "node scripts/capturas-tienda.mjs",
     "revisar-paises": "vite-node scripts/revisar-paises.ts",
-    "revisar": "npm run revisar-planes && npm run revisar-rachas && npm run revisar-areas && npm run revisar-dictado && npm run revisar-paises && npm run revisar-banco && npm run revisar-asistencia && npm run revisar-turnos && npm run revisar-subgrupos && npm run revisar-partido && npm run revisar-tareas && npm run revisar-llamada",
+    "revisar": "npm run revisar-planes && npm run revisar-rachas && npm run revisar-areas && npm run revisar-dictado && npm run revisar-paises && npm run revisar-banco && npm run revisar-asistencia && npm run revisar-turnos && npm run revisar-subgrupos && npm run revisar-partido && npm run revisar-tareas && npm run revisar-llamada && npm run revisar-verjuntos",
     "revisar-reglas": "npx firebase emulators:exec --only firestore --project genuino-pruebas \"node scripts/revisar-reglas.mjs\"",
     "desplegar-reglas": "node scripts/desplegar-reglas.mjs",
     "fallos": "node scripts/fallos.mjs",
@@ -31,7 +31,8 @@
     "revisar-subgrupos": "vite-node scripts/revisar-subgrupos.ts",
     "revisar-partido": "vite-node scripts/devocionales/revisar-partido.ts",
     "revisar-tareas": "vite-node scripts/revisar-tareas.ts",
-    "revisar-llamada": "vite-node scripts/revisar-llamada.ts"
+    "revisar-llamada": "vite-node scripts/revisar-llamada.ts",
+    "revisar-verjuntos": "vite-node scripts/revisar-verjuntos.ts"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.1",

@@ -1,14 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 69,
-  "nombre": "6.27",
+  "codigo": 70,
+  "nombre": "6.28",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La llamada a la comunidad ahora dice a quien le sono: Sono en 3 de 4, y de cada uno que le pasa (app sin actualizar, pantalla completa apagada, ahorro de bateria...).",
-    "Probar mi timbre: en Juntos, comunidad de voz. A los 15 segundos te suena, para comprobarlo con la app cerrada.",
-    "Recuadro flotante como Google Meet: sal de la app con una sala abierta y sigue con tu microfono y el boton de colgar.",
-    "Tareas que se repiten cada semana: elige los dias (por ejemplo, todos los lunes).",
-    "El devocional de cada dia lleva su sala de voz: entrar, abrirla o unirte a la comunidad desde la misma tarjeta."
+    "Ver juntos: pega un enlace de YouTube en la sala y todos lo ven a la par, cada uno en su movil. El anfitrion lo pone en marcha, lo pausa o lo adelanta.",
+    "Si una alarma no suena, la app manda sola el parte del despertador para poder arreglarlo sin que tengas que hacer nada.",
+    "Incluye todo lo de la 6.27: la llamada que dice a quien le sono, Probar mi timbre y el recuadro flotante."
   ],
   "importante": true
 }

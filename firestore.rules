@@ -240,7 +240,7 @@ service cloud.firestore {
 
       function salaRazonable(d) {
         return d.keys().hasOnly(['nombre', 'anfitrion', 'abierta', 'desde', 'tipo', 'micLibre', 'campana', 'lectura',
-                                 'padre', 'miembros', 'hasta', 'subgrupos'])
+                                 'padre', 'miembros', 'hasta', 'subgrupos', 'video'])
           && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 60
           && d.abierta is bool
           && d.desde is number
@@ -250,6 +250,16 @@ service cloud.firestore {
           && (!('padre' in d) || (d.padre is string && d.padre.size() > 0 && d.padre.size() <= 64))
           && (!('miembros' in d) || (d.miembros is list && d.miembros.size() <= 30))
           && (!('hasta' in d) || d.hasta is number)
+          // «Ver juntos»: el video de YouTube que todos ven a la par. Sólo su
+          // identificador y dónde va; lo pone el anfitrión (sólo él escribe la sala).
+          && (!('video' in d) || (
+            d.video is map
+            && d.video.keys().hasOnly(['id', 'estado', 'pos', 'en', 'dur'])
+            && (!('dur' in d.video) || (d.video.dur is number && d.video.dur >= 0 && d.video.dur <= 86400))
+            && d.video.id is string && d.video.id.matches('^[A-Za-z0-9_-]{11}$')
+            && d.video.estado in ['play', 'pausa']
+            && d.video.pos is number && d.video.pos >= 0
+            && d.video.en is number))
           // Y en el devocional, el reparto en marcha: como mucho 5 grupos.
           && (!('subgrupos' in d) || (
             d.subgrupos is map

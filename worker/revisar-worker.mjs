@@ -419,6 +419,10 @@ let deOyente = null;
   debe("y se reconoce como anfitrión", r.datos.esAnfitrion === true);
   debe("el token empieza por la versión 007 de Agora", String(r.datos.token).startsWith("007"));
   debe("la cuenta del token es la suya", r.datos.cuenta === "ana");
+  debe(
+    "y trae la hora del portero, para ver videos a la par",
+    typeof r.datos.ahora === "number" && Math.abs(r.datos.ahora - Date.now()) < 5000 && typeof r.datos.llegada === "number" && r.datos.llegada <= r.datos.ahora,
+  );
   const p = privilegiosDe(r.datos.token);
   debe(
     "el anfitrión habla la hora entera: no pierde la voz a mitad del devocional",
@@ -969,6 +973,20 @@ console.log("\nLo que rodea");
   debe(
     "y las claves buenas siguen guardadas: el de verdad entra sin volver a pedirlas",
     r3.estado === 200 && clavesPedidas === tras,
+  );
+}
+
+{
+  const r = await portero.fetch(new Request("https://portero.genuino/hora", { method: "GET", headers: { Origin: "https://localhost" } }), entorno);
+  const d = await r.json();
+  debe(
+    "/hora da la hora de llegada y la de salida, sin caché y con CORS",
+    r.status === 200 &&
+      typeof d.llegada === "number" &&
+      typeof d.ahora === "number" &&
+      d.ahora >= d.llegada &&
+      r.headers.get("Cache-Control") === "no-store" &&
+      r.headers.get("Access-Control-Allow-Origin") === "https://localhost",
   );
 }
 

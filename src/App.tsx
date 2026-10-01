@@ -55,6 +55,7 @@ import { PantallaCuenta } from "@/componentes/PantallaCuenta";
 import { PantallaSala } from "@/componentes/PantallaSala";
 import { Intro, tocaSaludar } from "@/componentes/Intro";
 import { PantallaFallo } from "@/componentes/PantallaFallo";
+import { avisarSiFallaronAlarmas } from "@/logica/vigiaAlarmas";
 import { contarSolicitudes, miUid, publicarNota } from "@/logica/muro";
 import { leerPerfil } from "@/logica/nube";
 import { pasarLaApp } from "@/logica/pasarApp";
@@ -370,6 +371,8 @@ export default function App() {
       const faltaron = await alarmasPerdidas();
       if (faltaron.length > 0) setPerdidas(faltaron);
       await programarDespertador(datos);
+      // Si alguna alarma falló, el parte sale solo (ver vigiaAlarmas).
+      void avisarSiFallaronAlarmas();
     };
 
     // El permiso es el mismo para todo; el despertador es quien programa.

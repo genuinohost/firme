@@ -668,8 +668,23 @@ async function probar(peticion, entorno, origen, ctx) {
 
 export default {
   async fetch(peticion, entorno, ctx) {
+    // En Workers el reloj se congela hasta la primera E/S: esto es la hora
+    // exacta de llegada (para que el móvil mida su desfase como NTP).
+    const llegada = Date.now();
     const origen = peticion.headers.get("Origin") ?? "";
     const ruta = new URL(peticion.url).pathname;
+
+    // La hora, para que cada móvil corrija su reloj como NTP y «ver juntos»
+    // vaya a la par. GET y sin cabeceras propias: el navegador no manda el
+    // preflight, y la medida no lleva dentro el viaje de más que sí lleva la
+    // primera petición (DNS, TLS, preflight), que va sólo a la ida.
+    if (ruta === "/hora") {
+      if (peticion.method !== "GET") return new Response("Sólo GET.", { status: 405 });
+      return new Response(JSON.stringify({ llegada, ahora: Date.now() }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...cabecerasCors(origen) },
+      });
+    }
 
     // El paquete, antes que nada: es lo único que se pide con GET.
     if (ruta === "/apk") {
@@ -853,6 +868,10 @@ export default {
         habla,
         esAnfitrion,
         caduca: ahora + VALE_SEGUNDOS,
+        // La hora de aquí, en milisegundos: con ella cada móvil corrige su
+        // reloj para ver un video a la par que los demás («ver juntos»).
+        ahora: Date.now(),
+        llegada,
         // Cuándo deja de valer la palabra, para que la app sepa renovarla.
         ...(hablaPoco ? { caducaPalabra: ahora + PALABRA_SEGUNDOS } : {}),
       },

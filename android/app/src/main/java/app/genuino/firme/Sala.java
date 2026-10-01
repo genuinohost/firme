@@ -287,6 +287,35 @@ public class Sala extends Plugin {
 
     // ------------------------------------------------------------------ metodos
 
+    /**
+     * El volumen multimedia (el del video de «ver juntos»; la voz de la sala va
+     * por el de llamada). Con {@code nivel} (0-1), lo pone; siempre devuelve el
+     * que queda. Si lo impide No molestar, devuelve el que hay.
+     */
+    @PluginMethod
+    public void volumenMultimedia(PluginCall llamada) {
+        try {
+            android.media.AudioManager audio =
+                    (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+            int max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+            Double nivel = llamada.getDouble("nivel");
+            if (nivel != null) {
+                int v = (int) Math.round(Math.max(0, Math.min(1, nivel)) * max);
+                try {
+                    audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, v, android.media.AudioManager.FLAG_SHOW_UI);
+                } catch (SecurityException noMolestar) {
+                    // Con No molestar puede no dejar: se devuelve el que hay.
+                }
+            }
+            JSObject r = new JSObject();
+            r.put("nivel", audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC));
+            r.put("max", max);
+            llamada.resolve(r);
+        } catch (Exception e) {
+            llamada.reject("sin-volumen", e);
+        }
+    }
+
     /** Si este movil puede entrar en una sala. */
     @PluginMethod
     public void disponible(PluginCall llamada) {

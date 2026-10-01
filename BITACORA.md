@@ -8,6 +8,46 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 1 de octubre de 2026 (tarde) — 6.28: «ver juntos» y las alarmas que avisan solas
+
+## Lo que pidió Alex
+
+> «Sigue con la 1» (el reproductor de YouTube) · «revisa por qué no suenan las alarmas» —
+> «ahorita no puedo enviar el reporte. Por favor verifica y acomoda».
+
+## Las alarmas
+
+- **La 6.27 no tocó el despertador** (sólo textos y la visibilidad de unos métodos).
+- **La app calcula bien sus alarmas**: con `scripts/mirar-alarmas.ts <correo>` (lee la copia en
+  la nube con la cuenta de servicio y pasa sus datos por `avisosPendientes`) salen las 22 de los
+  próximos tres días a su hora (4:45 Levantarse, 4:59 Oración…). Sus 13 tareas son todas de días
+  pasados. **El fallo está en el camino del móvil**, y eso sólo lo dice el parte.
+- **Desde la 6.28 el parte llega solo** (`src/logica/vigiaAlarmas.ts`): al abrir la app, si el
+  diario del despertador tiene una alarma NO LLEGÓ o MUDA de los dos últimos días que aún no se
+  avisó, sube un aviso «Automático: …» con el parte completo a `fallos`. Se lee con
+  `node scripts/fallos.mjs`. Por ahora sólo en móviles de quien modera.
+- ⏳ **Pendiente**: leer ese parte en cuanto llegue y arreglar lo que diga.
+
+## «Ver juntos», rehecho
+
+La rama `ver-juntos-en-curso` se fusionó sobre la 6.27 y se rehízo la sincronía con un núcleo
+puro probado (`src/logica/verJuntos.ts`: `decidir`, `terminoPorTiempo`, `videoSonando`,
+`medirLatencia`), con 48 comprobaciones y una **simulación de red lenta** que cazó el peor
+fallo: con saltos de 9 s o más el video no sonaba nunca (ahora se espera hasta 25 s a que
+arranque el salto). Además: la duración va en la sala (los micrófonos se liberan al acabar
+aunque el anfitrión no mire), el video del anfitrión se pausa fuera de la vista y se recoloca
+sin publicar su propio retraso, velocidad fija en 1x, sin videos sugeridos, los directos se
+rechazan, y la hora se afina con `GET /hora` del portero (tres muestras, la de viaje más corto).
+
+Dos revisiones con escépticos (10 + 10 hallazgos confirmados, todos arreglados). Reglas 197,
+portero 105, reproductor 48, `npm run revisar` entero.
+
+## Publicación
+
+6.28 (código 70) **importante**, servida por el portero; reglas, web y portero desplegados.
+
+---
+
 # 🧭 1 de octubre de 2026 — 6.27: la llamada que dice a quién le sonó, la ventanita y «cada lunes»
 
 ## Lo que pidió Alex (28-09)

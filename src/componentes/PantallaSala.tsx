@@ -31,6 +31,7 @@ import {
   verQuienHabla,
   verSala,
   SALA_DURA_MS,
+  ahoraServidor,
   alTocarLaVentanita,
   cerrarVentanita,
   ponerFlotante,
@@ -53,6 +54,8 @@ import {
 } from "@/logica/devocionales";
 import { PegarDevocional } from "./PegarDevocional";
 import { EnSubgrupo, Subgrupos, marcarVuelta } from "./Subgrupos";
+import { VerJuntos } from "./VerJuntos";
+import { videoSonando } from "@/logica/verJuntos";
 import { contarGustos, darGusto, verGustos, type Gusto } from "@/logica/gustos";
 import { agregarOAceptar, escucharAmigos, type Amigo } from "@/logica/nube";
 import { leerBloqueados } from "@/logica/muro";
@@ -858,6 +861,32 @@ export function PantallaSala({
     ? gente.filter((g) => g.uid !== quienSoy.uid && !amigos.has(g.uid) && !bloqueados.has(g.uid))
     : [];
 
+  // ── el video suena: micrófonos cerrados ─────────────────────────────────
+  //
+  // Un micrófono abierto con el altavoz reenviaría el video a todos, con eco.
+  // Mientras suena se cierra —el de cada uno, también si alguien lo abre o se
+  // lo abre un cambio de papel—; para hablar, se pausa. Al acabar no se abre
+  // solo: abrirlo es un gesto de cada uno.
+  // Suena = en marcha y sin haber pasado del final: con la duración en la sala,
+  // al acabar el video los micrófonos se liberan aunque el anfitrión no esté
+  // mirando (antes la sala se quedaba en «play» y nadie podía hablar). Un
+  // temporizador repinta justo cuando termina, que si no nada cambia.
+  const [, setFinDelVideo] = useState(0);
+  const videoSuena = sala?.tipo !== "llamada" && videoSonando(sala?.video, ahoraServidor());
+  useEffect(() => {
+    const v = sala?.video;
+    if (!v || v.estado !== "play" || !v.dur) return;
+    const ms = (v.dur - (v.pos + Math.max(0, ahoraServidor() - v.en) / 1000)) * 1000;
+    if (ms <= 0) return;
+    const t = window.setTimeout(() => setFinDelVideo((n) => n + 1), ms + 600);
+    return () => window.clearTimeout(t);
+  }, [sala?.video?.estado, sala?.video?.pos, sala?.video?.en, sala?.video?.dur]);
+  useEffect(() => {
+    if (estado !== "dentro" || !videoSuena || !microAbierto) return;
+    setMicroAbierto(false);
+    void miMicro(false);
+  }, [estado, videoSuena, microAbierto]);
+
   // ── me silenciaron ───────────────────────────────────────────────────────
   useEffect(() => {
     if (estado !== "dentro" || !yo?.silenciado) return;
@@ -951,6 +980,12 @@ export function PantallaSala({
 
   /** Abrir o cerrar el micrófono propio, como el botón grande. */
   const cambiarMicro = () => {
+    // Mientras suena el video no se abre (lo cerraría el efecto de abajo y
+    // parecería roto, sobre todo desde la ventanita); cerrarlo sí se puede.
+    if (!microAbierto && videoSuena) {
+      setError("Suena el video: para hablar, que el anfitrión lo pause.");
+      return;
+    }
     if (yo?.silenciado) {
       setError("El anfitrión cerró tu micrófono. Levanta la mano si quieres hablar.");
       return;
@@ -996,9 +1031,10 @@ export function PantallaSala({
       habla,
       micro: microDeVerdad,
       mano: !!yo?.mano,
-      silenciado: !!yo?.silenciado,
+      // Con el video sonando, el micro de la ventanita sale apagado.
+      silenciado: !!yo?.silenciado || videoSuena,
     });
-  }, [estado, habla, microDeVerdad, yo?.mano, yo?.silenciado]);
+  }, [estado, habla, microDeVerdad, yo?.mano, yo?.silenciado, videoSuena]);
   // Al salir de la sala (o de esta pantalla), fuera la ventanita.
   useEffect(() => () => void ponerFlotante({ activo: false }), []);
   // Los botones de la ventanita, con lo último de la sala: una referencia y
@@ -1244,6 +1280,13 @@ export function PantallaSala({
         />
       ) : null}
       {/*
+        «Ver juntos» con video (6.27): ANTES del letrero de la lectura, que es
+        pegajoso y taparía el reproductor al bajar (YouTube no deja nada encima).
+      */}
+      {sala && sala.tipo !== "llamada" && sala.video ? (
+        <VerJuntos canal={canal} sala={sala} esAnfitrion={esAnfitrion} />
+      ) : null}
+      {/*
         El letrero de la lectura por turnos, arriba y pegado mientras se baja.
 
         Alex, 28-09-2026: «debe salir un letrero sutil arriba para que la
@@ -1340,6 +1383,11 @@ export function PantallaSala({
             </div>
           )}
         </div>
+      ) : null}
+
+      {/* «Ver juntos» sin video: la tarjeta para ponerlo (sólo el anfitrión). */}
+      {sala && sala.tipo !== "llamada" && !sala.video ? (
+        <VerJuntos canal={canal} sala={sala} esAnfitrion={esAnfitrion} />
       ) : null}
 
       <Tarjeta>

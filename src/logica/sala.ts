@@ -57,6 +57,7 @@ type SalaNativa = {
     cb: (d: { accion: "micro" | "mano" | "salir" }) => void,
   ): Promise<{ remove: () => Promise<void> }>;
   addListener(evento: "ventanita", cb: (d: { activa: boolean }) => void): Promise<{ remove: () => Promise<void> }>;
+  volumenMultimedia(o: { nivel?: number }): Promise<{ nivel: number; max: number }>;
   addListener(
     evento: "hablando",
     cb: (d: { quienes: QuienHabla[]; total: number }) => void,
@@ -158,6 +159,12 @@ export type Sala = {
   /** Sólo en un subgrupo: cuándo vuelven todos (ms; 0 = sin límite). */
   hasta?: number;
   /**
+   * «Ver juntos»: un video de YouTube que cada móvil reproduce a la par. Lo
+   * pone y lo mueve el anfitrión; `pos` es el segundo en que iba en el instante
+   * `en` (hora del servidor, ms), y cada móvil calcula dónde debe ir.
+   */
+  video?: VideoJuntos;
+  /**
    * Sólo en un devocional: los subgrupos en marcha. Cada móvil ve aquí a qué
    * grupo va y con quién; los nombres van también, porque quien ya se fue a
    * su grupo no está en la lista de esta sala.
@@ -192,6 +199,19 @@ export type Sala = {
    * persona sepa que le toca; también quién es el próximo».
    */
   lectura?: Lectura;
+};
+
+export type VideoJuntos = {
+  /** El identificador de YouTube (11 caracteres). */
+  id: string;
+  estado: "play" | "pausa";
+  pos: number;
+  en: number;
+  /**
+   * Cuánto dura (s), si el reproductor del anfitrión ya lo sabe. Con esto cada
+   * móvil sabe cuándo terminó aunque el anfitrión no esté mirando (6.27).
+   */
+  dur?: number;
 };
 
 export type Subgrupos = {
@@ -256,6 +276,12 @@ export type Permiso = {
   habla: boolean;
   esAnfitrion: boolean;
   caduca: number;
+  /** La hora del portero (ms) al responder y al recibir, para corregir el reloj de este móvil. */
+  ahora?: number;
+  llegada?: number;
+  /** Cuándo salió y volvió la petición, con el reloj de este móvil (lo pone pedirPermiso). */
+  t0?: number;
+  t3?: number;
 };
 
 /**
@@ -275,6 +301,7 @@ export async function pedirPermiso(canal: string): Promise<Permiso> {
   // quién llama. Firebase lo renueva solo cuando toca.
   const token = await quien.getIdToken();
 
+  const t0 = Date.now();
   const r = await fetch(dondeEstaElPortero(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -295,7 +322,8 @@ export async function pedirPermiso(canal: string): Promise<Permiso> {
     throw new Error(porque);
   }
 
-  return (await r.json()) as Permiso;
+  const permiso = (await r.json()) as Permiso;
+  return { ...permiso, t0, t3: Date.now() };
 }
 
 async function refSala(canal: string) {
@@ -465,6 +493,64 @@ export async function cerrarSubgrupos(canal: string, subgrupos: Subgrupos): Prom
   for (const g of subgrupos.grupos) lote.update(doc(bd, "salas", g.canal), { abierta: false });
   lote.update(doc(bd, "salas", canal), { subgrupos: deleteField() });
   await conPlazo(lote.commit());
+}
+
+// ------------------------------------------------------------ la hora buena
+//
+// Para ver un video a la vez, cada móvil necesita la misma hora, y los relojes
+// de los móviles no la tienen (uno con la hora a mano va minutos tarde). El
+// portero da la suya al entrar, y aquí se guarda la diferencia.
+let desfaseReloj = 0;
+
+/** La hora del servidor, en ms, calculada con el reloj de este móvil. */
+export function ahoraServidor(): number {
+  return Date.now() + desfaseReloj;
+}
+
+/**
+ * Afinar el desfase con el portero, como NTP: tres preguntas cortas a `/hora`
+ * y se queda la del viaje más corto (la que menos error mete). La primera
+ * petición de la sala lleva a la ida el DNS, el TLS y el preflight, que no
+ * vuelven, y eso descuadraba «ver juntos» medio segundo o más. (Revisión del
+ * reproductor, 6.27.) Si falla, se queda la medida de antes.
+ */
+export async function medirReloj(): Promise<void> {
+  let mejor: { viaje: number; desfase: number } | null = null;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const t0 = Date.now();
+      const r = await fetch(`${dondeEstaElPortero()}/hora`, { cache: "no-store" });
+      const t3 = Date.now();
+      if (!r.ok) continue;
+      const { llegada, ahora } = (await r.json()) as { llegada?: number; ahora?: number };
+      if (typeof llegada !== "number" || typeof ahora !== "number") continue;
+      const viaje = t3 - t0 - (ahora - llegada);
+      const desfase = (llegada - t0 + (ahora - t3)) / 2;
+      if (!mejor || viaje < mejor.viaje) mejor = { viaje, desfase };
+    } catch {
+      // Sin red, o un portero viejo sin /hora: se queda lo que había.
+    }
+  }
+  if (mejor) desfaseReloj = mejor.desfase;
+}
+
+/**
+ * El volumen multimedia del móvil (el del video; la voz de la sala va por el de
+ * llamada). Con `nivel` (0-1) lo cambia. `null` fuera de la app.
+ */
+export async function volumenMultimedia(nivel?: number): Promise<{ nivel: number; max: number } | null> {
+  if (!hayVoz()) return null;
+  try {
+    return await nativa.volumenMultimedia(nivel == null ? {} : { nivel });
+  } catch {
+    return null;
+  }
+}
+
+/** Poner, mover o quitar el video de «ver juntos». Sólo el anfitrión (reglas). */
+export async function ponerVideo(canal: string, video: VideoJuntos | null): Promise<void> {
+  const { updateDoc, deleteField } = await import("firebase/firestore");
+  await updateDoc(await refSala(canal), { video: video ?? deleteField() });
 }
 
 /** Poner, mover o apagar la campana. Sólo el anfitrión, y lo garantizan las reglas. */
@@ -758,6 +844,16 @@ export async function entrarEnSala(
   await deleteDoc(await refDentro(canal, uid)).catch(() => {});
 
   const permiso = await pedirPermiso(canal);
+  // Como NTP: con la hora de llegada y la de salida del portero, y las de ida
+  // y vuelta de este móvil, el viaje se descuenta solo.
+  if (typeof permiso.ahora === "number" && permiso.t0 && permiso.t3) {
+    desfaseReloj =
+      typeof permiso.llegada === "number"
+        ? (permiso.llegada - permiso.t0 + (permiso.ahora - permiso.t3)) / 2
+        : permiso.ahora - (permiso.t0 + permiso.t3) / 2;
+  }
+  // Y se afina aparte, sin esperar (ver medirReloj).
+  void medirReloj();
   const sala = await leerSala(canal);
 
   // Venir a un devocional es asistir: se apunta el día, sube la racha (o
