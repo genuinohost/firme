@@ -318,7 +318,7 @@ public class ReceptorAlarma extends BroadcastReceiver {
 
         Notification aviso = new NotificationCompat.Builder(contexto, AlarmaExacta.CANAL)
                 .setSmallIcon(R.drawable.ic_stat_firme)
-                .setColor(0xFFC9A227)
+                .setColor(0xFFC08E2E)
                 .setContentTitle(titulo)
                 .setContentText(cuerpo)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(cuerpo))

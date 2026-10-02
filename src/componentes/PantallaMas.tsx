@@ -50,7 +50,7 @@ export function PantallaMas({
               <span className="block text-xs text-tenue">{o.detalle}</span>
             </span>
             {o.aviso ? (
-              <span className="cifras shrink-0 rounded-full bg-acento px-2 py-0.5 text-xs font-semibold text-fondo">
+              <span className="cifras shrink-0 rounded-full bg-acento px-2 py-0.5 text-xs font-semibold text-sobre-acento">
                 {o.aviso}
               </span>
             ) : null}

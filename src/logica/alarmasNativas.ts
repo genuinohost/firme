@@ -216,7 +216,7 @@ export async function reprogramar(datos: Datos, ahora = new Date()): Promise<Res
           allowWhileIdle: true,
         },
         smallIcon: "ic_stat_firme",
-        iconColor: "#c9a227",
+        iconColor: "#c08e2e",
         extra: { idSuceso: aviso.idSuceso },
       })),
     });
@@ -249,7 +249,7 @@ export async function probarAlarmaDelSistema(segundos = 60): Promise<ResultadoPr
           body: "Si oyes esto con la pantalla apagada, las alarmas funcionan.",
           schedule: { at: new Date(Date.now() + segundos * 1000), allowWhileIdle: true },
           smallIcon: "ic_stat_firme",
-          iconColor: "#c9a227",
+          iconColor: "#c08e2e",
         },
       ],
     });

@@ -194,7 +194,7 @@ function EditorBloque({
                     onClick={() => alternarDia(i)}
                     className={`size-10 rounded-xl border text-sm transition ${
                       b.dias.includes(i)
-                        ? "border-acento bg-acento text-fondo font-semibold"
+                        ? "border-acento bg-acento text-sobre-acento font-semibold"
                         : "border-borde text-tenue"
                     }`}
                   >
@@ -223,7 +223,7 @@ function EditorBloque({
                     key={c.id}
                     onClick={() => cambiar("categoria", c.id as Categoria)}
                     className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                      b.categoria === c.id ? "text-fondo font-medium" : "border-borde text-tenue"
+                      b.categoria === c.id ? "text-white font-medium" : "border-borde text-tenue"
                     }`}
                     style={
                       b.categoria === c.id

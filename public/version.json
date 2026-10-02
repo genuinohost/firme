@@ -1,12 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 70,
-  "nombre": "6.28",
+  "codigo": 71,
+  "nombre": "6.29",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Ver juntos: pega un enlace de YouTube en la sala y todos lo ven a la par, cada uno en su movil. El anfitrion lo pone en marcha, lo pausa o lo adelanta.",
-    "Si una alarma no suena, la app manda sola el parte del despertador para poder arreglarlo sin que tengas que hacer nada.",
-    "Incluye todo lo de la 6.27: la llamada que dice a quien le sono, Probar mi timbre y el recuadro flotante."
+    "Genuino estrena imagen: Cristal, inspirada en el cielo nuevo y la tierra nueva de Apocalipsis 21 y 22. Clara y luminosa, con letra nueva e icono nuevo.",
+    "Puedes elegir el tema en Ajustes: claro, oscuro o segun el movil. La alarma de madrugada va siempre en oscuro."
   ],
-  "importante": true
+  "importante": false
 }

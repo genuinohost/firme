@@ -303,7 +303,7 @@ public class ServicioAlarma extends Service {
 
         NotificationCompat.Builder constructor = new NotificationCompat.Builder(this, CANAL_SERVICIO)
                 .setSmallIcon(R.drawable.ic_stat_firme)
-                .setColor(0xFFC9A227)
+                .setColor(0xFFC08E2E)
                 .setContentTitle(titulo)
                 .setContentText(cuerpo)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(cuerpo))

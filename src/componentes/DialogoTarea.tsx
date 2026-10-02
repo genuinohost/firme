@@ -330,7 +330,7 @@ export function DialogoTarea({
                   key={c.id}
                   onClick={() => setCategoria(c.id)}
                   className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                    categoria === c.id ? "text-fondo font-medium" : "border-borde text-tenue"
+                    categoria === c.id ? "text-white font-medium" : "border-borde text-tenue"
                   }`}
                   style={
                     categoria === c.id
@@ -420,7 +420,7 @@ export function DialogoTarea({
                         key={d.valor}
                         onClick={() => alternarDia(d.valor)}
                         className={`size-9 shrink-0 rounded-full border text-sm transition ${
-                          marcado ? "border-acento bg-acento font-semibold text-fondo" : "border-borde text-tenue"
+                          marcado ? "border-acento bg-acento font-semibold text-sobre-acento" : "border-borde text-tenue"
                         }`}
                         aria-pressed={marcado}
                         aria-label={d.nombre}

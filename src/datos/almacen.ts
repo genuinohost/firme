@@ -53,6 +53,7 @@ export function datosIniciales(): Datos {
       // es volverse a dormir. Se puede cambiar en Ajustes.
       posponerMin: 10,
       menosMovimiento: false,
+      tema: "dia",
     },
   };
 }

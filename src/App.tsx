@@ -274,6 +274,20 @@ export default function App() {
     return () => consulta?.removeEventListener?.("change", aplicar);
   }, [datos.ajustes.menosMovimiento]);
 
+  /** El tema (Cristal, 6.29): Día por defecto; Noche si se pide o si lo pide el móvil. */
+  useLayoutEffect(() => {
+    const oscuro = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const aplicar = () => {
+      const tema = datos.ajustes.tema ?? "dia";
+      const noche = tema === "noche" || (tema === "sistema" && (oscuro?.matches ?? false));
+      if (noche) document.documentElement.dataset.tema = "noche";
+      else delete document.documentElement.dataset.tema;
+    };
+    aplicar();
+    oscuro?.addEventListener?.("change", aplicar);
+    return () => oscuro?.removeEventListener?.("change", aplicar);
+  }, [datos.ajustes.tema]);
+
   useEffect(() => {
     if (!esNativo()) return;
     const mirar = async () => {
@@ -1340,7 +1354,7 @@ export default function App() {
                   setLlamada(null);
                   void atenderLlamada();
                 }}
-                className="toque w-full rounded-2xl bg-logro px-6 py-4 text-lg font-semibold text-fondo"
+                className="toque w-full rounded-2xl bg-logro px-6 py-4 text-lg font-semibold text-sobre-color"
               >
                 Listo
               </button>
@@ -1370,7 +1384,7 @@ export default function App() {
                   void atenderLlamada();
                   void entrarEnSala(canal, nombre);
                 }}
-                className="toque boton-vivo rounded-2xl bg-logro px-6 py-5 text-lg font-semibold text-fondo"
+                className="toque boton-vivo rounded-2xl bg-logro px-6 py-5 text-lg font-semibold text-sobre-color"
               >
                 Entrar
               </button>

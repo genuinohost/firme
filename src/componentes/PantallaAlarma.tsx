@@ -57,7 +57,9 @@ export function PantallaAlarma({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-fondo"
+      // Siempre de noche: suena de madrugada y con el móvil a oscuras.
+      data-tema="noche"
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-fondo text-texto"
       // Si el navegador aún no dejaba sonar, el primer toque arranca el timbre.
       onPointerDown={() => reanudar()}
     >

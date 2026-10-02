@@ -238,6 +238,25 @@ export function PantallaAjustes({
       </Tarjeta>
 
       <Tarjeta>
+        <Etiqueta>tema</Etiqueta>
+        <div className="mt-3">
+          <Campo etiqueta="Colores de la app">
+            <Selector
+              value={a.tema ?? "dia"}
+              onChange={(e) => cambiar("tema", e.target.value as "dia" | "noche" | "sistema")}
+            >
+              <option value="dia">Claro (día)</option>
+              <option value="noche">Oscuro (noche)</option>
+              <option value="sistema">Según el móvil</option>
+            </Selector>
+          </Campo>
+          <p className="mt-1.5 text-xs leading-relaxed text-tenue">
+            La pantalla de la alarma va siempre en oscuro, para no deslumbrarte de madrugada.
+          </p>
+        </div>
+      </Tarjeta>
+
+      <Tarjeta>
         <Etiqueta>movimiento</Etiqueta>
         <div className="mt-3">
           <Interruptor

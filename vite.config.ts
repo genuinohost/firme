@@ -85,8 +85,8 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         orientation: "portrait",
-        background_color: "#0b0d10",
-        theme_color: "#0b0d10",
+        background_color: "#fbfaf7",
+        theme_color: "#fbfaf7",
         categories: ["productivity", "lifestyle"],
         icons: [
           { src: "/icono-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

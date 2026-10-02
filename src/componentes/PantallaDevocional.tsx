@@ -239,7 +239,7 @@ export function PantallaDevocional({ onCerrar }: { onCerrar: () => void }) {
           </p>
           <button
             onClick={avanzar}
-            className="toque flex h-11 items-center justify-center gap-1 rounded-full bg-acento px-4 text-sm font-semibold text-fondo"
+            className="toque flex h-11 items-center justify-center gap-1 rounded-full bg-acento px-4 text-sm font-semibold text-sobre-acento"
             aria-label={leyendo + 1 < secciones.length ? "Sección siguiente" : "Terminar el día"}
           >
             {leyendo + 1 < secciones.length ? "›" : "Terminar ✓"}
@@ -289,7 +289,7 @@ export function PantallaDevocional({ onCerrar }: { onCerrar: () => void }) {
                 {n === hoy ? "hoy" : fechaCorta(n)}
               </span>
               {hecho ? (
-                <span className="absolute -top-1.5 -right-1 flex size-4 items-center justify-center rounded-full bg-logro text-fondo">
+                <span className="absolute -top-1.5 -right-1 flex size-4 items-center justify-center rounded-full bg-logro text-sobre-color">
                   <CheckDibujado className="size-2.5" />
                 </span>
               ) : null}
@@ -359,7 +359,7 @@ export function PantallaDevocional({ onCerrar }: { onCerrar: () => void }) {
                   >
                     <span
                       className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                        hecha ? "border-logro bg-logro text-fondo" : "border-borde"
+                        hecha ? "border-logro bg-logro text-sobre-color" : "border-borde"
                       }`}
                       aria-hidden
                     >

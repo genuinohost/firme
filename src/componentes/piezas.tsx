@@ -6,7 +6,7 @@ import { alternar, estaGuardada } from "@/logica/favoritas";
 import { CATEGORIAS, type Categoria } from "@/datos/tipos";
 
 export function colorDe(categoria: Categoria): string {
-  return CATEGORIAS.find((c) => c.id === categoria)?.color ?? "#8b949e";
+  return CATEGORIAS.find((c) => c.id === categoria)?.color ?? "#5a6785";
 }
 
 export function nombreCategoria(categoria: Categoria): string {
@@ -37,8 +37,8 @@ export function Boton({
 }) {
   const estilos: Record<string, string> = {
     normal: "bg-superficie-alta border-borde hover:border-tenue",
-    fuerte: "bg-acento text-fondo border-acento font-semibold hover:brightness-110",
-    logro: "bg-logro text-fondo border-logro font-semibold hover:brightness-110",
+    fuerte: "bg-acento text-sobre-acento border-acento font-semibold hover:brightness-110",
+    logro: "bg-logro text-sobre-color border-logro font-semibold hover:brightness-110",
     fallo: "bg-transparent border-borde text-tenue hover:text-fallo hover:border-fallo",
     fantasma: "bg-transparent border-transparent text-tenue hover:text-texto",
   };

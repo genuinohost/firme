@@ -2441,9 +2441,9 @@ function BotonRedondo({
 }) {
   const tamano = grande ? (estrecho ? "size-16" : "size-[72px]") : estrecho ? "size-[52px]" : "size-14";
   const color = peligro
-    ? "bg-fallo text-fondo"
+    ? "bg-fallo text-sobre-color"
     : activo
-      ? "bg-logro text-fondo"
+      ? "bg-logro text-sobre-color"
       : "bg-superficie-alta text-texto border border-borde";
   return (
     <button

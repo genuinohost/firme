@@ -10,12 +10,14 @@ export type Categoria =
   | "descanso";
 
 export const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
-  { id: "fe", nombre: "Fe", color: "#c9a227" },
-  { id: "cuerpo", nombre: "Cuerpo", color: "#d05a3e" },
-  { id: "mente", nombre: "Mente", color: "#5b86c4" },
-  { id: "trabajo", nombre: "Trabajo", color: "#3f9e7a" },
-  { id: "familia", nombre: "Familia", color: "#b0609b" },
-  { id: "descanso", nombre: "Descanso", color: "#6b7280" },
+  // Piedras de los cimientos (Apocalipsis 21:19-20), en tonos hondos: el
+  // nombre va en blanco encima y tiene que leerse (4.5:1). Genuino Cristal, 6.29.
+  { id: "fe", nombre: "Fe", color: "#8a6a1e" },
+  { id: "cuerpo", nombre: "Cuerpo", color: "#a8432c" },
+  { id: "mente", nombre: "Mente", color: "#2f5fa8" },
+  { id: "trabajo", nombre: "Trabajo", color: "#277a63" },
+  { id: "familia", nombre: "Familia", color: "#7a4bb0" },
+  { id: "descanso", nombre: "Descanso", color: "#5a6785" },
 ];
 
 /** Timbres de alarma. Se generan con Web Audio, no hay archivos de sonido. */
@@ -138,6 +140,12 @@ export type Ajustes = {
    * la app: hay gente a la que el movimiento marea y no sabe dónde apagarlo.
    */
   menosMovimiento: boolean;
+  /**
+   * Claro (Día, el de la marca: «no habrá allí más noche»), oscuro (Noche) o
+   * lo que diga el móvil. Genuino Cristal, 6.29. Opcional: las copias viejas
+   * no lo traen y se quedan en claro.
+   */
+  tema?: "dia" | "noche" | "sistema";
 };
 
 /** Todo el estado que se guarda. Una sola pieza, fácil de exportar. */

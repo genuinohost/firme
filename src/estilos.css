@@ -1,23 +1,82 @@
 @import "tailwindcss";
+@import "@fontsource/syne/latin-700.css";
+@import "@fontsource/syne/latin-800.css";
+@import "@fontsource/outfit/latin-400.css";
+@import "@fontsource/outfit/latin-500.css";
+@import "@fontsource/outfit/latin-600.css";
 
+/*
+ * Genuino Cristal (6.29, 2-10-2026): la identidad del cielo nuevo y la
+ * tierra nueva de Apocalipsis 21–22. El manual de marca está en
+ * https://claude.ai/artifact/LJMhzTFqg6qzyJ6xuBQJVn.
+ *
+ * Los NOMBRES de los colores son los de siempre (bg-fondo, text-acento…),
+ * para no tocar las cien pantallas: cambian sus valores. Dos temas:
+ * - Día, el principal («no habrá allí más noche»): nácar, oro vidrio, zafiro.
+ * - Noche (`data-tema="noche"`): el modo oscuro y la pantalla de la alarma.
+ */
 @theme {
-  --color-fondo: #0b0d10;
-  --color-superficie: #14181d;
-  --color-superficie-alta: #1c222a;
-  --color-borde: #262e38;
-  --color-texto: #e9ecef;
-  --color-tenue: #8b949e;
-  --color-acento: #c9a227;
+  --color-fondo: #fbfaf7;
+  --color-superficie: #ffffff;
+  --color-superficie-alta: #eef3fa;
+  --color-borde: #e1e6ef;
+  --color-texto: #14203a;
+  --color-tenue: #5a6785;
+  /* El oro vidrio: rellenos y bordes. El TEXTO dorado va con acento-tinta. */
+  --color-acento: #d9a84a;
+  --color-acento-tinta: #8a6a1e;
+  /* Texto sobre un relleno de oro (el botón principal), en los dos temas. */
+  --color-sobre-acento: #14203a;
+  /* Texto sobre un relleno de logro o de fallo. */
+  --color-sobre-color: #ffffff;
   /* El halo del botón de dictar, que late con el nivel de voz. */
-  --color-acento-suave: #c9a2271f;
-  --color-logro: #3f9e7a;
-  --color-fallo: #b9503a;
+  --color-acento-suave: #d9a84a2e;
+  --color-logro: #277a63;
+  --color-fallo: #b4472f;
+  --color-cielo: #8fb7e8;
+  --color-cielo-tinta: #2f5fa8;
 
   --font-cita: Georgia, "Times New Roman", serif;
+  --font-display: "Syne", "Outfit", system-ui, sans-serif;
+  --font-texto: "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 :root {
+  color-scheme: light;
+}
+
+/* La noche: el modo oscuro, y siempre la pantalla de la alarma. */
+[data-tema="noche"] {
   color-scheme: dark;
+  --color-fondo: #0b1020;
+  --color-superficie: #141b30;
+  --color-superficie-alta: #1c2540;
+  --color-borde: #2a3454;
+  --color-texto: #eef2fa;
+  --color-tenue: #9aa6c2;
+  --color-acento: #e9c878;
+  --color-acento-tinta: #e9c878;
+  --color-acento-suave: #e9c8782e;
+  --color-logro: #4fbf9c;
+  --color-fallo: #ef8a72;
+  --color-cielo-tinta: #a9c8f0;
+  --color-sobre-color: #0b1020;
+}
+
+/*
+ * El texto dorado, siempre en su tinta: el oro de relleno no llega a 4.5:1
+ * sobre el nácar. Fuera de capa a propósito, para ganar a la utilidad.
+ */
+.text-acento {
+  color: var(--color-acento-tinta);
+}
+
+/* Los titulares, en Syne: ancha, moderna, con aire de futuro. */
+h1,
+h2,
+.titular {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
 html,
@@ -34,12 +93,7 @@ body {
   margin: 0;
   background: var(--color-fondo);
   color: var(--color-texto);
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--font-texto);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }

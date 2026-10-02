@@ -242,7 +242,7 @@ function ArmarSubgrupos({
                   key={l}
                   onClick={() => poner(p.uid, l)}
                   className={`toque size-8 rounded-lg border text-sm font-semibold ${
-                    vigente[p.uid] === l ? "border-acento bg-acento text-fondo" : "border-borde text-tenue"
+                    vigente[p.uid] === l ? "border-acento bg-acento text-sobre-acento" : "border-borde text-tenue"
                   }`}
                   aria-pressed={vigente[p.uid] === l}
                   aria-label={`${p.nombre} al grupo ${l}`}

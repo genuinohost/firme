@@ -36,7 +36,7 @@ export function celebrarDia(desde?: DOMRect): void {
     // Dos tamaños y dos tonos de oro, para que no parezcan estampadas.
     const grande = i % 3 === 0;
     const lado = grande ? 7 : 4;
-    mota.style.cssText = `position:absolute;left:${x0}px;top:${y0}px;width:${lado}px;height:${lado}px;margin:-${lado / 2}px;border-radius:${grande ? "2px" : "50%"};background:${i % 2 ? "#e0b93a" : "#c9a227"};will-change:transform,opacity`;
+    mota.style.cssText = `position:absolute;left:${x0}px;top:${y0}px;width:${lado}px;height:${lado}px;margin:-${lado / 2}px;border-radius:${grande ? "2px" : "50%"};background:${i % 2 ? "#e9c878" : "#8fb7e8"};will-change:transform,opacity`;
     capa.appendChild(mota);
 
     // Un abanico hacia arriba (entre −150° y −30°), cada una a su distancia.

@@ -8,6 +8,34 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 2 de octubre de 2026 — 6.29: Genuino Cristal, la identidad nueva
+
+## Lo que pidió Alex
+
+> «Vamos a construir la MEJOR identidad gráfica para la aplicación y su página web» — «fresca,
+> elegante pero a la vez todo público: juvenil adulto. Muy moderna y futurista. Guíate por los
+> colores y descripción del nuevo cielo y la nueva tierra que describen en Apocalipsis».
+
+## Cómo quedó
+
+- **Dirección elegida: Cristal** (lienzo con las propuestas: https://claude.ai/artifact/52rKqLAVrecDvfyq1erbRs).
+  Oro puro «semejante al vidrio limpio», puertas de perla, «no habrá allí más noche».
+- **Manual de marca** (sistema de diseño): https://claude.ai/artifact/LJMhzTFqg6qzyJ6xuBQJVn —
+  colores en dos temas (Día y Noche), Syne + Outfit, espacios, radios, la gema, el icono y las piezas.
+- **En la app** (`src/estilos.css`): los mismos nombres de color con valores nuevos; tema Día por
+  defecto y Noche con `data-tema="noche"` (ajuste «Tema»: claro, oscuro o según el móvil; la
+  pantalla de alarma, siempre de noche). `text-acento` usa la tinta del oro (4.5:1); texto sobre
+  rellenos con `sobre-acento` y `sobre-color`. Fuentes empaquetadas con @fontsource (sin red).
+  Categorías en tonos de los doce cimientos. Iconos, arranque y lanzador de Android generados con
+  `node scripts/marca/generar-iconos.mjs`.
+
+## Pendiente
+
+- La página web pública de la app (portada) con la identidad nueva.
+- Las capturas de la tienda (`docs/tienda/`) y `public/compartir.png` siguen con la imagen vieja.
+
+---
+
 # 🧭 1 de octubre de 2026 (tarde) — 6.28: «ver juntos» y las alarmas que avisan solas
 
 ## Lo que pidió Alex

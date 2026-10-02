@@ -45,7 +45,7 @@ export async function programarVueltaDelGrupo(hasta: number, grupo: string): Pro
           body: "Toca para volver a la sala principal.",
           schedule: { at: new Date(hasta), allowWhileIdle: true },
           smallIcon: "ic_stat_firme",
-          iconColor: "#c9a227",
+          iconColor: "#c08e2e",
         },
       ],
     });
@@ -68,7 +68,7 @@ export async function avisarVueltaYa(texto: string): Promise<void> {
           body: "Toca para volver a la sala principal.",
           schedule: { at: new Date(Date.now() + 500), allowWhileIdle: true },
           smallIcon: "ic_stat_firme",
-          iconColor: "#c9a227",
+          iconColor: "#c08e2e",
         },
       ],
     });
