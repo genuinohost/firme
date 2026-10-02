@@ -31,7 +31,10 @@ Se actualiza al terminar cada tanda de cambios.
 
 ## Pendiente
 
-- La página web pública de la app (portada) con la identidad nueva.
+- ✅ **Portada pública hecha** (2-10): https://genuino-pro.web.app/inicio.html (`public/inicio.html`,
+  estática, tema día/noche según el móvil, fuentes en `public/fuentes/`, excluida del service
+  worker). La raíz `/` sigue siendo la app: el enlace que se comparte (`enlaceApp` en
+  `src/logica/compartir.ts`) todavía apunta a la app, no a la portada. Decisión de Alex.
 - Las capturas de la tienda (`docs/tienda/`) y `public/compartir.png` siguen con la imagen vieja.
 
 ---

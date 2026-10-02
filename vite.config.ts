@@ -65,14 +65,15 @@ export default defineConfig({
         importScripts: ["/sw-avisos.js"],
         cleanupOutdatedCaches: true,
         /**
-         * La política de privacidad es una página aparte, no parte de la app.
+         * La política de privacidad y la portada (inicio.html) son páginas aparte,
+         * no parte de la app.
          *
          * Sin esto, el service worker responde a **cualquier** navegación con
          * el index de la aplicación: quien ya hubiera abierto la web vería la
          * app en lugar de la política. El servidor la devuelve bien —así que
          * Google no lo notaría—, pero una persona sí.
          */
-        navigateFallbackDenylist: [/^\/privacidad/, /^\/borrar-cuenta/],
+        navigateFallbackDenylist: [/^\/privacidad/, /^\/borrar-cuenta/, /^\/inicio/],
       },
       manifest: {
         name: "Genuino — disciplina cristiana",
