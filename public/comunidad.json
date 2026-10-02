@@ -3,7 +3,7 @@
   "_sobre_firma": "Va al pie de cada frase que se comparte. Cuando la app este en Google Play, cambiar enlaceApp por la ficha de Play y a todos les cambia sin actualizar nada.",
   "firma": {
     "usuario": "@GenuinoLove",
-    "enlaceApp": "https://genuino-pro.web.app"
+    "enlaceApp": "https://genuino-pro.web.app/inicio.html"
   },
   "bienvenida": "Nadie persevera solo. Únete, anímate, y anima a otro.",
   "_sobre_portero": "Donde vive el portero de las salas de voz: lo que firma quien entra a un devocional y quien puede hablar. Esta aqui y no dentro de la app para que mudarlo no cueste dias de revision de Google Play con el devocional sin dejar entrar a nadie. Si se borra, la app usa el de siempre.",

@@ -8,6 +8,38 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 2 de octubre de 2026 (tarde) — 6.30: la presencia de Dios, hecha luz
+
+## Lo que pidió Alex
+
+> «Que los enlaces compartidos lleven a la portada» y «mejorar la app para que en todo momento
+> se vea y se sienta la presencia de Dios… muy moderna y futurista, fiel a la Biblia en la nueva
+> Jerusalén del Apocalipsis».
+
+## Cómo quedó
+
+- **Principio de diseño: sólo luz, nunca una imagen de Dios.** La ciudad no tiene sol ni noche:
+  «la claridad de Dios la iluminó» (21:23), «allí no habrá más noche» (22:5); el oro es «semejante
+  al vidrio limpio» (21:18); Dios habita con su pueblo (21:3).
+- **Resplandor** (`body::before` en `estilos.css`): dos luces enormes, oro y cielo, que se
+  desplazan en 52 s (sólo `transform`; se apaga con «Menos movimiento»).
+- **Tarjetas de cristal** (`.cristal`, en `Tarjeta`): translúcidas, con desenfoque y un hilo de luz.
+- **«Dios contigo»** (`DiosContigo.tsx`) en Hoy: un versículo por día, literal de la RV1909
+  (`src/datos/presencia.ts`, GENERADO por `scripts/marca/extraer-presencia.mjs` desde el archivo
+  privado; 31 versículos, los siete primeros de Apocalipsis 21–22), con un orbe que respira.
+- **«Estar con Dios»**: al tocarlo, pantalla de noche con un orbe de luz que respira (8 s), «Dios
+  está aquí», guía «Inhala / Exhala» y el versículo. Sin cuenta atrás ni nada que marcar.
+- La G de la racha usa la gema.
+- **Enlace compartido** → `https://genuino-pro.web.app/inicio.html` (por defecto y en
+  `public/comunidad.json`, que cambia sin actualizar la app).
+
+## Pendiente (ideas, sin hacer)
+
+- Llevar la luz a la sala de voz y a la pantalla de alarma (el versículo de presencia al sonar).
+- Imagen de compartir y capturas de la tienda con la identidad nueva.
+
+---
+
 # 🧭 2 de octubre de 2026 — 6.29: Genuino Cristal, la identidad nueva
 
 ## Lo que pidió Alex

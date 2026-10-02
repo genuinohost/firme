@@ -947,3 +947,112 @@ body {
   animation: none;
   transform: translate(-50%, -12px);
 }
+
+/* --------------------------------------------------------------------------
+   La presencia de Dios, hecha luz (Genuino Cristal, 6.30)
+
+   La ciudad de Apocalipsis 21–22 no tiene sol ni luna: «la claridad de Dios la
+   iluminó» (21:23) y «allí no habrá más noche» (22:5). Por eso la app no tiene
+   un fondo plano: tiene luz. Un resplandor muy lento detrás de todo, tarjetas
+   de cristal («oro puro, semejante al vidrio limpio», 21:18) y un orbe para
+   quedarse un momento. Nunca una imagen de Dios: sólo la luz, que es lo que la
+   Escritura enseña.
+   -------------------------------------------------------------------------- */
+:root {
+  --luz-oro: rgba(233, 200, 120, 0.3);
+  --luz-cielo: rgba(143, 183, 232, 0.26);
+  --luz-borde: rgba(255, 255, 255, 0.7);
+}
+[data-tema="noche"] {
+  --luz-oro: rgba(233, 200, 120, 0.13);
+  --luz-cielo: rgba(143, 183, 232, 0.12);
+  --luz-borde: rgba(255, 255, 255, 0.07);
+}
+
+/* El resplandor: dos luces enormes que se desplazan despacio. Sólo transform. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -25vmax;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(55vmax 42vmax at 76% 14%, var(--luz-oro), transparent 70%),
+    radial-gradient(50vmax 46vmax at 14% 88%, var(--luz-cielo), transparent 70%);
+  animation: resplandor 52s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes resplandor {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-4vmax, 3vmax, 0) scale(1.1);
+  }
+}
+
+@layer components {
+  /* Cristal: translúcido, con un hilo de luz arriba. Las utilidades lo pisan. */
+  .cristal {
+    background: color-mix(in srgb, var(--color-superficie) 80%, transparent);
+    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+    backdrop-filter: blur(10px) saturate(1.15);
+    box-shadow:
+      inset 0 1px 0 var(--luz-borde),
+      0 18px 36px -26px rgba(20, 32, 58, 0.28);
+  }
+}
+
+/* El orbe vivo: un punto de luz que respira, junto a «Dios contigo». */
+.orbe-vivo {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, #fff3cf, var(--color-acento) 60%, var(--color-cielo));
+  box-shadow: 0 0 0 0 var(--color-acento-suave);
+  animation: orbe-vivo 4.8s ease-in-out infinite;
+}
+@keyframes orbe-vivo {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-acento-suave), 0 0 6px 1px var(--color-acento-suave); }
+  50% { box-shadow: 0 0 0 7px transparent, 0 0 14px 4px var(--color-acento-suave); }
+}
+
+/* La pausa «Estar con Dios»: un orbe grande que respira al ritmo de 8 s. */
+.orbe {
+  width: min(62vw, 260px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 38% 32%, #fff6dc 0%, rgba(255, 246, 220, 0) 38%),
+    radial-gradient(circle, var(--color-acento) 0%, rgba(233, 200, 120, 0.55) 38%, rgba(143, 183, 232, 0.35) 66%, transparent 74%);
+  box-shadow: 0 0 80px 10px rgba(233, 200, 120, 0.28);
+  animation: respirar 8s ease-in-out infinite;
+}
+@keyframes respirar {
+  0%, 100% { transform: scale(0.82); opacity: 0.85; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+.aro {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-acento);
+  opacity: 0;
+  animation: aro 8s ease-out infinite;
+}
+.aro:nth-child(2) { animation-delay: 2.6s; }
+.aro:nth-child(3) { animation-delay: 5.2s; }
+@keyframes aro {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+:root[data-movimiento="menos"] body::before,
+:root[data-movimiento="menos"] .orbe-vivo,
+:root[data-movimiento="menos"] .orbe,
+:root[data-movimiento="menos"] .aro {
+  animation: none;
+}
+:root[data-movimiento="menos"] .aro {
+  display: none;
+}

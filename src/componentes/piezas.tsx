@@ -62,7 +62,7 @@ export function Tarjeta({
   className?: string;
 }) {
   return (
-    <div className={`aparece rounded-2xl border border-borde bg-superficie p-4 ${className}`}>
+    <div className={`aparece cristal rounded-2xl border border-borde p-4 ${className}`}>
       {children}
     </div>
   );

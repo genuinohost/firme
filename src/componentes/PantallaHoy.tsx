@@ -5,6 +5,7 @@ import { useAcabaDe, useSubio } from "@/logica/recien";
 import { celebrarDia } from "@/logica/celebrar";
 import { elegirFrase } from "@/logica/elegirFrase";
 import { diaDe, faltaPara, type Aviso } from "@/logica/avisos";
+import { DiosContigo } from "./DiosContigo";
 import {
   AreaTexto,
   Boton,
@@ -84,7 +85,8 @@ function quedanDe(suceso: Suceso, ahora: Date): string {
 }
 
 /** El trazo de la G del icono (`public/icono.svg`), para dibujarla detrás de la racha. */
-const TRAZO_G = "M 357.6 184.9 A 124 124 0 1 0 357.6 327.1 L 357.6 256 L 284 256";
+// La gema (Genuino Cristal): ocho caras abiertas arriba a la derecha, con su barra. En 0–100.
+const TRAZO_G = "M66 9.9 L50 4 L18 16 L4 50 L18 84 L50 96 L82 84 L96 50 L94 45 M50 52 H80";
 
 export function PantallaHoy(props: Props) {
   const {
@@ -205,9 +207,10 @@ export function PantallaHoy(props: Props) {
                   <path
                     className="trazo"
                     pathLength={1}
+                    transform="translate(36 36) scale(4.4)"
                     d={TRAZO_G}
                     stroke="currentColor"
-                    strokeWidth="34"
+                    strokeWidth="7.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -226,7 +229,10 @@ export function PantallaHoy(props: Props) {
         </div>
       </header>
 
-      {/* Cuánto falta para que suene la próxima alarma. Lo primero que se ve. */}
+      {/* La presencia de Dios: su Palabra de hoy y una pausa para estar con Él. */}
+      <DiosContigo />
+
+      {/* Cuánto falta para que suene la próxima alarma. */}
       <ContadorAlarma alarma={alarma} ahora={ahora} />
 
       {/* El bloque que toca ahora: grande, con la razón y la frase. */}

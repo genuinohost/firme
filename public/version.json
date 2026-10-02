@@ -1,11 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 71,
-  "nombre": "6.29",
+  "codigo": 72,
+  "nombre": "6.30",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Genuino estrena imagen: Cristal, inspirada en el cielo nuevo y la tierra nueva de Apocalipsis 21 y 22. Clara y luminosa, con letra nueva e icono nuevo.",
-    "Puedes elegir el tema en Ajustes: claro, oscuro o segun el movil. La alarma de madrugada va siempre en oscuro."
+    "Dios contigo: en Hoy ves cada dia un versiculo de su presencia y puedes tocarlo para estar un momento con El, en silencio, con una luz que respira.",
+    "Mas luz en toda la app: un resplandor suave de fondo y tarjetas de cristal, inspirados en la nueva Jerusalen de Apocalipsis 21 y 22.",
+    "Los enlaces que compartes ahora llevan a la pagina de Genuino."
   ],
   "importante": false
 }

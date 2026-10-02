@@ -32,7 +32,7 @@ export type Firma = {
 
 const FIRMA_POR_DEFECTO: Firma = {
   usuario: "@GenuinoLove",
-  enlaceApp: "https://genuino-pro.web.app",
+  enlaceApp: "https://genuino-pro.web.app/inicio.html",
 };
 
 export function firmaActiva(): boolean {
