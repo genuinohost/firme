@@ -8,6 +8,26 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 3 de octubre de 2026 (noche) — 6.33: más futurista y más luminosa
+
+- **Barra de navegación flotante de cristal** (`App.tsx`, clase `.cristal`): ya no va pegada al
+  borde; la pestaña activa lleva una pastilla de luz que se desliza. **Iconos propios de trazo fino**
+  (`IconosBarra.tsx`) en vez de los signos de texto (◎ ≡ ✎ ✉ ◈ ⋯), que cambiaban según el móvil.
+- **El río de vida** (`.rio`, Ap 22:1) bajo la fecha de Hoy: un cauce de luz (oro, cielo, esmeralda)
+  que corre y se llena con lo cumplido. Es un `progressbar` accesible.
+- **Borde de gema** (`.borde-gema`): un filo de luz que gira en 16 s alrededor de la tarjeta
+  principal de Hoy (`@property --giro`; si el móvil no lo soporta, queda fijo).
+- **Facetas** de una gema gigante, al 7,5 %, en el fondo; botones principales con luz debajo.
+- Todo se apaga con «Menos movimiento».
+
+## Ideas para seguir (sin hacer)
+
+- Entrada (`Intro`) con la gema que se talla y un destello; la racha como «doce puertas».
+- Sala de voz: los retratos de quien habla con aureola de luz.
+- Háptica suave al cumplir y sonido de campana cristalina (ya hay timbres).
+
+---
+
 # 🧭 3 de octubre de 2026 (tarde) — 6.32: imágenes de marca y la barra de la G
 
 - **Imagen al compartir** (`public/compartir.png`), **gráfico destacado de Play**

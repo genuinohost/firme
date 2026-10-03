@@ -190,6 +190,22 @@ export function PantallaHoy(props: Props) {
                 ? "nada programado"
                 : `${cumplidos} de ${sucesos.length} cumplidos`}
             </p>
+            {/*
+              El río de vida (Ap 22:1): el día que va corriendo, «resplandeciente
+              como cristal». Lo cumplido es el cauce lleno de luz.
+            */}
+            {sucesos.length > 0 ? (
+              <div
+                className="rio mt-2.5"
+                role="progressbar"
+                aria-label="Cumplido hoy"
+                aria-valuemin={0}
+                aria-valuemax={sucesos.length}
+                aria-valuenow={cumplidos}
+              >
+                <span style={{ width: `${Math.round((cumplidos / sucesos.length) * 100)}%` }} />
+              </div>
+            ) : null}
           </div>
           <div className="tercer-tiempo relative shrink-0 text-right leading-none">
             {subio ? (
@@ -237,7 +253,7 @@ export function PantallaHoy(props: Props) {
 
       {/* El bloque que toca ahora: grande, con la razón y la frase. */}
       {actual && actual.minuto !== null ? (
-        <Tarjeta className="relative overflow-hidden !p-5">
+        <Tarjeta className="borde-gema relative overflow-hidden !p-5">
           <div
             className="absolute inset-x-0 top-0 h-1"
             style={{ background: colorDe(actual.categoria) }}

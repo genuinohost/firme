@@ -1,11 +1,12 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 74,
-  "nombre": "6.32",
+  "codigo": 75,
+  "nombre": "6.33",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "Icono nuevo corregido: la G de Genuino ahora se ve completa, con su barra.",
-    "Imagen nueva al compartir un enlace."
+    "Barra de navegacion flotante de cristal, con iconos nuevos de trazo fino.",
+    "El dia corre como un rio de vida: una linea de luz bajo la fecha que se llena con lo que cumples.",
+    "La tarjeta principal de Hoy tiene un filo de luz que gira muy despacio, y el fondo guarda las facetas de una gema."
   ],
   "importante": false
 }

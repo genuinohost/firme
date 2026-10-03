@@ -37,8 +37,10 @@ export function Boton({
 }) {
   const estilos: Record<string, string> = {
     normal: "bg-superficie-alta border-borde hover:border-tenue",
-    fuerte: "bg-acento text-sobre-acento border-acento font-semibold hover:brightness-110",
-    logro: "bg-logro text-sobre-color border-logro font-semibold hover:brightness-110",
+    fuerte:
+      "bg-acento text-sobre-acento border-acento font-semibold shadow-[0_10px_26px_-12px_var(--color-acento)] hover:brightness-110",
+    logro:
+      "bg-logro text-sobre-color border-logro font-semibold shadow-[0_10px_26px_-12px_var(--color-logro)] hover:brightness-110",
     fallo: "bg-transparent border-borde text-tenue hover:text-fallo hover:border-fallo",
     fantasma: "bg-transparent border-transparent text-tenue hover:text-texto",
   };

@@ -55,6 +55,7 @@ import { PantallaCuenta } from "@/componentes/PantallaCuenta";
 import { PantallaSala } from "@/componentes/PantallaSala";
 import { Intro, tocaSaludar } from "@/componentes/Intro";
 import { PantallaFallo } from "@/componentes/PantallaFallo";
+import { IconoBarra } from "@/componentes/IconosBarra";
 import { avisarSiFallaronAlarmas } from "@/logica/vigiaAlarmas";
 import { contarSolicitudes, miUid, publicarNota } from "@/logica/muro";
 import { leerPerfil } from "@/logica/nube";
@@ -793,7 +794,7 @@ export default function App() {
       */}
       <main
         key={`${pestaña}:${escena}`}
-        className="zona-segura-arriba pantalla-entra flex-1 pb-24"
+        className="zona-segura-arriba pantalla-entra flex-1 pb-28"
         style={vars({ "--dir": dir })}
       >
         <AvisoActualizacion />
@@ -1078,23 +1079,30 @@ export default function App() {
       ) : null}
 
       {/* En las pantallas de dentro, «Más» queda marcada. */}
-      <nav className="zona-segura-abajo fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-borde bg-fondo/95 backdrop-blur">
+      {/*
+        La barra flota como una pastilla de cristal, no pegada al borde: el
+        resplandor de fondo pasa por detrás (Genuino Cristal, 6.33). El contenedor
+        deja pasar los toques; sólo la pastilla los recoge.
+      */}
+      <nav className="zona-segura-abajo pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg px-3 pb-2.5">
+       <div className="cristal pointer-events-auto relative rounded-[28px] border border-borde p-1.5">
         {/*
           La marca dorada se DESLIZA de una pestaña a otra en vez de saltar,
           estirándose a mitad de camino (el efecto de arriba). Mide una pestaña
           de ancho y se mueve con transform, que es lo único que el móvil anima
           sin recalcular nada.
         */}
+        <div className="relative">
         <div
           ref={marca}
-          className="marca-barra pointer-events-none absolute top-0 h-[3px] rounded-full bg-acento"
+          className="marca-barra pointer-events-none absolute top-0 h-full rounded-[22px] bg-acento-suave"
           style={{
             width: `${100 / PESTAÑAS.length}%`,
             transform: `translateX(${Math.max(0, PESTAÑAS.findIndex((p) => p.id === seleccionada)) * 100}%)`,
           }}
           aria-hidden
         />
-        <div className="flex">
+        <div className="relative flex">
           {PESTAÑAS.map((p) => (
             <button
               key={p.id}
@@ -1102,20 +1110,22 @@ export default function App() {
                 setPestaña(p.id);
                 if (p.id === "hoy") setDesplazamiento(0);
               }}
-              className={`toque flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-2.5 text-[10px] ${
+              className={`toque flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[22px] px-0.5 py-2 text-[10px] font-medium ${
                 seleccionada === p.id ? "text-acento" : "text-tenue"
               }`}
             >
               <span
-                className={`icono-barra text-lg leading-none ${seleccionada === p.id ? "activo" : ""}`}
+                className={`icono-barra leading-none ${seleccionada === p.id ? "activo" : ""}`}
                 aria-hidden
               >
-                {p.icono}
+                <IconoBarra id={p.id} />
               </span>
               {p.nombre}
             </button>
           ))}
         </div>
+        </div>
+       </div>
       </nav>
 
       {saludando && !disparo && !llamada ? (
