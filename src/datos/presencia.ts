@@ -39,3 +39,6 @@ export const PRESENCIA: Versiculo[] = [
   { ref: "Jeremías 29:13", texto: "Y me buscaréis y hallaréis, porque me buscaréis de todo vuestro corazón." },
   { ref: "Proverbios 3:5", texto: "Fíate de Jehová de todo tu corazón, y no estribes en tu prudencia." },
 ];
+
+/** Para la sala de voz: Dios en medio de quienes se reúnen. */
+export const VERSICULO_SALA: Versiculo = { ref: "Mateo 18:20", texto: "Porque donde están dos ó tres congregados en mi nombre, allí estoy en medio de ellos." };

@@ -4,6 +4,7 @@ import type { Disparo } from "@/logica/alarmas";
 import { elegirFrase } from "@/logica/elegirFrase";
 import { audioBloqueado, reanudar } from "@/logica/sonido";
 import { Boton, Cita, Etiqueta, colorDe } from "./piezas";
+import { versiculoDeHoy } from "./DiosContigo";
 
 /**
  * La alarma ocupa toda la pantalla a propósito: no se puede ignorar de reojo,
@@ -60,6 +61,11 @@ export function PantallaAlarma({
       // Siempre de noche: suena de madrugada y con el móvil a oscuras.
       data-tema="noche"
       className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-fondo text-texto"
+      // La luz del alba: el oro baja desde arriba, como «la claridad de Dios».
+      style={{
+        background:
+          "radial-gradient(100vmax 56vmax at 50% -8%, rgba(233,200,120,0.2), transparent 68%), var(--color-fondo)",
+      }}
       // Si el navegador aún no dejaba sonar, el primer toque arranca el timbre.
       onPointerDown={() => reanudar()}
     >
@@ -69,6 +75,12 @@ export function PantallaAlarma({
       />
       <div className="zona-segura-arriba zona-segura-abajo flex flex-1 flex-col justify-between gap-6 px-5 py-8">
         <div className="entrar">
+          <span className="mb-2 flex items-center gap-2">
+            <span className="orbe-vivo" aria-hidden />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-acento">
+              Dios contigo
+            </span>
+          </span>
           <Etiqueta>
             {disparo.esPrueba
               ? "prueba"
@@ -79,6 +91,9 @@ export function PantallaAlarma({
           <h1 className="latido mt-2 text-4xl leading-[1.1] font-bold">{suceso.nombre}</h1>
           <p className="cifras mt-2 text-sm text-tenue">
             {suceso.hora} · {suceso.duracionMin} min · sonando {reloj}
+          </p>
+          <p className="font-cita mt-3 text-[15px] leading-relaxed text-tenue italic">
+            «{versiculoDeHoy().texto}» <span className="not-italic">{versiculoDeHoy().ref}</span>
           </p>
           {mudo ? (
             <p className="mt-2 text-sm text-acento">

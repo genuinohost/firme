@@ -63,6 +63,7 @@ import { TextoDevocional } from "./TextoDevocional";
 import { parar, sonar, vibrar } from "@/logica/sonido";
 import { cuantosMiembros, escucharMiembros, llamarALaComunidad, type LlamadaHecha } from "@/logica/timbre";
 import { InformeDeLlamada } from "./InformeDeLlamada";
+import { VERSICULO_SALA } from "@/datos/presencia";
 import { Boton, Etiqueta, Tarjeta, Vacio } from "./piezas";
 
 /**
@@ -1390,13 +1391,30 @@ export function PantallaSala({
         <VerJuntos canal={canal} sala={sala} esAnfitrion={esAnfitrion} />
       ) : null}
 
-      <Tarjeta>
-        <Etiqueta>
-          {sala?.tipo === "llamada" ? "llamada" : sala?.tipo === "subgrupo" ? "subgrupo" : "devocional"} ·{" "}
-          {gente.length}{" "}
-          {gente.length === 1 ? "dentro" : "dentro"}
-        </Etiqueta>
-        <h2 className="mt-1 text-xl font-semibold">{sala?.nombre ?? "Una sala"}</h2>
+      <Tarjeta className="relative overflow-hidden">
+        {/* La luz de la sala: un halo de oro que se enciende cuando alguien habla. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-16 left-1/2 h-40 w-[120%] -translate-x-1/2 transition-opacity duration-700"
+          style={{
+            background: "radial-gradient(closest-side, var(--luz-oro), transparent)",
+            opacity: foco.length > 0 ? 1 : 0.45,
+          }}
+        />
+        <span className="relative flex items-center gap-2">
+          <span className="orbe-vivo" aria-hidden />
+          <Etiqueta>
+            {sala?.tipo === "llamada" ? "llamada" : sala?.tipo === "subgrupo" ? "subgrupo" : "devocional"} ·{" "}
+            {gente.length}{" "}
+            {gente.length === 1 ? "dentro" : "dentro"}
+          </Etiqueta>
+        </span>
+        <h2 className="relative mt-1 text-xl font-semibold">{sala?.nombre ?? "Una sala"}</h2>
+        {sala?.tipo === "devocional" ? (
+          <p className="font-cita relative mt-2 text-[13px] leading-relaxed text-tenue italic">
+            «{VERSICULO_SALA.texto}» <span className="not-italic">{VERSICULO_SALA.ref}</span>
+          </p>
+        ) : null}
 
         {/*
           El estado propio, en grande y sin ambigüedad.

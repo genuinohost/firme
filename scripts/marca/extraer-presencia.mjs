@@ -29,6 +29,7 @@ for (const [l, c, v] of ELEGIDOS) {
   filas.push({ ref: `${LIBROS[l]} ${c}:${v}`, texto: t.replace(/[\[\]]/g, "") });
 }
 const cuerpo = filas.map((f) => `  { ref: ${JSON.stringify(f.ref)}, texto: ${JSON.stringify(f.texto)} },`).join("\n");
+const sala = mapa.get("MAT 18:20").replace(/[\[\]]/g, "");
 writeFileSync(
   "src/datos/presencia.ts",
   `/**
@@ -42,6 +43,9 @@ export type Versiculo = { ref: string; texto: string };
 export const PRESENCIA: Versiculo[] = [
 ${cuerpo}
 ];
+
+/** Para la sala de voz: Dios en medio de quienes se reúnen. */
+export const VERSICULO_SALA: Versiculo = { ref: "Mateo 18:20", texto: ${JSON.stringify(sala)} };
 `,
 );
 console.log(filas.length, "versículos");

@@ -8,6 +8,27 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 3 de octubre de 2026 — 6.31: la luz en la sala y en la alarma · y el parte de las alarmas
+
+## El parte de las alarmas llegó solo (2-10, 21:32)
+
+Xiaomi 23078PND5G (Android 16), 6.30. **17 alarmas «NO LLEGÓ» entre el 30-09 22:00 y el 02-10 08:30**
+(el sistema no despertó a la app) y desde las **16:30 del 02-10, todas SONARON** (volumen 100 %).
+En el parte de ese momento: batería «sin restricciones» ✅, cajón «exenta» ✅, alarmas exactas ✅,
+avisos ✅, No molestar con acceso ✅. En el parte viejo del 24-09 ponía batería **NO** y cajón
+«activa». Lectura: arreglado al quitar las restricciones de batería; **la prueba real era el 04:45 del
+03-10**. ⚠️ Seguía puesto **«Ahorro de energía»** del sistema (le dije que lo apague). Si el
+04:45 falla, el parte vuelve a llegar solo (`node scripts/fallos.mjs`).
+
+## 6.31
+
+- **Sala de voz**: halo de oro en la cabecera que se enciende cuando alguien habla, un punto de
+  luz y Mateo 18:20 («donde están dos ó tres congregados en mi nombre, allí estoy en medio de
+  ellos»), literal.
+- **Alarma**: el alba baja desde arriba (degradado dorado), «Dios contigo» y el versículo del día.
+
+---
+
 # 🧭 2 de octubre de 2026 (tarde) — 6.30: la presencia de Dios, hecha luz
 
 ## Lo que pidió Alex
