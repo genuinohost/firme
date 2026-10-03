@@ -15,15 +15,15 @@ import { reducido } from "@/logica/resorte";
  *
  * ── Lo que pasa, en orden ─────────────────────────────────────────────────
  *
- *   0 ms     Un halo de oro empieza a abrirse detrás de todo.
- *   0–620    El logo ENFOCA: una copia borrosa y grande se disuelve mientras
- *            la nítida llega con resorte, y a los 480 ms un destello la remata.
- *            Es lo que hace una cámara al encontrar el foco.
- *   360–870  «Genuino», letra a letra, cada una 38 ms después de la anterior.
- *   640      El lema, más suave.
- *   1050     Empieza a irse: crece un 8 % y se disuelve sobre Hoy, que en ese
+ *   0 ms     Un halo de luz empieza a abrirse detrás de todo.
+ *   0–520    La gema SE TALLA (6.34): primero las facetas, finas, como líneas de
+ *            luz; después el filo, de oro a cielo, y al final la barra.
+ *   640      Un destello la remata y un rayo cruza (la claridad de Dios, Ap 21:23).
+ *   480–1140 «Genuino», letra a letra, en Syne.
+ *   820      El lema, más suave.
+ *   1150     Empieza a irse: crece un 8 % y se disuelve sobre Hoy, que en ese
  *            mismo instante vuelve a entrar debajo (`onSaliendo`).
- *   1400     Fin.
+ *   1500     Fin.
  *
  * ── Tres decisiones ───────────────────────────────────────────────────────
  *
@@ -49,10 +49,14 @@ import { reducido } from "@/logica/resorte";
 let yaSaludo = false;
 
 /** Cuánto dura todo, contando la salida. */
-const DURA_MS = 1400;
+const DURA_MS = 1500;
 const SALIDA_MS = 350;
 
 const LETRAS = "Genuino".split("");
+
+// La gema (Genuino Cristal): ocho caras abiertas arriba a la derecha, con su barra.
+const FILO = "M66 9.9 L50 4 L18 16 L4 50 L18 84 L50 96 L82 84 L96 50 L94 45";
+const FACETAS = "M50 4 L50 52 L18 16 M50 52 L4 50 M50 52 L18 84 M50 52 L50 96 M50 52 L82 84 M50 52 L96 50";
 
 export function Intro({
   onFin,
@@ -96,20 +100,31 @@ export function Intro({
       aria-label="Genuino"
       role="img"
     >
-      <div className="intro-pila size-24">
+      <div className="intro-pila size-28">
         <span className="intro-halo" aria-hidden />
-        <img src="/icono.svg" alt="" className="intro-borroso size-24" draggable={false} aria-hidden />
-        <img src="/icono.svg" alt="" className="intro-logo size-24" draggable={false} />
-        <img src="/icono.svg" alt="" className="intro-destello size-24" draggable={false} aria-hidden />
+        <svg viewBox="0 0 100 100" className="intro-gema size-28 overflow-visible" fill="none" aria-hidden>
+          <defs>
+            <linearGradient id="intro-v" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="96" y2="96">
+              <stop offset="0" stopColor="#e9c878" />
+              <stop offset="0.5" stopColor="#d9a84a" />
+              <stop offset="1" stopColor="#8fb7e8" />
+            </linearGradient>
+          </defs>
+          {/* Las facetas se tallan primero, finas; luego el filo, y al final la barra. */}
+          <path className="intro-faceta" pathLength={1} d={FACETAS} stroke="url(#intro-v)" strokeWidth="1.1" strokeLinejoin="round" strokeLinecap="round" />
+          <path className="intro-filo" pathLength={1} d={FILO} stroke="url(#intro-v)" strokeWidth="7" strokeLinejoin="round" strokeLinecap="round" />
+          <path className="intro-barra" pathLength={1} d="M50 52 H80" stroke="url(#intro-v)" strokeWidth="7" strokeLinecap="round" />
+        </svg>
+        <span className="intro-rayo" aria-hidden />
       </div>
-      <p className="mt-6 text-2xl font-semibold tracking-[0.12em] text-acento" aria-hidden>
+      <p className="mt-7 font-[family-name:var(--font-display)] text-[28px] font-extrabold tracking-[0.14em] text-acento-tinta" aria-hidden>
         {LETRAS.map((letra, i) => (
           <span key={i} className="intro-letra" style={vars({ "--i": i })}>
             {letra}
           </span>
         ))}
       </p>
-      <p className="intro-lema mt-2 text-[13px] text-texto">disciplina cristiana</p>
+      <p className="intro-lema mt-2 text-[13px] tracking-wide text-texto">disciplina cristiana</p>
     </div>
   );
 }

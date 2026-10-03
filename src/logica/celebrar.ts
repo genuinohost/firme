@@ -1,4 +1,5 @@
 import { reducido, resorte } from "@/logica/resorte";
+import { vibrar } from "@/logica/sonido";
 
 /**
  * El día completo: catorce motas de oro que salen del sitio y caen.
@@ -19,7 +20,11 @@ import { reducido, resorte } from "@/logica/resorte";
  * centro de la pantalla.
  */
 export function celebrarDia(desde?: DOMRect): void {
-  if (typeof document === "undefined" || reducido()) return;
+  if (typeof document === "undefined") return;
+  // Un golpecito de luz en la mano: dos pulsos cortos, como una campanilla. Se
+  // da aunque haya «menos movimiento»: no se ve, y por eso no marea.
+  vibrar([18, 50, 30]);
+  if (reducido()) return;
 
   const capa = document.createElement("div");
   capa.setAttribute("aria-hidden", "true");

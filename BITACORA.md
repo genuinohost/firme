@@ -8,6 +8,24 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 3 de octubre de 2026 (noche) — 6.34: la gema se talla, doce puertas y aureola
+
+- **La entrada talla la gema** (`Intro.tsx`): primero las facetas, finas; luego el filo (oro→cielo,
+  `gradientUnits="userSpaceOnUse"`), la barra, un destello y un rayo de luz que cruza (Ap 21:23).
+  «Genuino» en Syne. Dura 1,5 s; con «Menos movimiento» sigue sin intro.
+- **Las doce puertas** (`PuertasDePerla` en `PantallaHoy.tsx`, `.perla`): cada día seguido enciende
+  una perla (Ap 21:21); a los doce vuelve a empezar y anota las vueltas (×2…). Sólo dibuja la racha
+  que ya existía; no inventa nada.
+- **Aureola** (`.aureola`, `PantallaSala.tsx`): aro de luz que gira alrededor de quien habla.
+- **Háptica** al completar el día (`celebrar.ts`, `vibrar([18, 50, 30])`).
+- Verificado: `tsc`, `npm run revisar` (todo en verde), navegador (intro y aureola vistas). Las perlas
+  se vieron con DOM inyectado: la cuenta de prueba tiene racha 0, así que falta verlas con racha real.
+
+## Ideas para seguir (sin hacer)
+
+- Llevar la identidad a Planes / Diario / Mensaje / Juntos / Más y a `public/inicio.html`.
+- Revisar rendimiento de `backdrop-filter` en el Xiaomi y el contraste de las perlas apagadas.
+
 # 🧭 3 de octubre de 2026 (noche) — 6.33: más futurista y más luminosa
 
 - **Barra de navegación flotante de cristal** (`App.tsx`, clase `.cristal`): ya no va pegada al

@@ -1513,7 +1513,9 @@ export function PantallaSala({
             return (
               <div key={uid} className="aparece flex w-24 flex-col items-center gap-1.5">
                 <span className="relative">
-                  <span className="flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-logro bg-superficie-alta text-2xl ring-4 ring-logro/30">
+                  {/* La aureola: luz que gira despacio alrededor de quien habla (6.34). */}
+                  <span className="aureola" aria-hidden />
+                  <span className="relative flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-logro bg-superficie-alta text-2xl">
                     {g.foto ? (
                       <img
                         src={g.foto}

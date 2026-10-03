@@ -88,6 +88,35 @@ function quedanDe(suceso: Suceso, ahora: Date): string {
 // La gema (Genuino Cristal): ocho caras abiertas arriba a la derecha, con su barra. En 0–100.
 const TRAZO_G = "M66 9.9 L50 4 L18 16 L4 50 L18 84 L50 96 L82 84 L96 50 L94 45 M50 52 H80";
 
+/**
+ * Las doce puertas (Ap 21:21: «las doce puertas eran doce perlas»). Cada día
+ * seguido enciende una perla; a los doce se completa la ciudad y vuelve a
+ * empezar, anotando cuántas vueltas lleva. No inventa nada: sólo dibuja el
+ * número que ya había.
+ */
+function PuertasDePerla({ racha }: { racha: number }) {
+  if (racha <= 0) return null;
+  const encendidas = ((racha - 1) % 12) + 1;
+  const vueltas = Math.floor((racha - 1) / 12);
+  return (
+    <div
+      className="mt-2 flex items-center justify-end gap-[3px]"
+      role="img"
+      aria-label={`Puerta ${encendidas} de 12${vueltas > 0 ? `, vuelta ${vueltas + 1}` : ""}`}
+    >
+      {Array.from({ length: 12 }, (_, i) => (
+        <span
+          key={i}
+          className={`perla ${i < encendidas ? "encendida" : ""} ${i === encendidas - 1 ? "ultima" : ""}`}
+        />
+      ))}
+      {vueltas > 0 ? (
+        <span className="ml-1 text-[10px] font-semibold text-acento-tinta">×{vueltas + 1}</span>
+      ) : null}
+    </div>
+  );
+}
+
 export function PantallaHoy(props: Props) {
   const {
     fecha, fechaObjeto, esHoy, ahora, sucesos, ajustes, motivos, racha, alarma,
@@ -241,6 +270,7 @@ export function PantallaHoy(props: Props) {
             <div className="mt-1">
               <Etiqueta>{racha === 1 ? "día seguido" : "días seguidos"}</Etiqueta>
             </div>
+            <PuertasDePerla racha={racha} />
           </div>
         </div>
       </header>
