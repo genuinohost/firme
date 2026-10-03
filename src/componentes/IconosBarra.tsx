@@ -42,6 +42,40 @@ const TRAZOS: Record<string, ReactNode> = {
       <path d="M16 6a3 3 0 0 1 0 5.6M17.5 14.6A5.5 5.5 0 0 1 20.5 19" />
     </>
   ),
+  // Las del menú «Más» (6.35): el mismo trazo fino.
+  cuenta: (
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </>
+  ),
+  fallo: (
+    <>
+      <path d="M12 3.5 21 19.5H3z" />
+      <path d="M12 10v4.5M12 17.2v.1" />
+    </>
+  ),
+  pasar: (
+    <>
+      <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5" />
+      <path d="M5 13.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-5.5" />
+    </>
+  ),
+  // El porqué: una estrella de cuatro puntas, la luz que guía.
+  porque: <path d="M12 3c.6 4.7 2.3 6.4 7 7-4.7.6-6.4 2.3-7 7-.6-4.7-2.3-6.4-7-7 4.7-.6 6.4-2.3 7-7zM18.5 16.5v3M17 18h3" />,
+  progreso: (
+    <>
+      <path d="M4 20V13M10 20V8M16 20v-9M21 20H3" />
+      <path d="M13 4.5l3-1.5 3 3" opacity=".55" />
+    </>
+  ),
+  ajustes: (
+    <>
+      <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+      <circle cx="15" cy="7" r="2" />
+      <circle cx="9" cy="17" r="2" />
+    </>
+  ),
   mas: (
     <>
       <circle cx="6" cy="12" r="1.2" />

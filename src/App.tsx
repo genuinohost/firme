@@ -862,7 +862,7 @@ export default function App() {
                 ? [
                     {
                       id: "cuenta",
-                      icono: "◍",
+                      icono: "cuenta",
                       titulo: "Mi cuenta",
                       detalle:
                         solicitudes > 0
@@ -877,7 +877,7 @@ export default function App() {
                 : []),
               {
                 id: "fallo",
-                icono: "🐞",
+                icono: "fallo",
                 titulo: "Avisar de un fallo",
                 detalle: "Si algo no funciona, cuéntalo con capturas",
                 onIr: () => setPestaña("fallo"),
@@ -887,7 +887,7 @@ export default function App() {
               // tenga que bajar treinta megas por su conexión.
               {
                 id: "pasar",
-                icono: "↗",
+                icono: "pasar",
                 // «Compartir» y no «pasar»: Alex la buscó por esa palabra el
                 // 27-09-2026 y no la encontró. Se llama como la gente la busca.
                 titulo: "Compartir la app",
@@ -901,21 +901,21 @@ export default function App() {
               },
               {
                 id: "porque",
-                icono: "✦",
+                icono: "porque",
                 titulo: "Mi porqué",
                 detalle: "Las razones por las que te esfuerzas",
                 onIr: () => setPestaña("porque"),
               },
               {
                 id: "progreso",
-                icono: "▟",
+                icono: "progreso",
                 titulo: "Progreso",
                 detalle: "Rachas, calendario y en qué estás fallando",
                 onIr: () => setPestaña("progreso"),
               },
               {
                 id: "ajustes",
-                icono: "⚙",
+                icono: "ajustes",
                 titulo: "Ajustes",
                 detalle: "Alarmas, frases y tus datos",
                 onIr: () => setPestaña("ajustes"),

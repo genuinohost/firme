@@ -1180,3 +1180,16 @@ body::after {
 :root[data-movimiento="menos"] .aureola {
   animation: none;
 }
+
+/* La gema de los vacíos respira muy despacio. */
+.vacio-gema {
+  opacity: 0.8;
+  animation: vacio-respira 5s ease-in-out infinite;
+}
+@keyframes vacio-respira {
+  0%, 100% { opacity: 0.55; transform: scale(0.97); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+:root[data-movimiento="menos"] .vacio-gema {
+  animation: none;
+}

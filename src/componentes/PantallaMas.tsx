@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IconoBarra } from "@/componentes/IconosBarra";
 
 /**
  * El menú de lo que no cabe en la barra de abajo.
@@ -16,6 +17,7 @@ export function PantallaMas({
   racha: number;
   opciones: {
     id: string;
+    /** Una clave de `IconoBarra` (cuenta, fallo, pasar, porque, progreso, ajustes). */
     icono: string;
     titulo: string;
     detalle: string;
@@ -40,10 +42,14 @@ export function PantallaMas({
           <button
             key={o.id}
             onClick={o.onIr}
-            className="flex items-center gap-3 rounded-xl border border-borde bg-superficie px-4 py-3.5 text-left transition hover:border-acento"
+            className="cristal toque flex items-center gap-3 rounded-2xl border border-borde px-3.5 py-3 text-left transition hover:border-acento"
           >
-            <span className="text-xl" aria-hidden>
-              {o.icono}
+            {/* Cada opción lleva su gema: una baldosa de luz con el icono de trazo fino. */}
+            <span
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-acento-suave text-acento-tinta"
+              aria-hidden
+            >
+              <IconoBarra id={o.icono} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[15px]">{o.titulo}</span>

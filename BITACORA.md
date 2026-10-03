@@ -8,6 +8,15 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 3 de octubre de 2026 (noche) — 6.35: «Más» con iconos propios y vacíos con gema
+
+- **Menú «Más»** (`PantallaMas.tsx`): los signos de texto (◍ 🐞 ↗ ✦ ▟ ⚙) pasan a iconos de trazo fino
+  en `IconosBarra.tsx` (cuenta, fallo, pasar, porque, progreso, ajustes) sobre una baldosa de luz;
+  las filas son de cristal. `icono` ahora es una clave de `IconoBarra`, no un carácter.
+- **Vacíos** (`Vacio` en `piezas.tsx`): llevan la gema, apenas dibujada y respirando (`.vacio-gema`).
+- Verificado: `tsc` y navegador. (El despliegue imprime muchos `PERMISSION_DENIED`: son las pruebas
+  negativas de las reglas en el emulador, no un fallo.)
+
 # 🧭 3 de octubre de 2026 (noche) — 6.34: la gema se talla, doce puertas y aureola
 
 - **La entrada talla la gema** (`Intro.tsx`): primero las facetas, finas; luego el filo (oro→cielo,

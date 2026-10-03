@@ -1,13 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 76,
-  "nombre": "6.34",
+  "codigo": 77,
+  "nombre": "6.35",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La entrada talla la gema: se dibuja, destella y aparece Genuino.",
-    "Tu racha se cuenta en las doce puertas de perla: cada dia seguido enciende una.",
-    "Quien habla en una sala tiene una aureola de luz que gira a su alrededor.",
-    "Al completar el dia, un golpecito de vibracion suave."
+    "El menu Mas estrena iconos de trazo fino sobre baldosas de luz.",
+    "Cuando una lista esta vacia aparece la gema, respirando despacio."
   ],
   "importante": false
 }

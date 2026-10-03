@@ -310,10 +310,22 @@ export function Punto({ categoria }: { categoria: Categoria }) {
 }
 
 export function Vacio({ children }: { children: ReactNode }) {
+  // Un vacío no es un error: es un sitio esperando luz. Lleva la gema, apenas
+  // dibujada, y respira muy despacio (Genuino Cristal, 6.35).
   return (
-    <p className="rounded-2xl border border-dashed border-borde px-4 py-8 text-center text-sm text-tenue">
-      {children}
-    </p>
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-borde px-4 py-8 text-center text-sm text-tenue">
+      <svg viewBox="0 0 100 100" className="vacio-gema size-10 overflow-visible" fill="none" aria-hidden>
+        <defs>
+          <linearGradient id="vacio-v" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="96" y2="96">
+            <stop offset="0" stopColor="#e9c878" />
+            <stop offset="0.55" stopColor="#d9a84a" />
+            <stop offset="1" stopColor="#8fb7e8" />
+          </linearGradient>
+        </defs>
+        <path d="M66 9.9 L50 4 L18 16 L4 50 L18 84 L50 96 L82 84 L96 50 L94 45 M50 52 H80" stroke="url(#vacio-v)" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <p>{children}</p>
+    </div>
   );
 }
 
