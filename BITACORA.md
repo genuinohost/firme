@@ -8,6 +8,22 @@ Se actualiza al terminar cada tanda de cambios.
 
 ---
 
+# 🧭 3 de octubre de 2026 (tarde) — 6.32: imágenes de marca y la barra de la G
+
+- **Imagen al compartir** (`public/compartir.png`), **gráfico destacado de Play**
+  (`docs/tienda/destacado-1024x500.png`) e **icono de Play** (`docs/tienda/icono-play-512.png`)
+  rehechos con la identidad Cristal: `node scripts/marca/graficos.mjs` (página con Syne y Outfit,
+  fotografiada con Chrome sin pantalla). Los scripts viejos (`iconos.mjs`, `graficos-tienda.mjs`,
+  `tarjeta-compartir.mjs`) quedan **obsoletos** y se niegan a correr: sobrescribirían los nuevos.
+- 🐛 **A la G le faltaba la barra** en todos los iconos del 2-10 (6.29–6.31): un degradado con
+  `objectBoundingBox` sobre una línea recta no pinta nada (el mismo fallo que ya estaba anotado en
+  el script viejo). Arreglado con `gradientUnits="userSpaceOnUse"` en iconos, lanzador, arranque,
+  portada, manual de marca y lienzo.
+- ⏳ **Capturas de pantalla de la tienda**: siguen siendo las del móvil de Alex con la imagen vieja
+  (`docs/tienda/capturas/`). Hay que retomarlas desde el móvil con la 6.32 y pasar `npm run capturas`.
+
+---
+
 # 🧭 3 de octubre de 2026 — 6.31: la luz en la sala y en la alarma · y el parte de las alarmas
 
 ## El parte de las alarmas llegó solo (2-10, 21:32)

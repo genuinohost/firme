@@ -16,7 +16,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 
 const PERLA = "#FBFAF7";
-const degradado = (id) => `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9C878"/><stop offset="0.5" stop-color="#C08E2E"/><stop offset="1" stop-color="#5E8FD6"/></linearGradient>`;
+const degradado = (id) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="96" y2="96"><stop offset="0" stop-color="#E9C878"/><stop offset="0.5" stop-color="#C08E2E"/><stop offset="1" stop-color="#5E8FD6"/></linearGradient>`;
 const fondoNacar = `<linearGradient id="f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.6" stop-color="#E9F0FA"/><stop offset="1" stop-color="#F6E7C9"/></linearGradient>`;
 
 /** La gema en un cuadro de 100, con el trazo que se pida. */

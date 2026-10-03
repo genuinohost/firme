@@ -9,6 +9,9 @@
  * Se dibuja en SVG y se convierte a PNG porque WhatsApp no lee SVG. Tipografia
  * grande y poco detalle: la vista previa se enseña pequeña.
  */
+// OBSOLETO (2-10-2026): dibujaba la identidad anterior. Usa `node scripts/marca/generar-iconos.mjs` y `node scripts/marca/graficos.mjs`.
+console.error("Obsoleto: usa scripts/marca/generar-iconos.mjs y scripts/marca/graficos.mjs");
+process.exit(1);
 import { writeFileSync } from "node:fs";
 import sharp from "sharp";
 

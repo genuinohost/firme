@@ -1,10 +1,11 @@
 {
   "_lee_esto": "Lo genera scripts/publicar-release.mjs; no se edita a mano. Cuando la app esté en Google Play, cambiar 'enlace' por la ficha de Play.",
-  "codigo": 73,
-  "nombre": "6.31",
+  "codigo": 74,
+  "nombre": "6.32",
   "enlace": "https://genuino-portero.genuinohost.workers.dev/apk",
   "novedades": [
-    "La luz llega a la sala de voz, que se enciende cuando alguien habla, y a la pantalla de la alarma, que ahora trae el versiculo de su presencia del dia."
+    "Icono nuevo corregido: la G de Genuino ahora se ve completa, con su barra.",
+    "Imagen nueva al compartir un enlace."
   ],
   "importante": false
 }

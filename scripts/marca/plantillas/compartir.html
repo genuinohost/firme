@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Syne;font-weight:800;src:url(../../../node_modules/@fontsource/syne/files/syne-latin-800-normal.woff2)}
+@font-face{font-family:Syne;font-weight:700;src:url(../../../node_modules/@fontsource/syne/files/syne-latin-700-normal.woff2)}
+@font-face{font-family:Outfit;font-weight:400;src:url(../../../node_modules/@fontsource/outfit/files/outfit-latin-400-normal.woff2)}
+@font-face{font-family:Outfit;font-weight:600;src:url(../../../node_modules/@fontsource/outfit/files/outfit-latin-600-normal.woff2)}
+:root{--w:1200px;--h:630px}
+*{box-sizing:border-box}
+html,body{margin:0;width:var(--w);height:var(--h);overflow:hidden}
+body{position:relative;background:linear-gradient(150deg,#fbfaf7 0%,#eef3fa 55%,#f7efe2 100%);font-family:Outfit,sans-serif;color:#14203a}
+.luz1{position:absolute;right:-120px;top:-160px;width:760px;height:760px;border-radius:50%;background:radial-gradient(closest-side,rgba(233,200,120,.55),transparent)}
+.luz2{position:absolute;left:-200px;bottom:-300px;width:700px;height:700px;border-radius:50%;background:radial-gradient(closest-side,rgba(143,183,232,.4),transparent)}
+.gema{position:absolute;right:calc(var(--w)*.07);top:50%;width:calc(var(--h)*.56);height:calc(var(--h)*.56);transform:translateY(-50%)}
+.texto{position:absolute;left:calc(var(--w)*.075);top:50%;transform:translateY(-50%);max-width:calc(var(--w)*.55)}
+.et{font:600 calc(var(--h)*.042)/1.2 Outfit;letter-spacing:.22em;text-transform:uppercase;color:#8a6a1e}
+h1{margin:calc(var(--h)*.035) 0 0;font:800 calc(var(--h)*.165)/1 Syne;letter-spacing:-.025em}
+.lema{margin:calc(var(--h)*.045) 0 0;font:400 calc(var(--h)*.06)/1.25 Outfit;color:#3a4866}
+.ver{margin:calc(var(--h)*.06) 0 0;font:400 calc(var(--h)*.042)/1.4 Georgia,serif;font-style:italic;color:#5a6785}
+.ver b{font:600 calc(var(--h)*.034) Outfit;font-style:normal;letter-spacing:.08em;color:#8a6a1e;margin-left:.5em}
+</style></head>
+<body>
+<div class="luz1"></div><div class="luz2"></div>
+<svg class="gema" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="v" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="96" y2="96"><stop offset="0" stop-color="#E9C878"/><stop offset=".5" stop-color="#C08E2E"/><stop offset="1" stop-color="#5E8FD6"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="3"/></filter></defs>
+<g filter="url(#b)" opacity=".35"><path d="M66 9.9 L50 4 L18 16 L4 50 L18 84 L50 96 L82 84 L96 50 L94 45" fill="none" stroke="#E9C878" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 52 H80" stroke="#E9C878" stroke-width="10" stroke-linecap="round"/></g>
+<path d="M66 9.9 L50 4 L18 16 L4 50 L18 84 L50 96 L82 84 L96 50 L94 45" fill="none" stroke="url(#v)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 52 H80" stroke="url(#v)" stroke-width="7" stroke-linecap="round"/></svg>
+<div class="texto">
+<div class="et">Disciplina cristiana</div>
+<h1>genuino</h1>
+<div class="lema" id="lema">Tu madrugada con Dios, a su hora.</div>
+<div class="ver" id="ver">«Y allí no habrá más noche.» <b>APOCALIPSIS 22:5</b></div>
+</div>
+<script>
+const q=new URLSearchParams(location.search);
+if(q.get('w')){document.documentElement.style.setProperty('--w',q.get('w')+'px');document.documentElement.style.setProperty('--h',q.get('h')+'px')}
+if(q.get('lema'))document.getElementById('lema').textContent=q.get('lema');
+if(q.get('sinver'))document.getElementById('ver').remove();
+</script>
+</body></html>
